@@ -1,0 +1,193 @@
+/* =============================================================================
+   LEGENDARIOS — «Santuario de las leyendas» (js/legendarios.js).
+   Vista oscura de cielo nocturno y oro, a propósito distinta del resto del sitio.
+     .leyendas-cielo      estrellas que titilan y estrellas fugaces
+     .leyendas-portada    texto + leyenda destacada (.destacada) + altar con su ilustración
+     .leyendas-cifras     cuatro cifras del archivo
+     .leyendas-archivo    filtros por generación, cartas de reliquia (button.leyenda) y botón «Ver más»
+   --tipo-a y --tipo-b llevan los colores de los tipos: en la sección, los de la destacada;
+   en cada carta, los suyos. js/efectos.js añade --rx --ry --px --py al pasar el ratón.
+   ============================================================================= */
+
+/* Registradas para que el color del altar y del cielo cambie con una transición suave. */
+@property --tipo-a { syntax:'<color>'; inherits:true; initial-value:#626faf; }
+@property --tipo-b { syntax:'<color>'; inherits:true; initial-value:#626faf; }
+
+.leyendas { --oro:#e8c873; --oro-claro:#f8e8b4; --crema:#efe7d2; --apagado:#a9a48f; --serif:Georgia,'Times New Roman',serif;
+  position:relative; isolation:isolate; overflow:hidden; margin-top:24px; padding:16px 0 90px; color:var(--crema);
+  background:radial-gradient(ellipse at 76% 16%,color-mix(in srgb,var(--tipo-a) 32%,transparent),transparent 55%),radial-gradient(ellipse at 8% 62%,#7a5a1c2e,transparent 50%),linear-gradient(#070b16,#0b1222 45%,#080d18);
+  transition:--tipo-a 1s ease,--tipo-b 1s ease; }
+
+/* --- Cabecera, barra «Volver» y pie con el mismo azul noche ----------------------
+   js/vistas.js pone <body data-vista="legendarios"> mientras esta vista está abierta. */
+body[data-vista="legendarios"] { background:#070b16; }
+body[data-vista="legendarios"] header { border-bottom-color:#e8c8731f; background:#070b16; }
+body[data-vista="legendarios"] header::before { background:linear-gradient(90deg,#7a5a1c 0 25%,#c99a3d 25% 50%,#e8c873 50% 75%,#f6e3a1 75%); }
+body[data-vista="legendarios"] .logo { color:#efe7d2; }
+body[data-vista="legendarios"] .logo-icon { --dark:#e8c873; background:#141b2e; }
+body[data-vista="legendarios"] .logo-punto { color:#e8c873; }
+body[data-vista="legendarios"] .brand-note { border-left-color:#e8c87333; color:#a9a48f; }
+body[data-vista="legendarios"] nav a { color:#c8c3ad; }
+body[data-vista="legendarios"] nav a:hover { background:#ffffff0f; color:#f8e8b4; }
+body[data-vista="legendarios"] nav a[aria-current="page"] { background:#e8c8731f; color:#f8e8b4; }
+body[data-vista="legendarios"] .volver-inicio a { color:#e8c873; }
+body[data-vista="legendarios"] .volver-inicio span { color:#a9a48f; }
+body[data-vista="legendarios"] footer { border-top:1px solid #e8c8731a; background:#05080f; color:#a9a48f; }
+body[data-vista="legendarios"] footer a { color:#e8c873; }
+
+/* --- Cielo -------------------------------------------------------------------- */
+.leyendas-cielo { position:absolute; inset:0; z-index:-1; pointer-events:none; }
+.leyendas-cielo::before, .leyendas-cielo::after { content:''; position:absolute; inset:0; background-image:radial-gradient(1.3px 1.3px at 20px 30px,#fff,transparent),radial-gradient(1px 1px at 90px 120px,#ffffffaa,transparent),radial-gradient(1.6px 1.6px at 160px 60px,#ffe9b0,transparent),radial-gradient(1px 1px at 230px 170px,#fff,transparent),radial-gradient(1.2px 1.2px at 60px 200px,#ffffffcc,transparent),radial-gradient(1px 1px at 200px 10px,#cfe0ff,transparent); background-size:260px 230px; animation:titilar-cielo 5s ease-in-out infinite alternate; }
+.leyendas-cielo::after { background-size:340px 300px; background-position:120px 80px; opacity:.7; animation-delay:-2.5s; }
+.estrella-fugaz { position:absolute; top:10%; left:62%; width:130px; height:1.5px; border-radius:2px; background:linear-gradient(90deg,#fff,transparent); opacity:0; transform:rotate(-20deg); animation:estrella-fugaz 9s linear infinite; }
+.estrella-fugaz + .estrella-fugaz { top:34%; left:88%; animation-duration:13s; animation-delay:-5s; }
+
+/* --- Portada: texto, leyenda destacada y altar --------------------------------- */
+.leyendas-portada { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:center; gap:40px; padding:30px 0 34px; }
+.leyendas-kicker { color:var(--oro); font-size:10px; font-weight:800; letter-spacing:2.4px; text-transform:uppercase; }
+.leyendas-texto h2 { margin:14px 0 12px; font-family:var(--serif); font-size:clamp(38px,4.6vw,62px); font-weight:400; line-height:1.02; letter-spacing:-1px; }
+.leyendas-texto h2 em { display:block; background:linear-gradient(90deg,var(--oro-claro),var(--oro) 50%,#c79a3c); -webkit-background-clip:text; background-clip:text; color:transparent; font-style:italic; }
+.leyendas-texto > p { max-width:470px; margin:0; color:#c8c3ad; font-size:15px; line-height:1.75; }
+
+.destacada { position:relative; max-width:640px; margin-top:30px; padding:24px 24px 20px; border:1px solid #e8c87340; border-radius:18px; background:linear-gradient(150deg,#ffffff0f,#ffffff04); box-shadow:inset 0 1px 0 #ffffff14,0 20px 50px #0000004d; backdrop-filter:blur(4px); transition:opacity .25s ease; }
+.destacada.cambiando { opacity:.3; }
+.destacada-etiqueta { position:absolute; top:-10px; left:20px; padding:3px 11px; border-radius:99px; background:linear-gradient(90deg,#c99a3d,#f3dc92); color:#2a1f08; font-size:9px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
+.destacada-grupo { display:block; color:var(--oro); font-size:10px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase; }
+.destacada h3 { margin:8px 0 2px; font-family:var(--serif); font-size:clamp(30px,3.4vw,44px); font-weight:400; letter-spacing:2px; text-transform:uppercase; overflow-wrap:anywhere; }
+.destacada-especie { display:block; margin-bottom:12px; color:var(--apagado); font-family:var(--serif); font-size:15px; font-style:italic; }
+.destacada .leyenda-poder { margin-top:16px; }
+.destacada-descripcion { min-height:4.8em; margin:14px 0 18px; color:#cfc9b3; font-size:13.5px; line-height:1.6; }
+.destacada-controles { display:flex; align-items:center; gap:8px; }
+.destacada-flecha { display:grid; place-items:center; width:40px; height:40px; padding:0 0 3px; border:1px solid #e8c87366; border-radius:50%; background:#ffffff08; color:var(--oro); font-size:24px; line-height:1; transition:background .2s,color .2s; }
+.destacada-flecha:hover { background:var(--oro); color:#1a1405; }
+.destacada-ver { padding:11px 18px; border:0; border-radius:99px; background:linear-gradient(90deg,#c99a3d,#f3dc92); box-shadow:0 6px 20px #e8c87333; color:#24190a; font-size:13px; font-weight:bold; transition:transform .2s,box-shadow .2s; }
+.destacada-ver:hover { transform:translateY(-2px); box-shadow:0 10px 26px #e8c87355; }
+.destacada-contador { margin-left:auto; color:var(--apagado); font-family:var(--serif); font-size:13px; letter-spacing:1px; }
+
+.altar { position:relative; display:grid; place-items:center; justify-self:center; width:min(480px,100%); aspect-ratio:1; }
+.altar > * { grid-area:1/1; }
+.altar-runas { width:100%; height:100%; border-radius:50%; background:repeating-conic-gradient(#e8c873b3 0 .8deg,transparent .8deg 6deg); mask:radial-gradient(circle,transparent 64%,#000 65%,#000 68%,transparent 69%); animation:anillo 80s linear infinite; }
+.altar-anillo { position:relative; width:84%; height:84%; border:1px solid #e8c87359; border-radius:50%; box-shadow:0 0 0 10px #e8c8730a,inset 0 0 40px #e8c8731a; }
+.altar-anillo::before { content:''; position:absolute; inset:9%; border:1.5px dashed #e8c87366; border-radius:50%; animation:anillo 50s linear infinite reverse; }
+.altar-joyas { position:relative; width:100%; height:100%; animation:anillo 30s linear infinite; }
+.altar-joyas i { position:absolute; width:12px; height:12px; background:linear-gradient(135deg,#fff3c4,#c99a3d); clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%); filter:drop-shadow(0 0 6px #e8c873); }
+.altar-joyas i:nth-child(1) { top:calc(8% - 6px); left:calc(50% - 6px); }
+.altar-joyas i:nth-child(2) { top:calc(50% - 6px); right:calc(8% - 6px); }
+.altar-joyas i:nth-child(3) { bottom:calc(8% - 6px); left:calc(50% - 6px); }
+.altar-joyas i:nth-child(4) { top:calc(50% - 6px); left:calc(8% - 6px); }
+.altar-aura { width:64%; height:64%; border-radius:50%; background:radial-gradient(circle,color-mix(in srgb,var(--tipo-a) 72%,#fff) 0,color-mix(in srgb,var(--tipo-a) 55%,transparent) 32%,color-mix(in srgb,var(--tipo-b) 28%,transparent) 58%,transparent 72%); animation:aura 4s ease-in-out infinite; }
+.altar img { width:80%; height:80%; object-fit:contain; filter:drop-shadow(0 0 26px color-mix(in srgb,var(--tipo-a) 60%,transparent)) drop-shadow(0 18px 18px #000000aa); animation:flotar 4.5s ease-in-out infinite; transition:opacity .25s ease,transform .25s ease; }
+.altar img:not([src]) { visibility:hidden; }
+.altar img.cambiando { opacity:0; transform:scale(.92); }
+
+/* --- Cifras -------------------------------------------------------------------- */
+.leyendas-cifras { display:grid; grid-template-columns:repeat(4,1fr); margin-top:0; margin-bottom:0; border-top:1px solid #e8c87329; border-bottom:1px solid #e8c87329; }
+.leyendas-cifras div { display:flex; flex-direction:column-reverse; align-items:center; gap:4px; padding:18px 10px; border-left:1px solid #e8c8731f; }
+.leyendas-cifras div:first-child { border-left:0; }
+.leyendas-cifras dd { margin:0; color:var(--oro-claro); font-family:var(--serif); font-size:32px; }
+.leyendas-cifras dt { color:var(--apagado); font-size:9px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase; }
+
+/* --- Archivo: filtros y títulos por región ---------------------------------------- */
+.leyendas-archivo { padding-top:56px; }
+.leyendas-archivo-cabecera { display:flex; flex-direction:column; gap:18px; margin-bottom:28px; }
+.leyendas-archivo-cabecera h3 { margin:8px 0 0; font-family:var(--serif); font-size:clamp(26px,3vw,36px); font-weight:400; }
+.leyendas-filtros { display:flex; flex-wrap:wrap; gap:8px; }
+.leyendas-filtro { display:inline-flex; align-items:center; gap:7px; padding:8px 13px; border:1px solid #e8c87340; border-radius:99px; background:#ffffff06; color:var(--crema); font-size:12px; font-weight:bold; transition:border-color .2s,background .2s,color .2s; }
+.leyendas-filtro b { color:var(--oro); font-family:var(--serif); }
+.leyendas-filtro small { padding:1px 6px; border-radius:99px; background:#ffffff14; color:var(--apagado); font-size:10px; }
+.leyendas-filtro:hover { border-color:var(--oro); }
+.leyendas-filtro[aria-pressed="true"] { border-color:transparent; background:linear-gradient(90deg,#c99a3d,#f3dc92); color:#24190a; }
+.leyendas-filtro[aria-pressed="true"] b { color:#24190a; }
+.leyendas-filtro[aria-pressed="true"] small { background:#0000001f; color:#3a2a0c; }
+
+.leyendas-rejilla { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:24px 18px; } /* 10 por tanda: 2 filas de 5 */
+.leyendas-mas { display:flex; justify-content:center; margin-top:36px; }
+.leyendas-ver-mas { display:inline-flex; align-items:center; gap:10px; padding:14px 26px; border:0; border-radius:99px; background:linear-gradient(90deg,#c99a3d,#f3dc92); box-shadow:0 8px 26px #e8c87333; color:#24190a; font-size:14px; font-weight:bold; transition:transform .2s,box-shadow .2s; }
+.leyendas-ver-mas:hover { transform:translateY(-2px); box-shadow:0 12px 32px #e8c87355; }
+.leyendas-ver-mas small { padding:2px 9px; border-radius:99px; background:#0000001f; font-size:11px; }
+
+/* --- Carta de reliquia ---------------------------------------------------------- */
+.leyenda { --rx:0deg; --ry:0deg; position:relative; display:block; min-width:0; padding:3px; border:0; border-radius:18px; background:linear-gradient(150deg,#b8913f,#f6e3a1 22%,#8f6a22 45%,#f3dc92 70%,#a8822f); box-shadow:0 14px 34px #00000080,0 0 0 1px #00000099; color:var(--crema); text-align:center; transform:perspective(800px) rotateX(var(--rx)) rotateY(var(--ry)); transition:transform .35s cubic-bezier(.2,.8,.3,1.15),box-shadow .35s; }
+.leyenda:hover, .leyenda:focus-visible { z-index:2; transform:perspective(800px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(-8px); box-shadow:0 26px 54px #000000a6,0 0 34px color-mix(in srgb,var(--tipo-a) 50%,transparent),0 0 0 1px #00000099; }
+.leyenda.siguiendo { transition:transform .1s linear,box-shadow .35s; }
+
+.leyenda-marco { position:relative; display:flex; flex-direction:column; height:100%; overflow:hidden; border-radius:15px; background:radial-gradient(circle at 50% 28%,color-mix(in srgb,var(--tipo-a) 42%,#0d1426) 0,#0c1222 58%,#080c17); }
+/* Filete interior y esquinas de oro. */
+.leyenda-marco::before { content:''; position:absolute; inset:7px; z-index:2; border:1px solid #e8c87359; border-radius:11px; pointer-events:none; }
+.leyenda-marco::after { content:''; position:absolute; inset:3px; z-index:2; pointer-events:none;
+  background:linear-gradient(var(--oro),var(--oro)) top left/18px 2px,linear-gradient(var(--oro),var(--oro)) top left/2px 18px,
+             linear-gradient(var(--oro),var(--oro)) top right/18px 2px,linear-gradient(var(--oro),var(--oro)) top right/2px 18px,
+             linear-gradient(var(--oro),var(--oro)) bottom left/18px 2px,linear-gradient(var(--oro),var(--oro)) bottom left/2px 18px,
+             linear-gradient(var(--oro),var(--oro)) bottom right/18px 2px,linear-gradient(var(--oro),var(--oro)) bottom right/2px 18px;
+  background-repeat:no-repeat; }
+
+.leyenda-cabecera { position:relative; z-index:3; display:flex; justify-content:space-between; align-items:center; padding:15px 15px 0; }
+.leyenda-gen { display:grid; place-items:center; min-width:30px; height:30px; padding:0 7px; border-radius:99px; background:radial-gradient(circle at 35% 30%,#fff3c4,#c99a3d 70%); box-shadow:0 0 12px #e8c87359; color:#24190a; font-family:var(--serif); font-size:12px; font-weight:bold; }
+.leyenda-numero { color:var(--oro); font-family:var(--serif); font-size:12px; letter-spacing:1px; }
+
+.leyenda-arte { position:relative; display:grid; place-items:center; height:196px; margin-top:-8px; }
+.leyenda-arte::before { content:''; position:absolute; width:168px; height:168px; border-radius:50%; background:repeating-conic-gradient(#e8c87399 0 1deg,transparent 1deg 9deg); mask:radial-gradient(circle,transparent 66%,#000 67%,#000 70%,transparent 71%); animation:anillo 40s linear infinite; }
+.leyenda-arte::after { content:''; position:absolute; width:136px; height:136px; border:1px dashed #e8c87347; border-radius:50%; animation:anillo 26s linear infinite reverse; }
+.leyenda-aura { position:absolute; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle,color-mix(in srgb,var(--tipo-a) 70%,#fff) 0,color-mix(in srgb,var(--tipo-a) 45%,transparent) 36%,color-mix(in srgb,var(--tipo-b) 25%,transparent) 56%,transparent 70%); opacity:.8; animation:aura 4s ease-in-out calc(var(--orden) * -.3s) infinite; }
+.leyenda-arte img { position:relative; z-index:1; width:168px; height:168px; object-fit:contain; translate:calc(var(--px, 0) * 1px) calc(var(--py, 0) * 1px); filter:drop-shadow(0 0 14px color-mix(in srgb,var(--tipo-a) 55%,transparent)) drop-shadow(0 12px 12px #000000b3); transition:scale .4s ease,translate .1s linear; }
+.leyenda:hover .leyenda-arte img { scale:1.08; }
+
+.leyenda-datos { position:relative; z-index:3; display:flex; flex-direction:column; align-items:center; gap:6px; padding:2px 15px 18px; }
+.leyenda-grupo { color:var(--oro); font-size:9px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase; }
+.leyenda-nombre { font-family:var(--serif); font-size:21px; font-weight:400; line-height:1.1; letter-spacing:1.6px; text-transform:uppercase; overflow-wrap:anywhere; }
+.leyenda-especie { margin-top:-3px; color:var(--apagado); font-family:var(--serif); font-size:12px; font-style:italic; }
+.leyenda-datos .leyenda-tipos { justify-content:center; }
+.leyenda-datos .leyenda-poder { width:100%; margin-top:4px; padding-top:11px; border-top:1px solid #e8c87326; }
+
+/* Brillo holográfico que sigue al cursor. */
+.leyenda-brillo { position:absolute; inset:3px; z-index:4; border-radius:15px; background:linear-gradient(115deg,transparent 20%,#ffe9a166 36%,#9ff3ff55 46%,#ff9fe066 56%,transparent 72%); background-size:250% 250%; background-position:calc(50% + var(--px, 0) * 4%) calc(50% + var(--py, 0) * 4%); mix-blend-mode:color-dodge; opacity:0; pointer-events:none; transition:opacity .35s ease; }
+.leyenda:hover .leyenda-brillo { opacity:.8; }
+
+/* --- Piezas compartidas: tipos y barra de poder ----------------------------------- */
+.leyenda-tipos { display:flex; flex-wrap:wrap; gap:5px; }
+.leyenda-tipo { padding:3px 10px; border:1px solid color-mix(in srgb,var(--color-tipo) 80%,#fff); border-radius:99px; background:color-mix(in srgb,var(--color-tipo) 38%,transparent); color:#fff; font-size:10px; font-weight:bold; letter-spacing:.4px; }
+.leyenda-poder { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:10px; }
+.leyenda-poder small { color:var(--oro); font-size:9px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
+.leyenda-poder i { height:6px; overflow:hidden; border-radius:9px; background:#ffffff14; box-shadow:inset 0 0 0 1px #e8c87326; }
+.leyenda-poder i b { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#9c7a2e,#e8c873 60%,#fff3c4); box-shadow:0 0 10px #e8c87399; transition:width .6s ease; }
+.leyenda-poder strong { color:var(--oro-claro); font-family:var(--serif); font-size:16px; }
+
+@keyframes titilar-cielo { from { opacity:.35; } to { opacity:1; } }
+@keyframes estrella-fugaz { 0%,90% { opacity:0; translate:0 0; } 92% { opacity:1; } 100% { opacity:0; translate:-260px 95px; } }
+@keyframes aura { 0%,100% { transform:scale(.92); opacity:.75; } 50% { transform:scale(1.08); opacity:1; } }
+
+/* --- Pantallas medianas y móviles ---------------------------------------------------- */
+@media (max-width:1000px) {
+  .leyendas-portada { gap:20px; }
+  .leyendas-rejilla { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:760px) {
+  .leyendas-portada { grid-template-columns:minmax(0,1fr); }
+  .altar { order:-1; width:min(340px,90%); }
+  .leyendas-cifras { grid-template-columns:repeat(2,1fr); }
+  .leyendas-cifras div:nth-child(3) { border-left:0; }
+  .leyendas-cifras div:nth-child(n+3) { border-top:1px solid #e8c8731f; }
+  .leyendas-filtros { flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px; scrollbar-width:none; }
+  .leyendas-filtro { flex:none; }
+  .leyendas-rejilla { grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 10px; }
+}
+@media (max-width:480px) {
+  .destacada { padding:22px 16px 16px; }
+  .destacada-contador { display:none; }
+  .leyenda-arte { height:148px; }
+  .leyenda-arte img { width:122px; height:122px; }
+  .leyenda-arte::before { width:126px; height:126px; }
+  .leyenda-arte::after { width:102px; height:102px; }
+  .leyenda-aura { width:110px; height:110px; }
+  .leyenda-cabecera { padding:12px 12px 0; }
+  .leyenda-datos { gap:6px; padding:2px 10px 15px; }
+  .leyenda-nombre { font-size:15px; letter-spacing:.8px; }
+  .leyenda-grupo { font-size:8px; letter-spacing:1px; }
+  .leyenda-poder { gap:6px; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .leyendas *, .leyendas *::before, .leyendas *::after { animation:none !important; }
+  .leyenda { transform:none !important; }
+  .estrella-fugaz { display:none; }
+}

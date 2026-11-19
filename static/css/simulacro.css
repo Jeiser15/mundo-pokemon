@@ -1,0 +1,291 @@
+/* =============================================================================
+   COMBATE — la ventana emergente de la batalla (js/simulacro.js), en estilo pixel: barra · marcadores
+   (nombre, tipos, vida y equipo de cada bando) · lienzo con el campo visto desde arriba · mando + registro.
+   El campo, los Pokémon y los efectos se dibujan en el <canvas> (js/arena-pixel.js), a la resolución
+   real de la pantalla: aquí solo se le da tamaño. Con .en-pantalla-completa (en #simulacro) solo queda
+   la arena, con los marcadores arriba y los movimientos abajo, encima del campo.
+   ============================================================================= */
+
+/* =============================================================================
+   VENTANA DE BATALLA (dialog#batalla-ventana) en estilo pixel: esquinas rectas, bordes gruesos,
+   sombras duras y letra monoespaciada, a juego con la arena del lienzo.
+   ============================================================================= */
+body.batalla-abierta { overflow:hidden; } /* congela la página de fondo */
+.batalla-modal { --acento:#b9e08f; --borde:#0a0806; --madera:#3b2c1c; --panel:#1b160f; --texto:#fff8e6; --suave:#c9b99a;
+  position:fixed; inset:0; width:min(1300px,calc(100% - 16px)); max-width:none; max-height:calc(100% - 16px); padding:10px; overflow:auto; overscroll-behavior:contain; scrollbar-width:none; border:0; background:transparent; }
+.batalla-modal::-webkit-scrollbar { display:none; }
+.batalla-modal::backdrop { background:#050806e0; }
+.simulacro { border:4px solid var(--borde); background:#120e09; box-shadow:0 0 0 4px #d8c49a,0 0 0 8px var(--borde); color:var(--texto); font-family:'Courier New',ui-monospace,monospace; animation:ventana-aparece .25s steps(4) both; }
+.simulacro[data-nivel="maestro"] { --acento:#e8c873; }
+.simulacro[data-resultado="victoria"] { box-shadow:0 0 0 4px #e8c873,0 0 0 8px var(--borde); }
+.simulacro button { font-family:inherit; }
+.arena-aviso { margin:0; padding:70px 20px; color:var(--suave); font-size:15px; font-weight:bold; text-align:center; text-transform:uppercase; letter-spacing:1px; animation:parpadeo-texto 1s steps(2) infinite; }
+.arena-aviso.error { color:#ff9f86; animation:none; }
+
+.arena-barra { display:flex; align-items:center; gap:12px; padding:8px 12px; border-bottom:4px solid var(--borde); background:var(--madera); font-size:13px; font-weight:bold; text-transform:uppercase; letter-spacing:1px; }
+.arena-titulo b { color:var(--acento); }
+.nivel-estrellas { color:#e8c873; letter-spacing:2px; }
+.arena-turno { margin-left:auto; padding:3px 10px; border:2px solid var(--borde); background:#0a0806; }
+.arena-completa { padding:5px 10px; border:3px solid var(--borde); background:#2a2116; box-shadow:2px 2px 0 var(--borde); color:var(--texto); font-size:12px; font-weight:bold; text-transform:uppercase; }
+.arena-completa:hover { background:#3a2e1f; }
+.arena-completa:active { box-shadow:none; transform:translate(2px,2px); }
+/* Clima del combate y botones de sonido. */
+.arena-clima { display:inline-flex; align-items:center; gap:6px; padding:3px 9px; border:2px solid var(--borde); background:#2a2116; color:#ffe3a0; font-size:11px; }
+.arena-clima b { font-size:14px; }
+.arena-clima[data-clima="lluvia"], .arena-clima[data-clima="granizo"] { color:#cfe6ff; }
+.arena-clima[data-clima="niebla"] { color:#d9dde6; }
+.arena-clima[data-clima="arena"] { color:#f0d7a8; }
+.arena-sonido { display:grid; place-items:center; width:32px; height:30px; padding:0; border:3px solid var(--borde); background:#2a2116; box-shadow:2px 2px 0 var(--borde); color:var(--texto); font-size:14px; }
+.arena-sonido[aria-pressed="false"] { opacity:.5; text-decoration:line-through; }
+.arena-sonido:active { box-shadow:none; transform:translate(2px,2px); }
+.arena-salir { padding:5px 10px; border:3px solid var(--borde); background:#5a2a1c; box-shadow:2px 2px 0 var(--borde); color:var(--texto); font-size:12px; font-weight:bold; text-transform:uppercase; }
+.arena-salir:hover { background:#7a3a26; }
+.arena-salir:active { box-shadow:none; transform:translate(2px,2px); }
+
+.arena-cuerpo { display:grid; grid-template-columns:minmax(0,1fr) minmax(280px,340px); gap:12px; padding:12px; }
+.arena-principal { display:flex; flex-direction:column; gap:10px; min-width:0; }
+.arena-lateral { display:flex; flex-direction:column; gap:10px; min-width:0; min-height:0; }
+
+/* --- Marcadores: uno por bando, con «VS» en medio ------------------------------------------- */
+.arena-marcadores { display:grid; grid-template-columns:minmax(0,1fr) auto minmax(0,1fr); align-items:center; gap:10px; }
+.arena-vs { display:grid; place-items:center; width:44px; height:44px; border:3px solid var(--borde); background:#e8c873; box-shadow:3px 3px 0 var(--borde); color:#1d1406; font-size:17px; font-weight:900; }
+.hud { display:grid; gap:5px; min-width:0; padding:8px 10px; border:3px solid var(--borde); background:var(--panel); box-shadow:inset 0 0 0 2px var(--madera); }
+.hud-cabecera, .hud-identidad { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:5px 10px; }
+.hud[data-lado="rival"] .hud-cabecera, .hud[data-lado="rival"] .hud-identidad { flex-direction:row-reverse; }
+.hud-etiqueta { color:var(--acento); font-size:11px; font-weight:bold; letter-spacing:2px; text-transform:uppercase; }
+.hud-nombre { color:var(--texto); font-size:18px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; overflow-wrap:anywhere; }
+.hud-nombre-linea { display:inline-flex; flex-wrap:wrap; align-items:center; gap:6px; min-width:0; }
+.hud[data-lado="rival"] .hud-nombre-linea { flex-direction:row-reverse; }
+.hud.es-mega .hud-nombre { background:linear-gradient(90deg,#ff8a8a,#ffe08a,#8affb0,#8ad8ff,#c69bff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+/* Estado alterado (QUE, ENV, PAR, CON, DOR), del color del estado. */
+.hud-estado { padding:1px 5px; border:2px solid var(--borde); background:var(--color-estado); color:#1b1410; font-size:10px; font-weight:900; letter-spacing:1px; }
+.hud-nombre.vacio { color:var(--suave); }
+/* Etapas que no están a 0 (ATQ +1, DEF −1…): rojo si suben, azul si bajan. */
+.hud-etapas { display:inline-flex; flex-wrap:wrap; gap:3px; }
+.hud-etapa { padding:0 4px; border:2px solid var(--borde); background:#e8664a; color:white; font-size:9px; font-weight:900; letter-spacing:.5px; }
+.hud-etapa[data-signo="baja"] { background:#4a86d8; }
+.hud-tipos { display:flex; flex-wrap:wrap; gap:4px; }
+.hud-tipo { display:inline-flex; align-items:center; gap:3px; padding:1px 6px 1px 3px; border:2px solid var(--borde); background:var(--color-tipo); color:white; font-size:10px; font-weight:bold; text-transform:uppercase; text-shadow:1px 1px 0 #0008; }
+.hud-tipo svg { width:11px; height:11px; }
+/* Barra de vida segmentada; la clara («rastro») baja con retraso y deja ver cuánto quitó el golpe. */
+.hud-pv { position:relative; height:14px; overflow:hidden; border:2px solid var(--borde); background:#3a2a1c; }
+.hud-pv::after { content:''; position:absolute; inset:0; background:repeating-linear-gradient(90deg,transparent 0 8px,#0a080688 8px 10px); }
+.hud-pv i { position:absolute; top:0; bottom:0; left:0; width:calc(var(--pv,1) * 100%); }
+.hud[data-lado="rival"] .hud-pv i { right:0; left:auto; }
+.hud-pv-rastro { background:#fff3c4; transition:width .9s steps(12) .35s; }
+.hud-pv-actual { background:#4fc35e; box-shadow:inset 0 3px 0 #8ee68f; transition:width .35s steps(8); }
+.hud[data-salud="media"] .hud-pv-actual { background:#e0b030; box-shadow:inset 0 3px 0 #f6dc7a; }
+.hud[data-salud="baja"] .hud-pv-actual { background:#d8452a; box-shadow:inset 0 3px 0 #f58a6a; }
+.hud[data-salud="vacia"] .hud-pv { visibility:hidden; }
+.hud-pv-texto { color:var(--suave); font-size:11px; font-weight:bold; }
+.hud-pie { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:4px 10px; }
+.hud[data-lado="rival"] .hud-pie { flex-direction:row-reverse; }
+/* Energía de evolución: se llena atacando, recibiendo y concentrándose; llena, brilla en arcoíris. */
+.hud-energia { display:inline-flex; flex:1; align-items:center; gap:5px; min-width:90px; max-width:170px; }
+.hud-energia b { color:#9fd8ff; font-size:9px; letter-spacing:1px; }
+.hud-energia > i { position:relative; flex:1; height:7px; overflow:hidden; border:2px solid var(--borde); background:#1f2a35; }
+.hud-energia > i > i { position:absolute; inset:0 auto 0 0; width:calc(var(--energia, 0) * 100%); background:linear-gradient(90deg,#4fa8ff,#9b7bff); transition:width .4s steps(6); }
+.hud-energia.llena b { color:#ffe08a; animation:parpadeo-texto .6s steps(2) infinite; }
+.hud-energia.llena > i > i { background:linear-gradient(90deg,#ff8a8a,#ffe08a,#8affb0,#8ad8ff,#c69bff,#ff8a8a); background-size:200% 100%; animation:arcoiris 1.2s linear infinite; }
+.hud-fichas { display:flex; flex-wrap:wrap; gap:3px; }
+.ficha-mini { position:relative; display:grid; place-items:center; width:30px; height:30px; overflow:hidden; border:2px solid var(--borde); background:color-mix(in srgb,var(--color-tipo) 45%,#1b160f); }
+.ficha-mini img { width:28px; height:28px; object-fit:contain; image-rendering:pixelated; }
+.ficha-mini i { position:absolute; right:1px; bottom:1px; left:1px; height:3px; background:#0a0806; }
+.ficha-mini i::after { content:''; display:block; width:calc(var(--pv) * 100%); height:100%; background:#4fc35e; }
+.ficha-mini.en-campo { outline:2px solid var(--acento); outline-offset:1px; }
+.ficha-mini.fuera { filter:grayscale(1) brightness(.6); }
+.ficha-mini.fuera::after { content:'×'; position:absolute; color:#ff8f70; font-size:24px; font-weight:900; }
+
+/* --- Lienzo: js lo dibuja a la resolución real de la pantalla (16:9). Su ancho se limita para que quepa en alto. --- */
+.arena-lienzo-marco { position:relative; display:flex; justify-content:center; padding:4px; border:3px solid var(--borde); background:#0a0806; box-shadow:inset 0 0 0 2px var(--madera); }
+.arena-lienzo { display:block; width:100%; max-width:calc((100vh - 250px) * 16 / 9); height:auto; aspect-ratio:16 / 9; image-rendering:pixelated; }
+
+/* Bocadillo de diálogo sobre la arena: el rival (con su nombre) a la derecha; tú, a la izquierda. */
+.arena-bocadillo { position:absolute; top:7%; z-index:2; max-width:min(46%,420px); margin:0; padding:8px 12px; border:3px solid var(--borde); background:#fff8e6; box-shadow:4px 4px 0 #0008; color:#1b1410; font-size:13px; font-weight:bold; line-height:1.35; opacity:0; pointer-events:none; translate:0 -8px; transition:opacity .2s,translate .2s; }
+.arena-bocadillo[data-lado="rival"] { right:4%; }
+.arena-bocadillo[data-lado="jugador"] { left:4%; background:#e9f7dd; }
+.arena-bocadillo b { display:block; margin-bottom:2px; color:#a3461c; font-size:10px; letter-spacing:1px; text-transform:uppercase; }
+.arena-bocadillo.visible { opacity:1; translate:0 0; }
+.arena-bocadillo::after { content:''; position:absolute; bottom:-11px; width:14px; height:11px; background:inherit; clip-path:polygon(0 0,100% 0,50% 100%); }
+.arena-bocadillo[data-lado="rival"]::after { right:22px; }
+.arena-bocadillo[data-lado="jugador"]::after { left:22px; }
+
+/* --- Mando y registro ------------------------------------------------------------------------ */
+.arena-mando { padding:10px; border:3px solid var(--borde); background:var(--panel); box-shadow:inset 0 0 0 2px var(--madera); }
+.mando-titulo { margin:0 0 10px; color:var(--texto); font-size:13px; font-weight:bold; text-transform:uppercase; letter-spacing:.5px; }
+.mando-espera { color:var(--suave); }
+.mando-espera::after { content:' ...'; animation:parpadeo-texto .8s steps(2) infinite; }
+.mando-movimientos, .mando-acciones { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.mando-movimientos { margin-bottom:8px; }
+.accion { position:relative; display:grid; grid-template-columns:auto 1fr; align-items:center; gap:1px 8px; min-height:54px; padding:7px 8px; border:3px solid var(--borde); background:#2a2116; box-shadow:inset 0 -3px 0 #00000059,3px 3px 0 var(--borde); color:var(--texto); text-align:left; }
+.accion:hover:not(:disabled) { background:#3a2e1f; }
+.accion:active:not(:disabled) { box-shadow:inset 0 -1px 0 #00000059; transform:translate(3px,3px); }
+.accion:disabled { opacity:.4; cursor:default; }
+.accion strong { font-size:12px; text-transform:uppercase; }
+.accion small { grid-column:2; color:var(--suave); font-size:10px; }
+.accion-icono { display:grid; grid-row:span 2; place-items:center; width:28px; height:28px; border:2px solid var(--borde); background:var(--color-tipo); color:white; }
+.accion-icono svg { width:16px; height:16px; }
+/* Movimientos: del color de su tipo, con la mitad de arriba más clara (como los botones de los juegos). */
+.accion-ataque { min-height:58px; background:linear-gradient(color-mix(in srgb,var(--color-tipo) 84%,white) 0 50%,var(--color-tipo) 50%); }
+.accion-ataque:hover:not(:disabled) { background:linear-gradient(color-mix(in srgb,var(--color-tipo) 72%,white) 0 50%,color-mix(in srgb,var(--color-tipo) 90%,white) 50%); }
+.accion-ataque .accion-icono { border-color:var(--borde); background:white; color:var(--color-tipo); }
+.accion-ataque strong { color:white; font-size:13px; letter-spacing:.5px; text-shadow:2px 2px 0 #000a; }
+.accion-ataque small.accion-detalle { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:2px 6px; color:#fff; font-size:10px; font-weight:bold; text-shadow:1px 1px 0 #0009; }
+.accion-eficacia { padding:0 5px; border:2px solid var(--borde); background:#1b160fd9; color:var(--texto); font-style:normal; text-shadow:none; white-space:nowrap; }
+.accion-ataque[data-efecto="fuerte"] .accion-eficacia { background:#ffd36a; color:#1d1406; }
+.accion-ataque[data-efecto="debil"] .accion-eficacia, .accion-ataque[data-efecto="nulo"] .accion-eficacia { background:#5a2a1c; color:#ffc2b0; }
+.accion-ataque[data-efecto="fuerte"]::after { content:'¡VENTAJA!'; position:absolute; top:-10px; right:6px; padding:0 5px; border:2px solid var(--borde); background:#ffd36a; color:#1d1406; font-size:9px; font-weight:900; }
+/* Rasgos del movimiento (Rápido, Recarga, 2 turnos…): chapitas en la esquina de arriba. */
+.accion-rasgos { position:absolute; top:-9px; left:40px; display:flex; gap:3px; pointer-events:none; }
+.accion-rasgos b { padding:0 4px; border:2px solid var(--borde); background:#1b160f; color:#f3e4b8; font-size:8.5px; font-weight:900; letter-spacing:.5px; text-transform:uppercase; }
+/* En el panel lateral (estrecho) el color del botón ya dice el tipo: sin el icono, el detalle cabe en una línea. */
+.mando-movimientos .accion-ataque { grid-template-columns:1fr; }
+.mando-movimientos .accion-ataque .accion-icono { display:none; }
+.mando-movimientos .accion-ataque small { grid-column:1; }
+.mando-movimientos .accion-rasgos { left:8px; }
+.en-pantalla-completa .mando-movimientos .accion-ataque { grid-template-columns:auto 1fr; }
+.en-pantalla-completa .mando-movimientos .accion-ataque .accion-icono { display:grid; }
+.en-pantalla-completa .mando-movimientos .accion-ataque small { grid-column:2; }
+.en-pantalla-completa .mando-movimientos .accion-rasgos { left:40px; }
+.accion-concentrar, .accion-cambiar { grid-template-columns:1fr; min-height:42px; padding:5px 8px; }
+/* «Continuar»: el turno de recarga o el segundo turno de un movimiento de carga. */
+.accion-continuar { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; background:#3a2e1f; }
+.accion-continuar strong { color:var(--acento); font-size:14px; }
+.accion-concentrar small, .accion-cambiar small { grid-column:1; }
+.accion-concentrar strong::before { content:'◎ '; color:#ffd76a; }
+.accion-cambiar strong::before { content:'⇄ '; color:#9bd1f0; }
+.mando-pista { margin:10px 0 0; color:#e8c873; font-size:11px; }
+/* «¡Evolucionar!»: aparece con la barra de energía llena (borde de arcoíris que se mueve). */
+.accion-evolucionar { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%; min-height:0; margin-bottom:8px; padding:9px 12px; overflow:hidden; border:3px solid var(--borde); background:linear-gradient(90deg,#3a1f5c,#1f3a5c); box-shadow:inset 0 0 0 2px #ffffff40,3px 3px 0 var(--borde); }
+.accion-evolucionar::before { content:''; position:absolute; inset:0; background:linear-gradient(90deg,#ff8a8a55,#ffe08a55,#8affb055,#8ad8ff55,#c69bff55,#ff8a8a55); background-size:200% 100%; animation:arcoiris 1.6s linear infinite; }
+.accion-evolucionar > * { position:relative; }
+.accion-evolucionar strong { color:white; font-size:15px; letter-spacing:1px; text-shadow:2px 2px 0 #000a; }
+.accion-evolucionar small { color:#e6ddff; font-size:10.5px; }
+.accion-evolucionar:hover:not(:disabled) { background:linear-gradient(90deg,#4a2a74,#2a4a74); }
+.evolucion-destello { position:absolute; inset:0 auto 0 -40%; width:30%; background:linear-gradient(90deg,transparent,#ffffff66,transparent); animation:destello-boton 1.8s ease-in-out infinite; }
+.mando-equipo { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+.opcion-luchador { display:grid; grid-template-columns:40px 1fr; grid-template-areas:"img nombre" "img tipos" "pv pv" "texto texto"; align-items:center; gap:2px 6px; padding:6px; border:3px solid var(--borde); background:color-mix(in srgb,var(--color-tipo) 22%,#2a2116); box-shadow:3px 3px 0 var(--borde); color:var(--texto); text-align:left; }
+.opcion-luchador:hover { background:color-mix(in srgb,var(--color-tipo) 38%,#2a2116); }
+.opcion-luchador:active { box-shadow:none; transform:translate(3px,3px); }
+.opcion-luchador img { grid-area:img; width:40px; height:40px; object-fit:contain; image-rendering:pixelated; }
+.opcion-luchador strong { grid-area:nombre; font-size:11px; text-transform:uppercase; }
+.opcion-tipos { grid-area:tipos; display:flex; gap:3px; }
+.opcion-tipos i { display:grid; place-items:center; width:16px; height:16px; border:1px solid var(--borde); background:var(--color-tipo); }
+.opcion-tipos svg { width:10px; height:10px; color:white; }
+.opcion-pv { grid-area:pv; height:5px; border:1px solid var(--borde); background:#3a2a1c; }
+.opcion-pv i { display:block; width:calc(var(--pv) * 100%); height:100%; background:#4fc35e; }
+.opcion-luchador small { grid-area:texto; color:var(--suave); font-size:9.5px; }
+.mando-volver { margin-top:10px; padding:5px 10px; border:3px solid var(--borde); background:#2a2116; box-shadow:2px 2px 0 var(--borde); color:var(--texto); font-size:11px; font-weight:bold; text-transform:uppercase; }
+
+.arena-registro-marco { display:flex; flex:1 1 0; flex-direction:column; min-height:140px; overflow:hidden; padding:10px; border:3px solid var(--borde); background:#0e0b07; box-shadow:inset 0 0 0 2px var(--madera); }
+.arena-registro-marco h4 { margin:0 0 6px; color:var(--acento); font-size:11px; letter-spacing:2px; text-transform:uppercase; }
+.arena-registro { flex:1; margin:0; padding:0; overflow:auto; list-style:none; scrollbar-width:thin; }
+.arena-registro li { padding:3px 0 3px 8px; border-left:3px solid #ffffff33; color:#e6dcc4; font-size:11.5px; line-height:1.4; }
+.arena-registro li + li { margin-top:3px; }
+.arena-registro .registro-jugador { border-left-color:#4fc35e; }
+.arena-registro .registro-rival { border-left-color:#e8664a; }
+.arena-registro .registro-sistema { border-left-color:#e8c873; color:#f3e4b8; font-weight:bold; }
+.arena-registro .registro-separador { padding:6px 0 0; border:0; color:var(--acento); font-size:10px; font-weight:bold; letter-spacing:2px; text-transform:uppercase; }
+.arena-registro .fuerte { color:#ffe08a; }
+.arena-registro .ko { color:#ff9f86; font-weight:bold; }
+.arena-registro .evolucion { border-left-color:#c69bff; color:#e2d4ff; font-weight:bold; }
+.arena-registro .estado { color:#f0d7a8; }
+
+/* Final: sello, resumen, mejor de tu equipo y botones. */
+.arena-final { display:flex; flex-direction:column; align-items:flex-start; gap:7px; }
+.final-sello { padding:3px 10px; border:3px solid var(--borde); background:#e8c873; color:#1d1406; font-size:13px; font-weight:900; letter-spacing:2px; text-transform:uppercase; animation:final-sello .4s steps(4) both; }
+.arena-final[data-resultado="derrota"] .final-sello { background:#5b6b63; color:white; }
+.arena-final h3 { margin:2px 0; color:var(--texto); font-size:18px; text-transform:uppercase; }
+.arena-final p { margin:0; color:var(--suave); font-size:12px; }
+.final-mvp { display:flex; align-items:center; gap:10px; margin:4px 0; padding:6px 10px 6px 6px; border:3px solid var(--borde); background:#2a2116; }
+.final-mvp img { width:48px; height:48px; object-fit:contain; image-rendering:pixelated; }
+.final-mvp small { display:block; color:var(--acento); font-size:9.5px; font-weight:bold; letter-spacing:1px; text-transform:uppercase; }
+.final-mvp strong { display:block; color:var(--texto); text-transform:uppercase; }
+.final-mvp span span { color:var(--suave); font-size:11px; }
+.arena-final .final-consejo { padding:8px 10px; border-left:4px solid #e8c873; background:#e8c8731a; color:#f3e4b8; line-height:1.45; }
+.final-botones { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+.final-botones button { padding:8px 12px; border:3px solid var(--borde); background:#2a2116; box-shadow:3px 3px 0 var(--borde); color:var(--texto); font-size:12px; font-weight:bold; text-transform:uppercase; }
+.final-botones button:hover { background:#3a2e1f; }
+.final-botones button:active { box-shadow:none; transform:translate(3px,3px); }
+.final-botones .final-principal { background:var(--acento); color:#143e2d; }
+
+/* =============================================================================
+   PANTALLA COMPLETA (#simulacro.en-pantalla-completa): solo la arena. El lienzo llena la pantalla (16:9)
+   y encima flotan los marcadores (arriba, uno en cada esquina), la barra (arriba, en el centro) y el mando
+   (abajo). El registro se oculta y el mando desaparece mientras se anima el turno. Si el navegador no
+   tiene pantalla completa, la ventana ocupa toda la del navegador con el mismo aspecto.
+   ============================================================================= */
+.batalla-modal:has(.en-pantalla-completa) { width:100%; height:100%; max-height:100%; padding:0; overflow:hidden; }
+.simulacro.en-pantalla-completa { position:relative; width:100%; height:100%; overflow:hidden; border:0; background:#000; box-shadow:none; animation:none; }
+.simulacro::backdrop { background:#000; }
+.en-pantalla-completa .arena-cuerpo { position:absolute; inset:0; display:block; padding:0; }
+.en-pantalla-completa .arena-principal, .en-pantalla-completa .arena-lateral { display:contents; }
+.en-pantalla-completa .arena-lienzo-marco { position:absolute; inset:0; align-items:center; padding:0; border:0; background:#000; box-shadow:none; }
+.en-pantalla-completa .arena-lienzo { width:min(100%,calc(100vh * 16 / 9)); width:min(100%,calc(100dvh * 16 / 9)); max-width:none; }
+.en-pantalla-completa .arena-marcadores { position:absolute; top:12px; right:12px; left:12px; z-index:2; display:flex; justify-content:space-between; align-items:flex-start; pointer-events:none; }
+.en-pantalla-completa .hud { width:min(380px,calc(50% - 150px)); min-width:200px; background:#1b160fdb; box-shadow:inset 0 0 0 2px var(--madera),4px 4px 0 #0008; pointer-events:auto; }
+.en-pantalla-completa .arena-vs, .en-pantalla-completa .arena-titulo, .en-pantalla-completa .arena-registro-marco { display:none; }
+.en-pantalla-completa .arena-barra { position:absolute; top:12px; left:50%; z-index:3; flex-wrap:nowrap; gap:8px; padding:6px; border:3px solid var(--borde); background:#1b160fdb; white-space:nowrap; translate:-50% 0; }
+.en-pantalla-completa .arena-turno { margin-left:0; }
+.en-pantalla-completa .arena-mando { position:absolute; bottom:12px; left:50%; z-index:2; width:min(1000px,calc(100% - 24px)); max-height:48%; overflow:auto; background:#1b160fe6; box-shadow:inset 0 0 0 2px var(--madera),4px 4px 0 #0008; translate:-50% 0; transition:opacity .25s,translate .25s; }
+.en-pantalla-completa .arena-mando[data-fase="animando"] { opacity:0; pointer-events:none; translate:-50% 20px; }
+.en-pantalla-completa .arena-mando[data-fase="final"] { width:min(620px,calc(100% - 24px)); }
+.en-pantalla-completa .mando-movimientos { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.en-pantalla-completa .mando-acciones, .en-pantalla-completa .mando-equipo { grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+.en-pantalla-completa .accion-ataque { min-height:62px; }
+.en-pantalla-completa .accion-ataque strong { font-size:15px; }
+.en-pantalla-completa .arena-bocadillo { top:140px; }
+
+@keyframes arcoiris { to { background-position:-200% 0; } }
+@keyframes destello-boton { 0% { left:-40%; } 60%,100% { left:120%; } }
+@keyframes ventana-aparece { from { opacity:0; transform:scale(.92); } }
+@keyframes parpadeo-texto { 50% { opacity:.35; } }
+@keyframes final-sello { from { opacity:0; transform:scale(2); } }
+
+/* Ventanas estrechas: el lienzo ocupa todo el ancho y el mando va debajo (aquí la ventana sí se desplaza). */
+@media (max-width:860px) {
+  .arena-cuerpo { grid-template-columns:minmax(0,1fr); }
+  .arena-lienzo { max-width:none; }
+  .arena-registro-marco { flex:none; max-height:220px; }
+}
+
+@media (max-width:700px) {
+  .en-pantalla-completa .hud { width:calc(50% - 6px); min-width:0; }
+  .en-pantalla-completa .arena-marcadores { top:56px; right:6px; left:6px; } /* debajo de la barra */
+  .en-pantalla-completa .arena-barra { top:8px; gap:5px; padding:4px; font-size:10px; }
+  .en-pantalla-completa .arena-barra button { padding:4px 7px; font-size:10px; }
+  .en-pantalla-completa .arena-bocadillo { top:200px; }
+  .arena-clima span { display:none; }
+  .arena-sonido { width:28px; height:26px; font-size:12px; }
+  .arena-bocadillo { max-width:70%; padding:6px 9px; font-size:11px; }
+  .hud-energia { min-width:0; }
+  .en-pantalla-completa .mando-movimientos, .en-pantalla-completa .mando-acciones, .en-pantalla-completa .mando-equipo { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .en-pantalla-completa .mando-movimientos .accion-ataque { grid-template-columns:1fr; }
+  .en-pantalla-completa .mando-movimientos .accion-ataque .accion-icono { display:none; }
+  .en-pantalla-completa .mando-movimientos .accion-ataque small { grid-column:1; }
+  .en-pantalla-completa .mando-movimientos .accion-rasgos { left:8px; }
+  .en-pantalla-completa .opcion-luchador small { display:none; }
+  .batalla-modal { width:100%; max-height:100%; padding:4px; }
+  .simulacro { border-width:3px; box-shadow:0 0 0 3px #d8c49a; }
+  .arena-barra { flex-wrap:wrap; gap:6px 10px; padding:6px 8px; font-size:11px; }
+  .arena-cuerpo { gap:8px; padding:8px; }
+  .arena-marcadores { gap:5px; }
+  .arena-vs { width:30px; height:30px; font-size:12px; }
+  .hud { padding:5px 6px; }
+  .hud-nombre { font-size:12px; }
+  .hud-tipo { font-size:8px; }
+  .ficha-mini { width:22px; height:22px; border-width:1px; }
+  .ficha-mini img { width:20px; height:20px; }
+}
+
+/* Teléfono en vertical: el campo sube justo debajo de los marcadores y el mando queda debajo de él. */
+@media (max-width:700px) and (orientation:portrait) {
+  .en-pantalla-completa .arena-lienzo-marco { align-items:flex-start; padding-top:196px; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .simulacro, .arena-aviso, .mando-espera::after, .final-sello, .hud-energia.llena b, .hud-energia.llena > i > i,
+  .accion-evolucionar::before, .evolucion-destello { animation:none; }
+  .arena-bocadillo { transition:none; }
+  .en-pantalla-completa .arena-mando { transition:none; }
+}

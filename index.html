@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#06110c">
+  <title>Mundo Pokémon | Explora, combate y descubre</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/icono.svg">
+  <!-- Estilos: primero la base común y después uno por cada parte de la página. -->
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/portada.css">
+  <link rel="stylesheet" href="/static/css/habitats.css">
+  <link rel="stylesheet" href="/static/css/categorias.css">
+  <link rel="stylesheet" href="/static/css/legendarios.css">
+  <link rel="stylesheet" href="/static/css/pokedex.css">
+  <link rel="stylesheet" href="/static/css/ficha.css">
+  <link rel="stylesheet" href="/static/css/duelo.css">
+  <link rel="stylesheet" href="/static/css/equipo.css">
+  <link rel="stylesheet" href="/static/css/simulacro.css">
+  <link rel="stylesheet" href="/static/css/quien.css">
+  <link rel="stylesheet" href="/static/css/novedades.css">
+  <!-- Módulo de entrada: importa y arranca cada sección (ver static/js/main.js). -->
+  <script type="module" src="/static/js/main.js"></script>
+</head>
+<body data-vista="inicio" data-mundo> <!-- vistas.js los cambia; de entrada, Inicio (evita un destello claro) -->
+  <!-- Fondo continuo de las vistas «del mundo» (Inicio y Categorías): una capa fija detrás de toda la página.
+       Su luz cambia de color poco a poco según lo que estás viendo (static/js/mundo.js): sin cortes entre bandas. -->
+  <div class="mundo-fondo" aria-hidden="true"><span class="mundo-esporas"></span></div>
+
+  <header>
+    <div class="wrap nav">
+      <a class="logo" href="#inicio"><span class="logo-icon" aria-hidden="true"></span><span class="logo-texto">Mundo <b>Pokémon</b><span class="logo-punto">.</span></span><small class="brand-note">EXPLORA · COMBATE · DESCUBRE</small></a>
+      <nav aria-label="Navegación principal">
+        <a href="#inicio">Inicio</a>
+        <a href="#categorias">Categorías</a>
+        <a href="#legendarios">Legendarios</a>
+        <a href="#catalogo">Pokédex</a>
+        <a href="#duelo">Duelo Pokémon</a>
+        <a href="#quien">¿Quién es?</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div id="volver-inicio" class="wrap volver-inicio" hidden>
+      <a href="#inicio">← Volver al inicio</a>
+      <span>MUNDO POKÉMON / EXPLORACIÓN</span>
+    </div>
+
+    <!-- VISTA: Inicio («Mundo Pokémon»). Cinco partes sin fondo propio: todas se ven sobre .mundo-fondo, y cada
+         una dice con data-luz qué luz quiere (static/js/mundo.js la funde con la anterior al llegar a ella).
+           1. Héroe: buscador y Pokémon destacado que rota (static/js/portada.js)
+           2. Caminos: Legendarios, tipos, Pokédex y ¿Quién es? (static/js/guia.js)
+           3. Duelo en vivo: combate de muestra, novedades, tu equipo y las 6 arenas (static/js/novedades.js)
+           4. Pokémon del día y 5. regiones (static/js/guia.js) -->
+    <div id="inicio" class="mundo">
+      <section class="hero" data-luz="#5f9b60 #8fbf5e" aria-labelledby="hero-titulo">
+        <div class="wrap hero-inner">
+          <div class="hero-texto">
+            <!-- El Inicio sigue la hora del día (MOMENTOS_DEL_DIA en datos.js): portada.js cambia el título, el relato,
+                 el cielo y los Pokémon del altar. Los botones del reloj enseñan cómo es en otro momento. -->
+            <div class="hero-reloj">
+              <span class="hero-hora" id="hero-hora">--:--</span>
+              <span class="hero-momento" id="hero-momento">El mundo Pokémon</span>
+              <span class="hero-momentos" id="hero-momentos" role="group" aria-label="Ver cómo es el mundo en otro momento del día"></span>
+            </div>
+            <h1 id="hero-titulo" class="hero-cambia">Un mundo por <em>descubrir.</em></h1>
+            <p id="hero-relato" class="hero-relato hero-cambia">Busca cualquiera de las 1025 especies y descubre su historia.</p>
+            <form class="hero-busqueda" id="busqueda-inicio" role="search">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+              <input id="pokemon-inicio" aria-label="Nombre o número del Pokémon" placeholder="Nombre en inglés o número" autocomplete="off" required>
+              <button type="submit">Buscar</button>
+            </form>
+            <div class="hero-sugerencias" id="hero-sugerencias"><span>Prueba con</span></div>
+            <dl class="hero-cifras">
+              <div><dt>Especies</dt><dd data-total-especies>1025</dd></div>
+              <div><dt>Tipos</dt><dd>18</dd></div>
+              <div><dt>Leyendas</dt><dd>71</dd></div>
+              <div><dt>Regiones</dt><dd>9</dd></div>
+            </dl>
+          </div>
+
+          <div class="hero-escena" id="hero-escena">
+            <span class="hero-marca-agua" id="hero-marca" aria-hidden="true">001</span>
+            <div class="hero-altar">
+              <span class="hero-halo" aria-hidden="true"></span>
+              <span class="hero-runas" aria-hidden="true"></span>
+              <span class="hero-orbita" aria-hidden="true"></span>
+              <span class="hero-suelo" aria-hidden="true"></span>
+              <img id="hero-pokemon" alt="">
+            </div>
+            <div class="hero-tarjeta" id="hero-tarjeta">
+              <small id="hero-numero">N.º ---</small>
+              <strong id="hero-nombre">&nbsp;</strong>
+              <span class="hero-tipos" id="hero-tipos"></span>
+              <button type="button" class="hero-ver-ficha" id="hero-ver-ficha">Ver ficha <span aria-hidden="true">↗</span></button>
+            </div>
+            <div class="hero-miniaturas" id="hero-miniaturas" role="group" aria-label="Elegir Pokémon destacado"></div>
+          </div>
+        </div>
+        <div class="hero-cinta" aria-hidden="true"><div class="hero-cinta-pista" id="hero-cinta"></div></div>
+      </section>
+
+      <section class="wrap mundo-bloque caminos" data-luz="#8fbf5e #c9a64a" aria-labelledby="caminos-titulo">
+        <div class="mundo-cabecera">
+          <span class="mundo-sello">✦ Explora</span>
+          <h2 id="caminos-titulo">Elige tu <em>camino.</em></h2>
+          <p>Cada rincón del mundo tiene su propia luz: el santuario de las leyendas, los dieciocho tipos, la Pokédex completa y un juego para poner a prueba tu memoria.</p>
+        </div>
+
+        <div class="caminos-rejilla">
+          <a class="camino camino-leyendas" href="#legendarios">
+            <span class="camino-estrellas" aria-hidden="true"></span>
+            <span class="camino-sello">Santuario</span>
+            <strong>Un poder <em>legendario.</em></strong>
+            <p>Dominan el tiempo, el espacio, los mares y los cielos. Conoce a las leyendas que dieron forma al mundo Pokémon.</p>
+            <span class="camino-dato"><b>71</b> leyendas · 28 linajes</span>
+            <span class="leyendas-altar" aria-hidden="true">
+              <span class="leyendas-altar-runas"></span>
+              <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/249.png" alt="" loading="lazy">
+              <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/384.png" alt="" loading="lazy">
+              <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/483.png" alt="" loading="lazy">
+            </span>
+            <span class="camino-flecha" aria-hidden="true">↗</span>
+          </a>
+
+          <article class="camino camino-tipos">
+            <div class="camino-tipos-cabecera">
+              <div>
+                <span class="camino-sello">18 tipos</span>
+                <strong>Cada tipo, <em>su hábitat.</em></strong>
+              </div>
+              <a class="camino-enlace" href="#categorias">Ver categorías <span aria-hidden="true">↗</span></a>
+            </div>
+            <div class="camino-tipos-lista" id="guia-tipos" role="group" aria-label="Ver los Pokémon de un tipo"></div>
+          </article>
+
+          <a class="camino camino-pokedex" href="#catalogo">
+            <span class="camino-sello">El archivo</span>
+            <strong class="camino-cifra" data-total-especies>1025</strong>
+            <p>especies en la Pokédex nacional, con buscador y filtros por región y tipo.</p>
+            <span class="pokedex-estante" id="pokedex-estante" aria-hidden="true"></span>
+            <span class="camino-flecha" aria-hidden="true">↗</span>
+          </a>
+
+          <a class="camino camino-quien" href="#quien">
+            <span class="camino-sello">Juego</span>
+            <strong>¿Quién es <em>ese Pokémon?</em></strong>
+            <p>Adivina la silueta. Pasa el ratón por encima si te rindes…</p>
+            <span class="camino-dato" id="novedades-racha">Clásico, contrarreloj y experto</span>
+            <img id="novedades-silueta" class="camino-silueta" alt="" loading="lazy">
+            <span class="camino-flecha" aria-hidden="true">↗</span>
+          </a>
+        </div>
+      </section>
+
+      <!-- Duelo en vivo: dos Pokémon se atacan con sus movimientos reales en la arena pixelada (novedades.js) -->
+      <section id="novedades" class="wrap mundo-bloque inicio-novedades" data-luz="#ff8f4d #b8562a" aria-labelledby="novedades-titulo">
+        <div class="novedades-escaparate">
+          <figure class="novedades-muestra">
+            <div class="novedades-lienzo-marco">
+              <canvas id="novedades-lienzo" class="novedades-lienzo" aria-label="Combate de muestra en vivo"></canvas>
+              <span class="novedades-en-vivo"><i aria-hidden="true"></i>En vivo</span>
+              <span class="novedades-arena-nombre" id="novedades-arena-nombre">Bosque antiguo</span>
+            </div>
+            <figcaption class="novedades-rotulo" id="novedades-rotulo" aria-live="off">Un combate de muestra, con movimientos reales</figcaption>
+          </figure>
+
+          <div class="novedades-texto">
+            <span class="mundo-sello">⚔ Duelo Pokémon</span>
+            <h2 id="novedades-titulo">Ahora también puedes <em>combatir.</em></h2>
+            <p>Arma tu equipo y lánzate a combates por turnos en arenas pixeladas, con los movimientos reales de cada Pokémon.</p>
+            <ul class="novedades-lista" id="novedades-lista"></ul>
+            <div class="novedades-acciones">
+              <a class="novedades-boton" href="#duelo">Ir al Duelo Pokémon <span aria-hidden="true">→</span></a>
+              <a class="novedades-mi-equipo" href="#duelo" aria-label="Tu equipo para el Duelo">
+                <span class="novedades-equipo" id="novedades-equipo"></span>
+                <small id="novedades-record">Añádelos desde su ficha</small>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div class="novedades-arenas-cabecera">
+          <span class="mundo-sello">Elige dónde luchar</span>
+          <p>Pulsa una arena y el Duelo se abrirá con ella preparada.</p>
+        </div>
+        <div class="novedades-arenas" id="novedades-arenas"></div>
+      </section>
+
+      <section class="wrap mundo-bloque del-dia-bloque" id="del-dia-bloque" data-luz="#8fbf5e #5f9b60" aria-label="Pokémon del día">
+        <article class="del-dia cargando" id="pokemon-del-dia" aria-live="polite" aria-busy="true">
+          <div class="del-dia-arte esqueleto"></div>
+          <div class="del-dia-info">
+            <span class="linea-esqueleto corta"></span>
+            <span class="linea-esqueleto titulo"></span>
+            <span class="linea-esqueleto"></span>
+            <span class="linea-esqueleto"></span>
+            <span class="linea-esqueleto media"></span>
+          </div>
+        </article>
+      </section>
+
+      <section class="wrap mundo-bloque regiones" data-luz="#4f7fc4 #8fbf5e" aria-labelledby="regiones-titulo">
+        <div class="mundo-cabecera">
+          <span class="mundo-sello">✦ El viaje</span>
+          <h2 id="regiones-titulo">Nueve regiones, <em>un solo mundo.</em></h2>
+          <p>De Kanto a Paldea. Elige una y verás todos sus Pokémon en la Pokédex.</p>
+        </div>
+        <div class="regiones-ruta" id="guia-regiones"></div>
+      </section>
+    </div>
+
+    <!-- VISTA: Categorías, «la rueda de los tipos» (static/js/categorias.js). Vista «del mundo»: sin fondo propio,
+         sobre el fondo continuo, cuya luz toma el color del tipo elegido. Los 18 tipos en círculo alrededor de un
+         portal con el hábitat animado del elegido, que vuela al centro; los radios lo unen con los tipos contra los que
+         es fuerte (lima) y con los que lo vencen (rojo). Al lado, su perfil; debajo, la tabla 18×18 plegada. -->
+    <section id="categorias" class="mundo categorias" data-luz="#d8703c #d8703c" aria-labelledby="categorias-titulo">
+      <div class="wrap mundo-bloque categorias-bloque">
+        <div class="mundo-cabecera">
+          <span class="mundo-sello">✦ Los 18 tipos</span>
+          <h2 id="categorias-titulo">Cada tipo, <em>un mundo.</em></h2>
+          <p>Elige un tipo en la rueda: verás su hábitat, contra quién es fuerte, a quién teme y sus Pokémon más conocidos.</p>
+        </div>
+
+        <div class="rueda-bloque">
+          <div class="rueda-marco">
+            <div class="rueda" id="rueda-tipos" role="group" aria-label="Los 18 tipos (usa las flechas para cambiar)"></div>
+            <ul class="rueda-leyenda" aria-hidden="true">
+              <li class="leyenda-fuerte"><i></i><span id="leyenda-fuerte">Es fuerte contra</span></li>
+              <li class="leyenda-debil"><i></i><span id="leyenda-debil">Es débil ante</span></li>
+            </ul>
+            <p class="rueda-pista">Pulsa cualquier tipo para llevarlo al centro.</p>
+          </div>
+          <article class="tipo-perfil" id="tipo-perfil" aria-live="polite"></article>
+        </div>
+
+        <details class="tabla-tipos-bloque">
+          <summary>
+            <span class="tabla-resumen">
+              <span class="mundo-sello">✦ Tabla de efectividad</span>
+              <strong>¿Quién vence a quién? <em>Los 324 cruces.</em></strong>
+              <small>Filas: tipo del ataque · Columnas: tipo del Pokémon que lo recibe. Pulsa un tipo para verlo en la rueda.</small>
+            </span>
+            <span class="tabla-abrir" aria-hidden="true">+</span>
+          </summary>
+          <ul class="tabla-leyenda">
+            <li><b class="x2">2</b> Súper eficaz</li>
+            <li><b class="x05">½</b> Poco eficaz</li>
+            <li><b class="x0">0</b> Sin efecto</li>
+          </ul>
+          <div class="tabla-tipos-marco"><table class="tabla-tipos" id="tabla-tipos"></table></div>
+        </details>
+      </div>
+    </section>
+
+    <!-- VISTA: Legendarios. La leyenda destacada, los filtros y las cartas los crea static/js/legendarios.js -->
+    <section id="legendarios" class="leyendas">
+      <div class="leyendas-cielo" aria-hidden="true"><span class="estrella-fugaz"></span><span class="estrella-fugaz"></span></div>
+
+      <div class="wrap leyendas-portada">
+        <div class="leyendas-texto">
+          <span class="leyendas-kicker">✦ Santuario de las leyendas</span>
+          <h2>Un poder <em>legendario.</em></h2>
+          <p>Dominan el tiempo, el espacio, los mares y los cielos. Conoce a las 71 leyendas cuyo poder dio forma al mundo Pokémon.</p>
+
+          <article class="destacada" id="leyenda-destacada" aria-live="polite">
+            <span class="destacada-etiqueta">Leyenda destacada</span>
+            <span class="destacada-grupo" id="destacada-grupo"></span>
+            <h3 id="destacada-nombre"></h3>
+            <span class="destacada-especie" id="destacada-especie"></span>
+            <span class="leyenda-tipos" id="destacada-tipos"></span>
+            <span class="leyenda-poder destacada-poder"><small>Poder</small><i><b id="destacada-barra"></b></i><strong id="destacada-poder"></strong></span>
+            <p class="destacada-descripcion" id="destacada-descripcion"></p>
+            <div class="destacada-controles">
+              <button type="button" class="destacada-flecha" id="destacada-anterior" aria-label="Leyenda anterior">‹</button>
+              <button type="button" class="destacada-ver" id="destacada-ver">Ver ficha <span aria-hidden="true">↗</span></button>
+              <button type="button" class="destacada-flecha" id="destacada-siguiente" aria-label="Leyenda siguiente">›</button>
+              <span class="destacada-contador" id="destacada-contador"></span>
+            </div>
+          </article>
+        </div>
+
+        <div class="altar" aria-hidden="true">
+          <span class="altar-runas"></span>
+          <span class="altar-anillo"></span>
+          <span class="altar-joyas"><i></i><i></i><i></i><i></i></span>
+          <span class="altar-aura"></span>
+          <img id="destacada-imagen" alt="">
+        </div>
+      </div>
+
+      <dl class="wrap leyendas-cifras">
+        <div><dt>Leyendas</dt><dd id="cifra-leyendas">71</dd></div>
+        <div><dt>Regiones</dt><dd>9</dd></div>
+        <div><dt>Linajes</dt><dd id="cifra-grupos">28</dd></div>
+        <div><dt>Poder máximo</dt><dd id="cifra-poder">690</dd></div>
+      </dl>
+
+      <div class="wrap leyendas-archivo">
+        <div class="leyendas-archivo-cabecera">
+          <div>
+            <span class="leyendas-kicker">✧ El salón de las leyendas</span>
+            <h3>Una colección extraordinaria</h3>
+          </div>
+          <div class="leyendas-filtros" id="leyendas-filtros" role="group" aria-label="Filtrar por generación"></div>
+        </div>
+        <div id="lista-legendarios" class="leyendas-rejilla"></div>
+        <div class="leyendas-mas"><button type="button" id="leyendas-ver-mas" class="leyendas-ver-mas">Ver más <small></small> <span aria-hidden="true">↓</span></button></div>
+      </div>
+    </section>
+
+    <!-- VISTA: Pokédex, «el escáner» (azul eléctrico oscuro). A la izquierda, la pantalla holográfica que lee el registro
+         del Pokémon pulsado (static/js/escaner.js); a la derecha, el archivo de las 1025 especies con buscador y filtros
+         (static/js/catalogo.js con los datos de /api/pokedex). -->
+    <section id="catalogo" class="pokedex" aria-labelledby="pokedex-titulo">
+      <div class="pokedex-fondo" aria-hidden="true"></div>
+
+      <div class="wrap pokedex-cabecera">
+        <div>
+          <span class="pokedex-kicker">✦ Pokédex nacional</span>
+          <h2 id="pokedex-titulo">Cada especie, <em>registrada.</em></h2>
+          <p>De Bulbasaur a Pecharunt. Pulsa cualquier Pokémon del archivo y el escáner leerá su registro: su descripción, sus medidas, sus estadísticas y su grito.</p>
+        </div>
+        <dl class="pokedex-cifras">
+          <div><dt>Especies</dt><dd data-total-especies>1025</dd></div>
+          <div><dt>Regiones</dt><dd>9</dd></div>
+          <div class="pokedex-vistos">
+            <dt>Vistos por ti</dt>
+            <dd><span id="pokedex-vistos">0</span><small> / <span data-total-especies>1025</span></small></dd>
+            <span class="pokedex-vistos-barra" aria-hidden="true"><b id="pokedex-vistos-barra"></b></span>
+          </div>
+        </dl>
+      </div>
+
+      <div class="wrap pokedex-cuerpo">
+        <!-- El escáner (static/js/escaner.js): la barra con la lente, la pantalla holográfica, el registro y los controles -->
+        <aside class="escaner" id="escaner" aria-label="Escáner de la Pokédex">
+          <div class="escaner-barra">
+            <span class="escaner-lente" aria-hidden="true"></span>
+            <span class="escaner-luces" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="escaner-registro" id="escaner-registro">Preparando el escáner…</span>
+            <button type="button" class="escaner-grito" id="escaner-grito" title="Escuchar su grito" aria-label="Escuchar su grito" disabled>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>
+            </button>
+          </div>
+          <div class="escaner-pantalla" id="escaner-pantalla">
+            <span class="escaner-suelo" aria-hidden="true"></span>
+            <span class="escaner-haz" aria-hidden="true"></span>
+            <span class="escaner-numero" id="escaner-numero" aria-hidden="true"></span>
+            <img id="escaner-imagen" alt="">
+            <span class="escaner-barrido" aria-hidden="true"></span>
+          </div>
+          <div class="escaner-datos" id="escaner-datos" aria-live="polite"></div>
+          <div class="escaner-controles">
+            <button type="button" class="escaner-paso" id="escaner-anterior" aria-label="Escanear el anterior de la lista">‹</button>
+            <button type="button" class="escaner-azar" id="escaner-azar">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg>
+              Al azar
+            </button>
+            <button type="button" class="escaner-paso" id="escaner-siguiente" aria-label="Escanear el siguiente de la lista">›</button>
+            <button type="button" class="escaner-ficha" id="escaner-ficha">Ficha completa <span aria-hidden="true">↗</span></button>
+          </div>
+        </aside>
+
+        <!-- El archivo: buscador, filtros y tarjetas (static/js/catalogo.js) -->
+        <div class="pokedex-archivo">
+          <div class="pokedex-panel">
+            <div class="pokedex-fila">
+              <label class="pokedex-busqueda">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+                <input id="pokedex-buscar" type="search" placeholder="Busca por nombre o número…" autocomplete="off" aria-label="Buscar en la Pokédex por nombre o número">
+              </label>
+              <label class="pokedex-orden">
+                <span>Orden</span>
+                <select id="pokedex-orden">
+                  <option value="numero">Número ↑</option>
+                  <option value="numero-desc">Número ↓</option>
+                  <option value="nombre">Nombre A–Z</option>
+                  <option value="nombre-desc">Nombre Z–A</option>
+                </select>
+              </label>
+            </div>
+            <div class="pokedex-filtro" id="pokedex-regiones" role="group" aria-label="Filtrar por región"></div>
+            <div class="pokedex-filtro pokedex-filtro-tipos" id="pokedex-tipos" role="group" aria-label="Filtrar por tipo"></div>
+          </div>
+
+          <div class="pokedex-resumen">
+            <p id="estado-catalogo" role="status">Preparando la Pokédex...</p>
+            <button type="button" id="pokedex-limpiar" class="pokedex-limpiar" hidden>Quitar filtros ✕</button>
+          </div>
+          <div id="lista-catalogo" class="pokemon-grid"></div>
+          <div class="pokedex-vacio" id="pokedex-vacio" hidden>
+            <p>No hay especies que coincidan. Prueba con otro nombre o quita algún filtro.</p>
+            <div class="pokedex-vacio-acciones">
+              <button type="button" id="pokedex-buscar-api" hidden></button>
+              <button type="button" id="pokedex-vacio-limpiar">Quitar filtros</button>
+            </div>
+            <small>Las formas especiales (Mega, Alola, Gigamax…) no están en la lista: búscalas en PokéAPI por su nombre en inglés, por ejemplo «charizard-mega-x».</small>
+          </div>
+          <div class="pokedex-mas"><button type="button" id="mas-catalogo" class="pokedex-boton-mas" hidden>Ver más ↓</button></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VISTA: Duelo Pokémon. Mismo lenguaje que Legendarios (oscuro, serifa, líneas finas) con su propia paleta:
+         verde bosque casi negro y brasa (static/css/duelo.css). Arriba, la maqueta 3D de la arena (escenario elegido,
+         tus Pokémon y un rival misterioso) y tu récord. Tres pasos que maneja static/js/duelo.js: 1) configurar la
+         batalla (modo, dificultad y escenario), 2) elegir tus Pokémon o tu luchador (cinturón, buscador y análisis:
+         static/js/equipo.js) y 3) combatir (la batalla se abre en #batalla-ventana: static/js/simulacro.js) -->
+    <section id="duelo" class="duelo">
+      <div class="duelo-brasas" aria-hidden="true"></div>
+
+      <div class="wrap duelo-portada">
+        <div class="duelo-texto">
+          <span class="duelo-kicker">⚔ Arena de batalla</span>
+          <h2>Duelo <em>Pokémon.</em></h2>
+          <p>Elige el campo, el rival y a tus Pokémon, y lánzate a un combate por turnos en una arena pixelada vista desde arriba.</p>
+          <ol class="duelo-pasos" id="duelo-pasos" aria-label="Pasos del duelo">
+            <li><button type="button" data-paso="1"><b aria-hidden="true">I</b><span>Configura la batalla</span></button></li>
+            <li><button type="button" data-paso="2"><b aria-hidden="true">II</b><span id="duelo-nombre-paso-2">Elige tus Pokémon</span></button></li>
+            <li><button type="button" data-paso="3"><b aria-hidden="true">III</b><span>¡A combatir!</span></button></li>
+          </ol>
+        </div>
+
+        <figure class="duelo-escaparate" aria-hidden="true">
+          <div class="escaparate-plano">
+            <div class="escaparate-campo" id="duelo-cartel-fondo"></div>
+            <div class="escaparate-escena" id="duelo-cartel-escena"></div>
+          </div>
+          <figcaption class="escaparate-rotulo" id="duelo-cartel-rotulo"></figcaption>
+        </figure>
+      </div>
+
+      <dl class="wrap duelo-cifras" id="duelo-cifras">
+        <div><dt>Combates</dt><dd id="duelo-cifra-combates">0</dd></div>
+        <div><dt>Victorias</dt><dd id="duelo-cifra-victorias">0</dd></div>
+        <div><dt>Derrotas</dt><dd id="duelo-cifra-derrotas">0</dd></div>
+        <div><dt>De cada 100, ganas</dt><dd id="duelo-cifra-porcentaje">—</dd></div>
+      </dl>
+
+      <div class="wrap duelo-contenido">
+        <!-- Paso 1: modo, dificultad y escenario (los crea duelo.js) -->
+        <div class="duelo-paso" id="duelo-paso-1">
+          <div class="paso-cabecera">
+            <span class="duelo-kicker">✦ Paso I</span>
+            <h3>Configura la batalla</h3>
+            <p>Cómo será el enfrentamiento, lo duro que será el rival y dónde se celebra el combate.</p>
+          </div>
+          <div class="duelo-configuracion" id="duelo-configuracion"></div>
+          <div class="duelo-navegacion">
+            <button type="button" class="duelo-siguiente" id="duelo-a-equipo" data-ir="2">Siguiente: elige tus Pokémon →</button>
+          </div>
+        </div>
+
+        <!-- Paso 2: tu equipo o tu luchador (equipo.js) -->
+        <div class="duelo-paso" id="duelo-paso-2" hidden>
+          <div class="paso-cabecera equipo-cabecera">
+            <div>
+              <span class="duelo-kicker">✦ Paso II</span>
+              <h3 id="duelo-equipo-titulo">Elige tus Pokémon</h3>
+              <p id="duelo-equipo-texto">Hasta seis. Durante el combate podrás cambiarlos.</p>
+            </div>
+            <dl class="equipo-cifras">
+              <div><dt>Miembros</dt><dd id="equipo-miembros">0/6</dd></div>
+              <div><dt>Poder medio</dt><dd id="equipo-poder">—</dd></div>
+              <div><dt>Tipos que golpeas fuerte</dt><dd id="equipo-cobertura">—</dd></div>
+            </dl>
+          </div>
+
+          <div class="equipo-cinturon" id="equipo-cinturon" role="group" aria-label="Tus Pokémon"></div>
+
+          <div class="equipo-herramientas">
+            <div class="equipo-busqueda">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+              <input id="equipo-buscar" type="search" placeholder="Busca un Pokémon: nombre o número…" autocomplete="off" aria-label="Buscar un Pokémon para añadirlo" aria-controls="equipo-resultados">
+              <div class="equipo-resultados" id="equipo-resultados" hidden></div>
+            </div>
+            <button type="button" id="equipo-azar" class="equipo-boton">Completar al azar</button>
+            <button type="button" id="equipo-vaciar" class="equipo-boton secundario">Vaciar</button>
+            <p class="equipo-aviso" id="equipo-aviso" role="status"></p>
+          </div>
+
+          <details class="equipo-detalles">
+            <summary>Ver análisis por tipos <small>debilidades, tipos que golpeas fuerte, estadísticas y consejos</small></summary>
+            <div class="equipo-analisis" id="equipo-analisis"></div>
+          </details>
+
+          <div class="duelo-navegacion">
+            <button type="button" class="duelo-atras" data-ir="1">← Configuración</button>
+            <button type="button" class="duelo-siguiente" id="duelo-a-combate" data-ir="3">Siguiente: ¡a combatir! →</button>
+          </div>
+        </div>
+
+        <!-- Paso 3: resumen, pantalla completa e «Iniciar combate» (duelo.js) -->
+        <div class="duelo-paso" id="duelo-paso-3" hidden>
+          <div class="duelo-resumen" id="duelo-resumen"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VISTA: ¿Quién es ese Pokémon? El tablero y los controles los crea static/js/quien.js -->
+    <section id="quien" class="wrap section quien">
+      <div class="quien-cabecera">
+        <div>
+          <span class="eyebrow">Pon a prueba tu memoria</span>
+          <h2>¿Quién es ese Pokémon?</h2>
+          <p>Adivina el Pokémon por su silueta. Elige el modo y la región, pide pistas si te atascas y mantén la racha.</p>
+        </div>
+        <dl class="quien-cifras">
+          <div><dt>Puntos</dt><dd id="quien-puntos">0</dd></div>
+          <div><dt>Racha</dt><dd id="quien-racha">0</dd></div>
+          <div><dt>Mejor racha</dt><dd id="quien-mejor">0</dd></div>
+          <div><dt>Aciertos</dt><dd id="quien-aciertos">0/0</dd></div>
+        </dl>
+      </div>
+      <div class="quien-controles">
+        <div class="quien-modos" id="quien-modos" role="group" aria-label="Modo de juego"></div>
+        <div class="quien-regiones" id="quien-regiones" role="group" aria-label="Región"></div>
+      </div>
+      <div class="quien-juego" id="quien-juego"></div>
+    </section>
+
+  </main>
+
+  <!-- Ficha de un Pokémon: ventana modal que rellena static/js/ficha.js -->
+  <dialog id="ficha" class="ficha-modal" aria-label="Ficha del Pokémon">
+    <button id="cerrar-ficha" class="cerrar-ficha" type="button" aria-label="Cerrar ficha">✕</button>
+    <section id="resultado" class="detail" aria-label="Detalles del Pokémon" aria-live="polite"></section>
+  </dialog>
+
+  <!-- Arena de batalla: ventana emergente que rellena static/js/simulacro.js. El campo y los Pokémon se
+       dibujan en pixel art en un <canvas> (static/js/arena-pixel.js); las reglas están en combate.js -->
+  <dialog id="batalla-ventana" class="batalla-modal" aria-label="Arena de batalla">
+    <div id="simulacro" class="simulacro"></div>
+  </dialog>
+
+  <footer>
+    <div class="wrap footer-inner">
+      <span>Mundo Pokémon · Un proyecto para aprender</span>
+      <span id="estado-snapshot" role="status">Comprobando copia local…</span>
+      <span>Datos e imágenes de <a href="https://pokeapi.co/" target="_blank" rel="noopener noreferrer">PokéAPI</a></span>
+    </div>
+  </footer>
+</body>
+</html>

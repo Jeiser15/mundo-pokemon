@@ -1,0 +1,284 @@
+/* =============================================================================
+   INICIO — «Mundo Pokémon».
+   El fondo continuo, la cabecera y el pie oscuros y las piezas comunes (.mundo, .mundo-sello…) están en
+   base.css («MUNDO»): el Inicio no tiene fondo propio; cada parte pide su luz con data-luz (js/mundo.js).
+     2. Héroe: buscador, cifras y Pokémon destacado en su altar (js/portada.js) + cinta de tipos
+     3. Caminos: Legendarios, tipos, Pokédex y ¿Quién es? (js/guia.js)
+     4. Pokémon del día (js/guia.js)
+     5. Regiones (js/guia.js)
+   El Duelo en vivo (parte 3 del HTML) tiene su hoja: novedades.css.
+   Mismo lenguaje que Legendarios y el Duelo (oscuro, serifa, líneas finas, vidrio) en verde noche y lima.
+   ============================================================================= */
+
+/* Registradas para poder animar el cambio de color (de un destacado a otro, de un momento a otro). */
+@property --tipo-hero { syntax:'<color>'; inherits:true; initial-value:#5f9b60; }
+@property --tipo-dia { syntax:'<color>'; inherits:true; initial-value:#5f9b60; }
+@property --cielo { syntax:'<color>'; inherits:true; initial-value:#c9ed96; }
+
+/* --- 2. Héroe ------------------------------------------------------------------------------------ */
+/* El cielo del momento del día (--cielo, js/portada.js) tiñe la palabra en cursiva, un brillo tras el título y la luz
+   de abajo del fondo. Sin data-momento (antes de que cargue el JS) el título y el relato no se ven: así no cambian de golpe. */
+.hero { --intervalo-hero:5s; position:relative; isolation:isolate; transition:--tipo-hero .9s ease,--cielo 1.4s ease; }
+.hero::before { content:''; position:absolute; top:-90px; left:-12%; z-index:-1; width:62%; aspect-ratio:1.4; background:radial-gradient(closest-side,color-mix(in srgb,var(--cielo) 15%,transparent),transparent); pointer-events:none; }
+.hero-inner { display:grid; grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr); align-items:center; gap:56px; min-height:640px; padding:36px 0 40px; }
+
+.hero-texto { animation:entrada .8s ease both; }
+/* Reloj: la hora local, el momento y cinco botones para ver el mundo en otro momento (el de ahora lleva un punto) */
+.hero-reloj { display:inline-flex; align-items:center; gap:12px; padding:5px 5px 5px 18px; border:1px solid #ffffff26; border-radius:99px; background:#ffffff08; }
+.hero-hora { color:var(--crema); font-family:var(--serif); font-size:18px; font-variant-numeric:tabular-nums; }
+.hero-momento { padding-left:12px; border-left:1px solid #ffffff22; color:color-mix(in srgb,var(--cielo) 55%,#fff); font-size:10.5px; font-weight:800; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; }
+.hero-momentos { display:flex; gap:2px; padding:3px; border-radius:99px; background:#00000038; }
+.hero-momento-boton { position:relative; display:grid; place-items:center; width:31px; height:31px; padding:0; border:0; border-radius:50%; background:transparent; color:#a9b8a5; transition:background .25s,color .25s,box-shadow .25s; }
+.hero-momento-boton svg { width:15px; height:15px; }
+.hero-momento-boton:hover { background:#ffffff14; color:var(--crema); }
+.hero-momento-boton[aria-pressed="true"] { background:var(--cielo); color:#10180f; box-shadow:0 0 16px color-mix(in srgb,var(--cielo) 55%,transparent); }
+.hero-momento-boton.es-ahora::after { content:''; position:absolute; bottom:2px; left:50%; width:4px; height:4px; margin-left:-2px; border-radius:50%; background:var(--lima); }
+.hero-momento-boton.es-ahora[aria-pressed="true"]::after { background:#10180f; }
+
+.hero h1 { max-width:700px; margin:26px 0 20px; font-size:clamp(50px,5.8vw,92px); line-height:.98; letter-spacing:-2px; }
+.hero h1 em { display:block; padding-bottom:.16em; margin-bottom:-.16em; background-image:linear-gradient(90deg,color-mix(in srgb,var(--cielo) 28%,#fff),color-mix(in srgb,var(--cielo) 80%,#fff) 55%,var(--cielo)); }
+.hero-relato { max-width:520px; min-height:5.25em; margin:0; color:#c3cfbf; font-size:16.5px; line-height:1.75; } /* 3 líneas: no salta al cambiar de momento */
+/* Los Pokémon que nombra el relato: pasar por encima los sube al altar; pulsar abre su ficha */
+.hero-nombrado { padding:0; border:0; border-bottom:1px dashed color-mix(in srgb,var(--color-tipo) 75%,#fff); border-radius:3px 3px 0 0; background:none; color:color-mix(in srgb,var(--color-tipo) 40%,#fff); font:inherit; font-weight:bold; transition:color .2s,background .2s; }
+.hero-nombrado:hover, .hero-nombrado:focus-visible { border-bottom-style:solid; background:color-mix(in srgb,var(--color-tipo) 22%,transparent); box-shadow:0 0 0 3px color-mix(in srgb,var(--color-tipo) 22%,transparent); color:#fff; }
+.hero-cambia { transition:opacity .3s ease,translate .3s ease; }
+.hero-cambia.cambiando, .hero:not([data-momento]) .hero-cambia { opacity:0; translate:0 8px; }
+
+.hero-busqueda { display:flex; align-items:center; gap:10px; max-width:560px; margin-top:32px; padding:7px 7px 7px 20px; border:1px solid #ffffff24; border-radius:99px; background:#ffffff0b; box-shadow:inset 0 1px 0 #ffffff10,0 20px 50px #0000004d; transition:border-color .2s,box-shadow .2s; }
+.hero-busqueda:focus-within { border-color:var(--lima); box-shadow:0 0 0 4px #c9ed9626,0 20px 50px #0000004d; }
+.hero-busqueda svg { flex:none; width:20px; height:20px; color:#a9cfa0; }
+.hero-busqueda input { flex:1; min-width:0; padding:12px 4px; border:0; outline:none; background:transparent; color:#fff; font-size:15px; }
+.hero-busqueda input::placeholder { color:#93aa90; }
+.hero-busqueda button { padding:13px 26px; border:0; border-radius:99px; background:var(--lima); color:#14301f; font-weight:bold; transition:transform .2s,background .2s; }
+.hero-busqueda button:hover { transform:translateY(-2px); background:#dcf7b6; }
+
+.hero-sugerencias { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:14px; color:#8fa58c; font-size:11px; font-weight:bold; letter-spacing:.3px; }
+.hero-sugerencias > span { margin-right:2px; }
+.hero-sugerencias button { display:inline-flex; align-items:center; padding:2px 13px 2px 2px; border:1px solid #ffffff1c; border-radius:99px; background:#ffffff06; color:#e4eedb; font-size:12px; font-weight:bold; transition:border-color .2s,background .2s,transform .2s; }
+.hero-sugerencias button:hover { transform:translateY(-2px); border-color:var(--lima); background:#c9ed9612; }
+.hero-sugerencias img { width:36px; height:36px; margin:-6px -2px -6px -4px; }
+
+.hero-cifras { display:flex; margin:40px 0 0; padding-top:24px; border-top:1px solid; border-image:linear-gradient(90deg,#ffffff2b,transparent 90%) 1; }
+.hero-cifras div { display:flex; flex-direction:column-reverse; gap:4px; padding:0 30px; border-left:1px solid #ffffff17; }
+.hero-cifras div:first-child { padding-left:0; border-left:0; }
+.hero-cifras dd { margin:0; color:#e6f5cf; font-family:var(--serif); font-size:34px; line-height:1; }
+.hero-cifras dt { color:var(--apagado); font-size:9px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase; }
+
+/* El destacado: un altar en el color de su tipo (anillo de marcas, órbita, halo y su sombra) */
+.hero-escena { position:relative; display:grid; justify-items:center; gap:18px; animation:entrada 1s .15s ease both; }
+.hero-marca-agua { position:absolute; top:-6px; right:-6px; color:transparent; font-family:var(--serif); font-size:clamp(130px,14vw,220px); line-height:.8; letter-spacing:-4px; -webkit-text-stroke:1px color-mix(in srgb,var(--tipo-hero) 45%,#ffffff2e); opacity:.75; pointer-events:none; user-select:none; transition:opacity .3s ease; }
+.hero-altar { position:relative; display:grid; place-items:center; width:min(520px,100%); aspect-ratio:1; }
+.hero-altar > * { grid-area:1/1; }
+.hero-halo { width:80%; height:80%; border-radius:50%; background:radial-gradient(circle,color-mix(in srgb,var(--tipo-hero) 65%,#fff) 0,color-mix(in srgb,var(--tipo-hero) 42%,transparent) 30%,color-mix(in srgb,var(--tipo-hero) 12%,transparent) 55%,transparent 70%); animation:halo 5s ease-in-out infinite; }
+.hero-runas { width:100%; height:100%; border-radius:50%; background:repeating-conic-gradient(color-mix(in srgb,var(--tipo-hero) 50%,#ffffffd0) 0 .7deg,transparent .7deg 6deg); mask:radial-gradient(circle,transparent 64%,#000 65%,#000 67.5%,transparent 68.5%); opacity:.55; animation:anillo 90s linear infinite; }
+.hero-orbita { position:relative; width:84%; height:84%; border:1px solid color-mix(in srgb,var(--tipo-hero) 40%,#ffffff20); border-radius:50%; box-shadow:0 0 0 12px #ffffff04,inset 0 0 60px color-mix(in srgb,var(--tipo-hero) 14%,transparent); animation:anillo 40s linear infinite; }
+.hero-orbita::before { content:''; position:absolute; inset:9%; border:1.5px dashed color-mix(in srgb,var(--tipo-hero) 45%,#ffffff2a); border-radius:50%; animation:anillo 30s linear infinite reverse; }
+.hero-orbita::after { content:''; position:absolute; top:13%; left:13%; width:9px; height:9px; border-radius:50%; background:var(--lima); box-shadow:0 0 14px var(--lima); }
+.hero-suelo { align-self:end; width:50%; height:8%; margin-bottom:10%; border-radius:50%; background:radial-gradient(closest-side,#000000b0,transparent); animation:sombra 3.5s ease-in-out infinite; }
+.hero-altar img { position:relative; width:76%; max-width:none; filter:drop-shadow(0 0 30px color-mix(in srgb,var(--tipo-hero) 50%,transparent)) drop-shadow(0 22px 18px #000000a0); animation:flotar 3.5s ease-in-out infinite; transition:opacity .3s ease,transform .3s ease; }
+.hero-altar img.cambiando { opacity:0; transform:translateY(10px) scale(.94); }
+.hero-altar img:not([src]) { visibility:hidden; }
+
+.hero-tarjeta { position:absolute; right:-4px; bottom:100px; z-index:2; display:grid; justify-items:start; gap:6px; min-width:210px; padding:16px 20px 18px; border:1px solid color-mix(in srgb,var(--tipo-hero) 45%,#ffffff1f); border-radius:18px; background:linear-gradient(150deg,#ffffff14,#ffffff04),#0a1712e8; box-shadow:0 24px 50px #0009,inset 0 1px 0 #ffffff14; animation:etiqueta-flota 4s ease-in-out infinite; transition:opacity .25s ease,border-color .9s ease; }
+.hero-tarjeta small { color:var(--apagado); font-size:10px; font-weight:800; letter-spacing:1.6px; }
+.hero-tarjeta strong { font-family:var(--serif); font-size:27px; font-weight:400; line-height:1.05; }
+.hero-tipos, .del-dia-tipos { display:flex; flex-wrap:wrap; gap:6px; }
+.hero-tipos span, .del-dia-tipos span { padding:4px 11px; border:1px solid color-mix(in srgb,var(--color-etiqueta) 70%,#fff); border-radius:99px; background:color-mix(in srgb,var(--color-etiqueta) 75%,#000); color:#fff; font-size:10.5px; font-weight:bold; letter-spacing:.3px; }
+.hero-ver-ficha { margin-top:8px; padding:9px 15px; border:0; border-radius:99px; background:var(--lima); color:#14301f; font-size:12px; font-weight:bold; transition:background .2s,transform .2s; }
+.hero-ver-ficha:hover { transform:translateY(-2px); background:#dcf7b6; }
+.hero-tarjeta.cambiando, .hero-marca-agua.cambiando { opacity:0; }
+
+.hero-miniaturas { position:relative; z-index:1; display:flex; justify-content:center; gap:4px; max-width:100%; padding:5px; overflow-x:auto; scrollbar-width:none; border:1px solid #ffffff14; border-radius:99px; background:#08140fb8; }
+.hero-miniatura { position:relative; display:grid; place-items:center; flex:none; width:42px; height:42px; padding:0; overflow:hidden; border:1px solid transparent; border-radius:50%; background:#ffffff06; transition:background .2s,border-color .2s,transform .2s; }
+.hero-miniatura img { width:72px; height:72px; max-width:none; opacity:.7; filter:grayscale(.4); transition:opacity .2s,filter .2s; }
+.hero-miniatura:hover { transform:translateY(-2px); background:#ffffff14; }
+.hero-miniatura:hover img, .hero-miniatura[aria-pressed="true"] img { opacity:1; filter:none; }
+.hero-miniatura[aria-pressed="true"] { border-color:color-mix(in srgb,var(--tipo-hero) 60%,#ffffff); background:color-mix(in srgb,var(--tipo-hero) 35%,transparent); }
+/* Barra que se llena hasta el siguiente cambio; se congela con .en-pausa. */
+.hero-miniatura[aria-pressed="true"]::after { content:''; position:absolute; right:10px; bottom:4px; left:10px; height:2px; border-radius:2px; background:var(--lima); transform-origin:left; animation:progreso-hero var(--intervalo-hero) linear both; }
+.hero.en-pausa .hero-miniatura::after { animation-play-state:paused; }
+
+/* Cinta de los 18 tipos: dos líneas finas que se desvanecen en los lados (sin fondo propio) */
+.hero-cinta { overflow:hidden; background:linear-gradient(90deg,transparent,#ffffff1c 20%,#ffffff1c 80%,transparent) top/100% 1px no-repeat,linear-gradient(90deg,transparent,#ffffff1c 20%,#ffffff1c 80%,transparent) bottom/100% 1px no-repeat; mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent); }
+.hero-cinta-pista { display:flex; width:max-content; padding:16px 0; animation:cinta 80s linear infinite; }
+.hero-cinta span { display:inline-flex; align-items:center; gap:10px; padding-right:40px; color:#a9b8a5; font-size:10px; font-weight:800; letter-spacing:2px; text-transform:uppercase; white-space:nowrap; }
+.hero-cinta span::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--color-tipo); box-shadow:0 0 10px var(--color-tipo); }
+
+/* --- 3. Caminos ---------------------------------------------------------------------------------- */
+.caminos-rejilla { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+.camino { --camino:#c9ed96; position:relative; isolation:isolate; display:flex; flex-direction:column; align-items:flex-start; gap:8px; min-height:270px; padding:28px; overflow:hidden; border:1px solid #ffffff14; border-radius:24px;
+  background:radial-gradient(120% 90% at 100% 100%,color-mix(in srgb,var(--camino) 15%,transparent),transparent 60%),linear-gradient(150deg,#ffffff0e,#ffffff02);
+  box-shadow:inset 0 1px 0 #ffffff0d; color:var(--crema); text-decoration:none; transition:transform .3s ease,border-color .3s ease,box-shadow .3s ease; }
+a.camino:hover { transform:translateY(-5px); border-color:color-mix(in srgb,var(--camino) 50%,transparent); box-shadow:0 26px 60px #0007,0 0 50px color-mix(in srgb,var(--camino) 15%,transparent),inset 0 1px 0 #ffffff14; }
+.camino-sello { color:var(--camino); font-size:10px; font-weight:800; letter-spacing:2.2px; text-transform:uppercase; }
+.camino strong { max-width:16ch; font-family:var(--serif); font-size:clamp(26px,2.4vw,34px); font-weight:400; line-height:1.08; }
+.camino strong em { background-image:linear-gradient(90deg,color-mix(in srgb,var(--camino) 35%,#fff),var(--camino)); }
+.camino p { max-width:36ch; margin:2px 0 0; color:var(--apagado); font-size:13.5px; line-height:1.6; }
+.camino-dato { margin-top:auto; padding-top:14px; color:color-mix(in srgb,var(--camino) 70%,#fff); font-family:var(--serif); font-size:14px; font-style:italic; text-shadow:0 1px 10px #000; }
+.camino-dato b { font-size:24px; font-style:normal; font-weight:400; }
+.camino-flecha { position:absolute; top:22px; right:22px; display:grid; place-items:center; width:36px; height:36px; border:1px solid #ffffff26; border-radius:50%; color:var(--camino); transition:background .25s,color .25s,border-color .25s; }
+a.camino:hover .camino-flecha { border-color:var(--camino); background:var(--camino); color:#0b1510; }
+
+/* Legendarios: un trozo de su cielo nocturno, con el anillo dorado del altar y tres leyendas */
+.camino-leyendas { --camino:#e8c873; grid-column:span 2; grid-row:span 2; min-height:560px; border-color:#e8c87330;
+  background:radial-gradient(60% 55% at 70% 78%,#e8c87326,transparent 70%),radial-gradient(80% 70% at 85% 100%,#3d3f8655,transparent 70%),linear-gradient(160deg,#0d1424d9,#090e1ad9 60%,#0a0e18e6); }
+.camino-leyendas strong { font-size:clamp(34px,3.6vw,52px); }
+.camino-estrellas { position:absolute; inset:0; z-index:-1; opacity:.7; mask-image:linear-gradient(#000,transparent 85%); animation:titilar 5s ease-in-out infinite alternate;
+  background-image:radial-gradient(1.2px 1.2px at 20px 30px,#fff,transparent),radial-gradient(1px 1px at 90px 120px,#ffffffaa,transparent),radial-gradient(1.5px 1.5px at 160px 60px,#ffe9b0,transparent),radial-gradient(1px 1px at 230px 170px,#fff,transparent),radial-gradient(1px 1px at 60px 200px,#cfe0ff,transparent);
+  background-size:260px 230px; }
+.leyendas-altar { position:absolute; right:-4%; bottom:-8%; z-index:-1; width:86%; aspect-ratio:1.3; }
+.leyendas-altar::before { content:''; position:absolute; top:48%; left:50%; width:62%; aspect-ratio:1; translate:-50% -50%; border:1px solid #e8c87340; border-radius:50%; background:radial-gradient(circle,#e8c87330,transparent 65%); box-shadow:0 0 0 12px #e8c87308; }
+.leyendas-altar-runas { position:absolute; top:48%; left:50%; width:74%; aspect-ratio:1; translate:-50% -50%; border-radius:50%; background:repeating-conic-gradient(#e8c873a0 0 .8deg,transparent .8deg 6deg); mask:radial-gradient(circle,transparent 63%,#000 64%,#000 68%,transparent 69%); animation:anillo 80s linear infinite; }
+.leyendas-altar img { position:absolute; bottom:12%; width:44%; filter:drop-shadow(0 0 22px #e8c87340) drop-shadow(0 16px 16px #000a); transition:transform .45s ease; }
+.leyendas-altar img:nth-of-type(1) { left:6%; bottom:20%; }
+.leyendas-altar img:nth-of-type(2) { left:28%; z-index:1; width:50%; bottom:16%; }
+.leyendas-altar img:nth-of-type(3) { right:4%; }
+a.camino-leyendas:hover .leyendas-altar img:nth-of-type(1) { transform:translate(-14px,-6px) rotate(-5deg); }
+a.camino-leyendas:hover .leyendas-altar img:nth-of-type(2) { transform:translateY(-12px) scale(1.05); }
+a.camino-leyendas:hover .leyendas-altar img:nth-of-type(3) { transform:translate(12px,-6px) rotate(5deg); }
+
+/* Tipos: los 18, cada uno abre la Pokédex filtrada (no es un enlace entero: tiene botones dentro) */
+.camino-tipos { grid-column:span 2; min-height:0; gap:22px; }
+.camino-tipos-cabecera { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; width:100%; }
+.camino-tipos-cabecera strong { display:block; margin-top:8px; max-width:none; }
+.camino-enlace { flex:none; padding:8px 14px; border:1px solid #ffffff26; border-radius:99px; color:var(--lima); font-size:12px; font-weight:bold; text-decoration:none; transition:background .2s,border-color .2s; }
+.camino-enlace:hover { border-color:var(--lima); background:#c9ed9614; }
+.camino-tipos-lista { display:grid; grid-template-columns:repeat(9,minmax(0,1fr)); gap:8px; width:100%; margin-top:auto; }
+.camino-tipo { display:flex; flex-direction:column; align-items:center; gap:7px; min-width:0; padding:11px 2px 9px; overflow:hidden; border:1px solid color-mix(in srgb,var(--color-tipo) 30%,transparent); border-radius:14px; background:color-mix(in srgb,var(--color-tipo) 9%,transparent); color:#dfe6d6; font-size:10px; font-weight:bold; white-space:nowrap; transition:transform .2s,background .2s,border-color .2s,box-shadow .2s; }
+.camino-tipo span { display:grid; place-items:center; width:32px; height:32px; border-radius:50%; background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--color-tipo) 55%,#fff),var(--color-tipo) 70%); color:#fff; box-shadow:0 0 16px color-mix(in srgb,var(--color-tipo) 45%,transparent); }
+.camino-tipo svg { width:16px; height:16px; }
+.camino-tipo:hover { transform:translateY(-3px); border-color:color-mix(in srgb,var(--color-tipo) 65%,transparent); background:color-mix(in srgb,var(--color-tipo) 20%,transparent); box-shadow:0 10px 24px color-mix(in srgb,var(--color-tipo) 22%,transparent); }
+
+/* Pokédex: la cifra y un estante con sprites animados */
+.camino-pokedex { --camino:#86d4b0; }
+.camino strong.camino-cifra { color:#e6f5cf; font-size:clamp(52px,5vw,74px); line-height:.95; letter-spacing:-2px; }
+.pokedex-estante { display:flex; align-items:flex-end; justify-content:space-around; align-self:stretch; min-height:74px; margin:auto 0 -6px; padding:12px 0 0; background:linear-gradient(90deg,transparent,#86d4b066 15%,#86d4b066 85%,transparent) bottom/100% 1px no-repeat; }
+.pokedex-estante img { max-width:16%; image-rendering:pixelated; object-fit:contain; filter:drop-shadow(0 4px 4px #0008); transition:transform .3s ease; }
+a.camino-pokedex:hover .pokedex-estante img { transform:translateY(-5px); }
+a.camino-pokedex:hover .pokedex-estante img:nth-child(even) { transform:translateY(-9px); }
+
+/* ¿Quién es?: la silueta negra con un halo azul, como en el anime; al pasar por encima se revela */
+.camino-quien { --camino:#7fb3ff; background:radial-gradient(70% 70% at 88% 82%,#3a6ad85c,transparent 70%),linear-gradient(150deg,#ffffff0e,#ffffff02); }
+.camino-quien strong, .camino-quien p, .camino-quien .camino-dato { max-width:58%; }
+.camino-silueta { position:absolute; right:-3%; bottom:-7%; z-index:-1; width:min(48%,180px); max-height:62%; object-fit:contain; object-position:bottom right; filter:brightness(0) drop-shadow(0 0 14px #6aa8ff); transition:filter .5s,transform .5s; }
+.camino-silueta:not([src]) { visibility:hidden; }
+a.camino-quien:hover .camino-silueta { filter:drop-shadow(0 12px 18px #000a); transform:scale(1.05) rotate(-3deg); }
+
+/* --- 4. Pokémon del día -------------------------------------------------------------------------- */
+.del-dia { --tipo-dia:#5f9b60; display:grid; grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr); align-items:center; gap:64px; min-height:460px; transition:--tipo-dia .9s ease; }
+.del-dia-arte { position:relative; display:grid; place-items:center; width:min(500px,100%); aspect-ratio:1; justify-self:center; }
+.del-dia-arte > * { grid-area:1/1; }
+.del-dia-halo { position:relative; width:100%; height:100%; border:1px solid color-mix(in srgb,var(--tipo-dia) 35%,transparent); border-radius:50%; background:radial-gradient(circle,color-mix(in srgb,var(--tipo-dia) 50%,transparent) 0,color-mix(in srgb,var(--tipo-dia) 16%,transparent) 42%,transparent 68%); box-shadow:0 0 0 14px #ffffff04,inset 0 0 70px color-mix(in srgb,var(--tipo-dia) 16%,transparent); }
+.del-dia-halo::before { content:''; position:absolute; inset:7%; border:1.5px dashed color-mix(in srgb,var(--tipo-dia) 40%,#ffffff22); border-radius:50%; animation:anillo 60s linear infinite; }
+.del-dia-numero { align-self:start; justify-self:start; color:transparent; font-family:var(--serif); font-size:clamp(70px,8vw,120px); line-height:.8; -webkit-text-stroke:1px color-mix(in srgb,var(--tipo-dia) 55%,#ffffff33); pointer-events:none; }
+.del-dia-arte img { position:relative; width:84%; max-width:none; filter:drop-shadow(0 0 30px color-mix(in srgb,var(--tipo-dia) 45%,transparent)) drop-shadow(0 22px 18px #000000a0); animation:flotar 4s ease-in-out infinite; }
+.del-dia-info .mundo-sello { color:color-mix(in srgb,var(--tipo-dia) 50%,#fff); }
+.del-dia-info h2 { margin:16px 0 6px; font-size:clamp(48px,5.6vw,86px); line-height:1; letter-spacing:-1.5px; }
+.del-dia-especie { display:block; margin-bottom:16px; color:var(--apagado); font-family:var(--serif); font-size:17px; font-style:italic; }
+.del-dia-descripcion { max-width:560px; margin:24px 0 28px; padding-left:20px; border-left:2px solid color-mix(in srgb,var(--tipo-dia) 75%,transparent); color:#d6dccf; font-family:var(--serif); font-size:18px; font-style:italic; line-height:1.6; }
+.del-dia-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px 28px; max-width:600px; margin:0 0 30px; padding:0; list-style:none; }
+.del-dia-stats li { display:grid; grid-template-columns:1fr auto; align-items:baseline; gap:6px 8px; color:var(--apagado); font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; }
+.del-dia-stats strong { color:var(--crema); font-family:var(--serif); font-size:20px; font-weight:400; letter-spacing:0; }
+.del-dia-stats i { grid-column:1/-1; height:3px; overflow:hidden; border-radius:3px; background:#ffffff14; }
+.del-dia-stats b { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,color-mix(in srgb,var(--tipo-dia) 55%,#fff),var(--tipo-dia)); box-shadow:0 0 10px color-mix(in srgb,var(--tipo-dia) 60%,transparent); }
+.del-dia-acciones { display:flex; flex-wrap:wrap; align-items:center; gap:12px 20px; }
+.del-dia-acciones small { color:var(--apagado); font-family:var(--serif); font-size:13.5px; font-style:italic; }
+.del-dia-boton { padding:13px 24px; border:0; border-radius:99px; background:var(--lima); color:#14301f; font-size:13px; font-weight:bold; transition:background .2s,transform .2s; }
+.del-dia-boton:hover { transform:translateY(-2px); background:#dcf7b6; }
+.del-dia-error { margin:18px 0 16px; color:var(--apagado); font-size:15px; }
+
+/* Esqueleto mientras carga */
+.esqueleto, .linea-esqueleto { background:linear-gradient(90deg,#ffffff08 25%,#ffffff16 50%,#ffffff08 75%); background-size:200% 100%; animation:brillo-esqueleto 1.4s ease-in-out infinite; }
+.del-dia-arte.esqueleto { border-radius:50%; }
+.linea-esqueleto { display:block; height:12px; margin:12px 0; border-radius:6px; }
+.linea-esqueleto.corta { width:35%; }
+.linea-esqueleto.media { width:60%; }
+.linea-esqueleto.titulo { width:70%; height:56px; margin:18px 0 22px; }
+
+/* --- 5. Regiones: nueve etapas sobre una ruta ---------------------------------------------------- */
+.regiones-ruta { position:relative; display:grid; grid-template-columns:repeat(9,minmax(0,1fr)); gap:12px; padding-top:34px; }
+.regiones-ruta::before { content:''; position:absolute; top:10px; right:0; left:0; height:1px; background:linear-gradient(90deg,transparent,#c9ed9666 8%,#c9ed9666 92%,transparent); }
+.region { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:2px; min-width:0; padding:18px 14px 0; border:1px solid #ffffff14; border-radius:18px; background:linear-gradient(170deg,#ffffff0e,#ffffff02); color:var(--crema); text-align:left; transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease,background .25s ease; }
+.region::before { content:''; position:absolute; top:-24px; left:50%; width:1px; height:23px; background:linear-gradient(#c9ed9666,transparent); }
+.region-marca { position:absolute; top:-28px; left:50%; width:9px; height:9px; border:1px solid var(--lima); background:#0b1712; translate:-50% 0; rotate:45deg; box-shadow:0 0 10px #c9ed9655; transition:background .25s,box-shadow .25s; }
+.region-generacion { padding:3px 8px; border:1px solid #c9ed9638; border-radius:99px; color:var(--lima); font-size:9px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; transition:background .25s,color .25s; }
+.region:hover .region-generacion { background:var(--lima); color:#14301f; }
+.region strong { margin-top:8px; font-family:var(--serif); font-size:21px; font-weight:400; }
+.region-rango { color:var(--apagado); font-size:10.5px; }
+.region-iniciales { display:flex; margin:8px -8px -2px; }
+.region-iniciales img { width:48px; height:48px; margin-right:-14px; transition:transform .25s ease; }
+.region:hover { transform:translateY(-5px); border-color:#c9ed9659; background:linear-gradient(170deg,#c9ed9614,#ffffff03); box-shadow:0 20px 40px #0006; }
+.region:hover .region-marca { background:var(--lima); box-shadow:0 0 16px var(--lima); }
+.region:hover .region-iniciales img { transform:translateY(-4px); }
+.region:hover .region-iniciales img:nth-child(2) { transform:translateY(-7px); }
+
+/* --- Animaciones --------------------------------------------------------------------------------- */
+@keyframes halo { 0%,100% { opacity:.85; scale:1; } 50% { opacity:1; scale:1.05; } }
+@keyframes sombra { 0%,100% { scale:1; opacity:1; } 50% { scale:.86; opacity:.7; } }
+@keyframes titilar { from { opacity:.45; } to { opacity:.8; } }
+@keyframes etiqueta-flota { 0%,100% { translate:0 0; } 50% { translate:0 -6px; } }
+@keyframes progreso-hero { from { transform:scaleX(0); } to { transform:scaleX(1); } }
+@keyframes cinta { to { transform:translateX(-50%); } }
+@keyframes brillo-esqueleto { from { background-position:100% 0; } to { background-position:-100% 0; } }
+
+/* --- Tableta ------------------------------------------------------------------------------------- */
+@media (max-width:1100px) {
+  .caminos-rejilla { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .camino-leyendas { grid-row:auto; min-height:440px; }
+  .camino-tipos-lista { grid-template-columns:repeat(6,minmax(0,1fr)); }
+  /* Las regiones pasan a tres filas: la ruta continua ya no tiene sentido. */
+  .regiones-ruta { grid-template-columns:repeat(3,minmax(0,1fr)); padding-top:0; }
+  .regiones-ruta::before, .region::before, .region-marca { display:none; }
+}
+@media (max-width:900px) {
+  .hero-inner { grid-template-columns:minmax(0,1fr); gap:24px; min-height:0; }
+  .hero-altar { width:min(440px,100%); }
+  .del-dia { grid-template-columns:minmax(0,1fr); gap:20px; }
+  .del-dia-arte { width:min(380px,82%); }
+}
+
+/* --- Móvil --------------------------------------------------------------------------------------- */
+@media (max-width:700px) {
+  .mundo-bloque { padding:56px 0; }
+  .hero-inner { padding:30px 0 30px; }
+  .hero h1 { font-size:clamp(40px,11.5vw,60px); letter-spacing:-1.2px; }
+  .hero-reloj { padding-left:14px; }
+  .hero-busqueda { padding-left:16px; }
+  .hero-busqueda button { padding:12px 18px; }
+  .hero-cifras { justify-content:space-between; }
+  .hero-cifras div { padding:0 10px; }
+  .hero-cifras dd { font-size:25px; }
+  .hero-cifras dt { font-size:8px; letter-spacing:1px; }
+  .hero-altar { width:min(340px,92%); }
+  .hero-marca-agua { font-size:110px; }
+  .hero-tarjeta { right:0; bottom:84px; min-width:0; padding:12px 15px 14px; }
+  .hero-tarjeta strong { font-size:21px; }
+  .hero-miniaturas { justify-content:flex-start; }
+  .caminos-rejilla { grid-template-columns:minmax(0,1fr); }
+  .camino-leyendas, .camino-tipos { grid-column:auto; }
+  .camino-leyendas { min-height:430px; }
+  .camino { padding:24px 22px; }
+  .camino-tipos-cabecera { flex-wrap:wrap; }
+  .camino-tipos-lista { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  .camino-tipo { flex-direction:row; justify-content:flex-start; gap:7px; padding:7px 6px; border-radius:99px; }
+  .camino-tipo span { flex:none; width:24px; height:24px; }
+  .camino-tipo svg { width:13px; height:13px; }
+  .del-dia-descripcion { font-size:16px; }
+  .del-dia-stats { grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px 20px; }
+  /* Regiones en una fila que se desliza con el dedo. */
+  .regiones-ruta { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; padding-bottom:10px; scrollbar-width:none; }
+  .region { flex:0 0 140px; scroll-snap-align:start; }
+}
+
+@media (max-width:520px) {
+  .hero-momento { display:none; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .hero, .del-dia, .hero-cambia { transition:none; }
+  .hero-halo, .hero-runas, .hero-orbita, .hero-orbita::before, .hero-suelo,
+  .hero-altar img, .hero-tarjeta, .hero-cinta-pista, .camino-estrellas, .leyendas-altar-runas, .del-dia-halo::before,
+  .del-dia-arte img, .esqueleto, .linea-esqueleto { animation:none !important; }
+  .hero-miniatura::after { display:none; }
+  .camino, .region, .leyendas-altar img, .pokedex-estante img, .camino-silueta { transition:none; }
+}

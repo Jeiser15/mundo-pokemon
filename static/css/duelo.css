@@ -1,0 +1,193 @@
+/* =============================================================================
+   DUELO POKÉMON — «La arena» (js/duelo.js). Mismo lenguaje que Legendarios (fondo oscuro, títulos con
+   serifa y una palabra en cursiva, líneas finas, paneles de vidrio, etiquetas pequeñas en versalitas,
+   cifras grandes) con su propia paleta: verde bosque casi negro y BRASA, a juego con la ventana del combate.
+     .duelo-brasas       chispas de brasa que suben despacio
+     .duelo-portada      texto + pasos (I · II · III) y la maqueta 3D de la arena (.duelo-escaparate):
+                         el escenario elegido inclinado, tus Pokémon de pie sobre él y un rival misterioso
+     .duelo-cifras       tu récord (combates, victorias, derrotas, porcentaje)
+     .duelo-contenido    el paso visible, en un panel de vidrio
+   El paso 2 (cinturón, buscador y análisis) está en equipo.css; la ventana del combate, en simulacro.css.
+   ============================================================================= */
+
+.duelo { --brasa:#ff8f4d; --brasa-clara:#ffc27a; --brasa-oscura:#d9652c; --crema:#f2ebdd; --apagado:#a9b2a5;
+  --linea:#ff8f4d33; --vidrio:linear-gradient(150deg,#ffffff0e,#ffffff03); --serif:Georgia,'Times New Roman',serif;
+  --pildora:linear-gradient(90deg,#d9652c,#ffb470);
+  position:relative; isolation:isolate; overflow:hidden; margin-top:24px; padding:16px 0 90px; color:var(--crema);
+  background:radial-gradient(ellipse at 80% 14%,#ff8f4d24,transparent 55%),radial-gradient(ellipse at 6% 64%,#2f7a4b2e,transparent 50%),linear-gradient(#07110d,#0b1712 45%,#08120e); }
+
+/* --- Cabecera, barra «Volver» y pie a juego --------------------------------------------------
+   js/vistas.js pone <body data-vista="duelo"> mientras esta vista está abierta. */
+body[data-vista="duelo"] { background:#07110d; }
+body[data-vista="duelo"] header { border-bottom-color:#ff8f4d1f; background:#07110d; }
+body[data-vista="duelo"] header::before { background:linear-gradient(90deg,#7a2e12 0 25%,#c45a24 25% 50%,#ff8f4d 50% 75%,#ffc27a 75%); }
+body[data-vista="duelo"] .logo { color:#f2ebdd; }
+body[data-vista="duelo"] .logo-icon { --dark:#ff8f4d; background:#0d1c15; }
+body[data-vista="duelo"] .logo-punto { color:#ff8f4d; }
+body[data-vista="duelo"] .brand-note { border-left-color:#ff8f4d33; color:#a9b2a5; }
+body[data-vista="duelo"] nav a { color:#c9c3b3; }
+body[data-vista="duelo"] nav a:hover { background:#ffffff0f; color:#ffd8b3; }
+body[data-vista="duelo"] nav a[aria-current="page"] { background:#ff8f4d1f; color:#ffd8b3; }
+body[data-vista="duelo"] .volver-inicio a { color:#ff8f4d; }
+body[data-vista="duelo"] .volver-inicio span { color:#a9b2a5; }
+body[data-vista="duelo"] footer { border-top:1px solid #ff8f4d1a; background:#050c09; color:#a9b2a5; }
+body[data-vista="duelo"] footer a { color:#ff8f4d; }
+
+/* --- Brasas: dos capas de chispas que suben (cada una se desplaza lo que mide su dibujo: sin saltos) --- */
+.duelo-brasas { position:absolute; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+.duelo-brasas::before, .duelo-brasas::after { content:''; position:absolute; inset:0 0 -300px; background-image:radial-gradient(1.6px 1.6px at 30px 40px,#ffb070,transparent),radial-gradient(1.2px 1.2px at 120px 160px,#ff8f4dcc,transparent),radial-gradient(2px 2px at 210px 90px,#ffd2a6aa,transparent),radial-gradient(1px 1px at 260px 230px,#ff8f4d,transparent),radial-gradient(1.4px 1.4px at 80px 260px,#ffc27a99,transparent); background-size:300px 300px; opacity:.55; animation:brasas-suben 26s linear infinite; }
+.duelo-brasas::after { bottom:-380px; background-size:380px 380px; background-position:150px 60px; opacity:.35; animation:brasas-suben-lejos 40s linear infinite; }
+
+/* --- Portada: texto, pasos y maqueta de la arena ---------------------------------------------- */
+.duelo-portada { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.1fr); align-items:center; gap:40px; padding:30px 0 34px; }
+.duelo-kicker { display:inline-block; color:var(--brasa); font-size:10px; font-weight:800; letter-spacing:2.4px; text-transform:uppercase; }
+.duelo-texto h2 { margin:14px 0 12px; font-family:var(--serif); font-size:clamp(38px,4.6vw,62px); font-weight:400; line-height:1.02; letter-spacing:-1px; }
+.duelo-texto h2 em { display:block; background:linear-gradient(90deg,#ffd8b3,var(--brasa) 55%,var(--brasa-oscura)); -webkit-background-clip:text; background-clip:text; color:transparent; font-style:italic; }
+.duelo-texto > p { max-width:470px; margin:0; color:#c9c3b3; font-size:15px; line-height:1.75; }
+
+/* Pasos: I · II · III. */
+.duelo-pasos { display:flex; flex-direction:column; gap:6px; max-width:470px; margin:30px 0 0; padding:0; list-style:none; }
+.duelo-pasos button { display:flex; align-items:center; gap:14px; width:100%; padding:10px 16px 10px 10px; border:1px solid transparent; border-radius:14px; background:none; color:var(--apagado); font-size:14px; font-weight:bold; text-align:left; transition:background .2s,border-color .2s,color .2s; }
+.duelo-pasos button:hover:not(:disabled) { background:#ffffff08; color:var(--crema); }
+.duelo-pasos button:disabled { opacity:.45; cursor:default; }
+.duelo-pasos b { display:grid; flex:none; place-items:center; width:38px; height:38px; border:1px solid #ff8f4d59; border-radius:50%; color:var(--brasa); font-family:var(--serif); font-size:14px; font-weight:400; }
+.duelo-pasos [data-estado="actual"] button { border-color:#ff8f4d40; background:var(--vidrio); color:var(--crema); box-shadow:inset 0 1px 0 #ffffff12; }
+.duelo-pasos [data-estado="actual"] b { border:0; background:radial-gradient(circle at 35% 30%,#ffe2c4,var(--brasa) 70%); box-shadow:0 0 16px #ff8f4d66; color:#2a1206; font-weight:bold; }
+.duelo-pasos [data-estado="hecho"] b { position:relative; }
+.duelo-pasos [data-estado="hecho"] b::after { content:'✓'; position:absolute; right:-4px; bottom:-4px; display:grid; place-items:center; width:16px; height:16px; border-radius:50%; background:var(--brasa); color:#2a1206; font-family:Arial,sans-serif; font-size:9px; font-weight:bold; }
+
+/* Maqueta: el campo del escenario, inclinado como visto desde la grada, con los Pokémon de pie encima. */
+/* Las medidas de dentro van en cqw (ancho de la maqueta): --alto y --sombra son px cuando la maqueta mide 640 px. */
+.duelo-escaparate { position:relative; justify-self:center; width:min(640px,100%); margin:0; padding:6% 0 0; perspective:1100px; container-type:inline-size; }
+.duelo-escaparate::before { content:''; position:absolute; inset:18% 4% 4%; border-radius:50%; background:radial-gradient(ellipse,#ff8f4d38,transparent 66%); filter:blur(14px); }
+.escaparate-plano { position:relative; aspect-ratio:16 / 9; transform:rotateX(50deg); transform-origin:50% 62%; transform-style:preserve-3d; }
+.escaparate-campo { position:absolute; inset:0; overflow:hidden; border:1px solid #ff8f4d80; border-radius:8px; box-shadow:0 0 0 7px #ff8f4d0d,0 0 0 8px #ff8f4d26,0 50px 70px #000000b3; }
+.escaparate-campo .vista-escenario { width:100%; height:100%; }
+.escaparate-escena { position:absolute; inset:0; transform-style:preserve-3d; }
+/* Cada Pokémon se pone de pie sobre el campo: se gira lo contrario que el plano, desde sus pies. */
+.escaparate-figura { position:absolute; left:var(--x); top:var(--y); display:flex; flex-direction:column; align-items:center; transform:translate(-50%,-100%) rotateX(-50deg); transform-origin:50% 100%; }
+.escaparate-figura img { width:auto; height:calc(var(--alto, 56) * .15625cqw); image-rendering:pixelated; filter:drop-shadow(0 6px 4px #000000a6); animation:figura-respira 2.6s ease-in-out infinite; animation-delay:calc(var(--i, 0) * -.45s); }
+.escaparate-figura.tuyo img { scale:-1 1; } /* mira hacia el rival */
+.escaparate-sombra { position:absolute; left:var(--x); top:var(--y); width:calc(var(--sombra, 46) * .15625cqw); height:calc(var(--sombra, 46) * .07cqw); border-radius:50%; background:radial-gradient(#000000a6,transparent 70%); translate:-50% -50%; }
+.escaparate-misterio { display:grid; place-items:center; width:calc(var(--alto, 74) * .15625cqw); height:calc(var(--alto, 74) * .15625cqw); border:1px solid #ff8f4d80; border-radius:50%; background:radial-gradient(circle at 50% 40%,#2a170c,#0b0705 70%); box-shadow:0 0 26px #ff8f4d4d,inset 0 0 18px #ff8f4d33; color:var(--brasa-clara); font-family:var(--serif); font-size:calc(var(--alto, 74) * .08cqw); font-style:italic; animation:misterio-late 2.8s ease-in-out infinite; }
+.escaparate-vs { color:var(--brasa-clara); font-family:var(--serif); font-size:4cqw; font-style:italic; text-shadow:0 0 18px #ff8f4d,0 3px 6px #000; }
+.escaparate-rotulo { position:relative; margin-top:-2%; color:var(--apagado); font-family:var(--serif); font-size:13px; letter-spacing:1px; text-align:center; }
+.escaparate-rotulo b { color:var(--brasa-clara); font-weight:400; }
+
+/* --- Cifras: tu récord ----------------------------------------------------------------------- */
+.duelo-cifras { display:grid; grid-template-columns:repeat(4,1fr); margin-top:0; margin-bottom:0; border-top:1px solid #ff8f4d29; border-bottom:1px solid #ff8f4d29; }
+.duelo-cifras div { display:flex; flex-direction:column-reverse; align-items:center; gap:4px; padding:18px 10px; border-left:1px solid #ff8f4d1f; }
+.duelo-cifras div:first-child { border-left:0; }
+.duelo-cifras dd { margin:0; color:#ffd8b3; font-family:var(--serif); font-size:32px; }
+.duelo-cifras dt { color:var(--apagado); font-size:9px; font-weight:800; letter-spacing:1.8px; text-align:center; text-transform:uppercase; }
+
+/* --- El paso visible, en un panel de vidrio ------------------------------------------------------ */
+.duelo-contenido { padding-top:48px; }
+.duelo-paso { padding:30px; border:1px solid #ff8f4d38; border-radius:20px; background:var(--vidrio); box-shadow:inset 0 1px 0 #ffffff12,0 24px 60px #00000059; animation:entrada .35s ease both; }
+.paso-cabecera h3 { margin:8px 0 6px; font-family:var(--serif); font-size:clamp(26px,3vw,36px); font-weight:400; letter-spacing:-.3px; }
+.paso-cabecera p { max-width:620px; margin:0; color:var(--apagado); font-size:14px; line-height:1.65; }
+.duelo-navegacion { display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; margin-top:28px; padding-top:22px; border-top:1px solid #ffffff12; }
+.duelo-navegacion .duelo-siguiente:only-child { margin-left:auto; }
+.duelo-siguiente { padding:14px 26px; border:0; border-radius:99px; background:var(--pildora); box-shadow:0 8px 26px #ff8f4d33; color:#2a1206; font-size:14px; font-weight:bold; transition:transform .2s,box-shadow .2s; }
+.duelo-siguiente:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 12px 32px #ff8f4d55; }
+.duelo-siguiente:disabled { background:#ffffff12; box-shadow:none; color:var(--apagado); cursor:default; }
+.duelo-atras { padding:13px 20px; border:1px solid #ff8f4d59; border-radius:99px; background:#ffffff06; color:var(--crema); font-size:14px; font-weight:bold; transition:background .2s,border-color .2s; }
+.duelo-atras:hover { border-color:var(--brasa); background:#ff8f4d14; }
+
+/* --- Paso 1: grupos de opciones -------------------------------------------------------------- */
+.duelo-configuracion { display:grid; gap:26px; margin-top:26px; }
+.duelo-grupo + .duelo-grupo { padding-top:26px; border-top:1px solid #ffffff12; }
+.duelo-grupo-cabecera { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; margin-bottom:16px; }
+.grupo-numero { color:var(--brasa); font-family:var(--serif); font-size:15px; letter-spacing:1px; }
+.duelo-grupo h4 { margin:0; font-family:var(--serif); font-size:22px; font-weight:400; }
+.duelo-grupo-cabecera p { margin:0; color:var(--apagado); font-size:13px; }
+.duelo-opciones { display:grid; gap:14px; }
+.duelo-opciones-modo { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.duelo-opciones-nivel { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.duelo-opciones-escenario { grid-template-columns:repeat(3,minmax(0,1fr)); } /* 6 escenarios: 3 + 3 */
+.duelo-opcion { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:7px; padding:18px; border:1px solid #ffffff1a; border-radius:16px; background:#ffffff05; color:var(--crema); text-align:left; transition:border-color .2s,background .2s,transform .2s,box-shadow .2s; }
+.duelo-opcion:hover { border-color:#ff8f4d80; transform:translateY(-2px); }
+.duelo-opcion[aria-pressed="true"] { border-color:var(--brasa); background:linear-gradient(150deg,#ff8f4d1f,#ff8f4d06); box-shadow:0 0 0 1px var(--brasa),0 14px 34px #ff8f4d1a; }
+.duelo-opcion[aria-pressed="true"]::after { content:'✓'; position:absolute; top:14px; right:14px; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#ffe2c4,var(--brasa) 70%); color:#2a1206; font-size:11px; font-weight:bold; }
+.duelo-opcion strong { font-family:var(--serif); font-size:20px; font-weight:400; }
+.duelo-opcion small { color:var(--apagado); font-size:12.5px; line-height:1.5; }
+.duelo-opcion em { margin-top:auto; padding-top:6px; color:var(--brasa-clara); font-family:var(--serif); font-size:12.5px; }
+.opcion-marcador { background:linear-gradient(90deg,#ffd8b3,var(--brasa)); -webkit-background-clip:text; background-clip:text; color:transparent; font-family:var(--serif); font-size:34px; font-style:italic; line-height:1.1; }
+.opcion-estrellas { color:var(--brasa); font-size:15px; letter-spacing:4px; text-shadow:0 0 10px #ff8f4d80; }
+.duelo-opciones-escenario .duelo-opcion { padding:10px 10px 16px; }
+.duelo-opciones-escenario .duelo-opcion[aria-pressed="true"]::after { top:18px; right:18px; }
+.opcion-vista { display:block; width:100%; margin-bottom:4px; overflow:hidden; border:1px solid #ff8f4d40; border-radius:10px; }
+.vista-escenario { display:block; width:100%; height:auto; aspect-ratio:16 / 9; image-rendering:pixelated; transition:transform .5s; }
+.duelo-opcion:hover .vista-escenario { transform:scale(1.05); }
+.duelo-opciones-escenario strong { padding:0 6px; font-size:18px; }
+.duelo-opciones-escenario small { padding:0 6px; }
+
+/* --- Paso 3: resumen ------------------------------------------------------------------------- */
+.duelo-resumen { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(0,1fr); align-items:start; gap:26px; }
+.resumen-escenario { position:relative; overflow:hidden; border:1px solid #ff8f4d66; border-radius:16px; background:#000; box-shadow:0 0 0 6px #ff8f4d0d,0 26px 56px #000000a6; }
+/* Esquinas de brasa, como las cartas de Legendarios. */
+.resumen-escenario::after { content:''; position:absolute; inset:8px; pointer-events:none;
+  background:linear-gradient(var(--brasa),var(--brasa)) top left/20px 2px,linear-gradient(var(--brasa),var(--brasa)) top left/2px 20px,
+             linear-gradient(var(--brasa),var(--brasa)) top right/20px 2px,linear-gradient(var(--brasa),var(--brasa)) top right/2px 20px,
+             linear-gradient(var(--brasa),var(--brasa)) bottom left/20px 2px,linear-gradient(var(--brasa),var(--brasa)) bottom left/2px 20px,
+             linear-gradient(var(--brasa),var(--brasa)) bottom right/20px 2px,linear-gradient(var(--brasa),var(--brasa)) bottom right/2px 20px;
+  background-repeat:no-repeat; }
+.resumen-escenario-nombre { position:absolute; bottom:18px; left:18px; padding:5px 14px; border:1px solid #ff8f4d66; border-radius:99px; background:#07110dd9; color:var(--brasa-clara); font-family:var(--serif); font-size:14px; letter-spacing:1px; }
+.resumen-panel { display:flex; flex-direction:column; gap:14px; }
+.resumen-panel h3 { margin:0; font-family:var(--serif); font-size:clamp(26px,2.6vw,32px); font-weight:400; }
+.resumen-datos { display:grid; margin:0; border-top:1px solid #ffffff14; }
+.resumen-dato { display:grid; grid-template-columns:96px minmax(0,1fr); align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid #ffffff14; }
+.resumen-dato dt { color:var(--apagado); font-size:9.5px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
+.resumen-dato dd { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; margin:0; font-family:var(--serif); font-size:16px; }
+.resumen-cambiar { flex:none; padding:4px 11px; border:1px solid #ff8f4d4d; border-radius:99px; background:none; color:var(--brasa-clara); font-family:Arial,sans-serif; font-size:11px; font-weight:bold; }
+.resumen-cambiar:hover { border-color:var(--brasa); background:#ff8f4d14; }
+.resumen-equipo { display:flex; flex-wrap:wrap; align-items:flex-end; gap:2px; min-width:0; }
+.resumen-sprite { width:auto; height:40px; image-rendering:pixelated; scale:-1 1; }
+.resumen-record { margin:0; color:var(--apagado); font-family:var(--serif); font-size:13px; font-style:italic; }
+.interruptor { position:relative; display:flex; align-items:center; gap:14px; padding:12px 14px; border:1px solid #ffffff14; border-radius:14px; background:#ffffff05; cursor:pointer; }
+.interruptor input { position:absolute; width:1px; height:1px; opacity:0; }
+.interruptor-pista { position:relative; flex:none; width:46px; height:26px; border:1px solid #ff8f4d59; border-radius:99px; background:#ffffff0d; transition:background .2s,border-color .2s; }
+.interruptor-pista::after { content:''; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:var(--apagado); transition:transform .2s,background .2s; }
+.interruptor input:checked + .interruptor-pista { border-color:transparent; background:var(--pildora); }
+.interruptor input:checked + .interruptor-pista::after { background:#2a1206; transform:translateX(20px); }
+.interruptor input:focus-visible + .interruptor-pista { outline:2px solid var(--brasa); outline-offset:3px; }
+.interruptor strong { display:block; font-size:14px; }
+.interruptor small { color:var(--apagado); font-size:12px; }
+.duelo-iniciar { display:flex; align-items:center; justify-content:center; gap:12px; margin-top:4px; padding:17px 26px; border:0; border-radius:99px; background:var(--pildora); box-shadow:0 10px 30px #ff8f4d40; color:#2a1206; font-size:15px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; animation:iniciar-brilla 2.4s ease-in-out infinite; transition:transform .2s; }
+.duelo-iniciar:hover { transform:translateY(-2px); }
+.resumen-panel .duelo-atras { align-self:flex-start; border-color:transparent; background:none; color:var(--apagado); font-weight:normal; }
+.resumen-panel .duelo-atras:hover { color:var(--crema); }
+
+@keyframes brasas-suben { to { transform:translateY(-300px); } }
+@keyframes brasas-suben-lejos { to { transform:translateY(-380px); } }
+@keyframes figura-respira { 0%,100% { translate:0 0; } 50% { translate:0 -3px; } }
+@keyframes misterio-late { 0%,100% { box-shadow:0 0 22px #ff8f4d40,inset 0 0 16px #ff8f4d2e; } 50% { box-shadow:0 0 34px #ff8f4d73,inset 0 0 22px #ff8f4d4d; } }
+@keyframes iniciar-brilla { 0%,100% { box-shadow:0 10px 30px #ff8f4d40; } 50% { box-shadow:0 10px 40px #ff8f4d80; } }
+
+/* --- Pantallas medianas y móviles ---------------------------------------------------------- */
+@media (max-width:1000px) {
+  .duelo-portada { gap:20px; }
+  .duelo-opciones-escenario { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .duelo-resumen { grid-template-columns:minmax(0,1fr); }
+}
+@media (max-width:760px) {
+  .duelo-portada { grid-template-columns:minmax(0,1fr); }
+  .duelo-escaparate { order:-1; width:min(480px,100%); }
+  .duelo-pasos { flex-direction:row; max-width:none; }
+  .duelo-pasos li { flex:1; min-width:0; }
+  .duelo-pasos button { flex-direction:column; gap:6px; padding:10px 4px; font-size:11.5px; text-align:center; }
+  .duelo-cifras { grid-template-columns:repeat(2,1fr); }
+  .duelo-cifras div:nth-child(3) { border-left:0; }
+  .duelo-cifras div:nth-child(n+3) { border-top:1px solid #ff8f4d1f; }
+  .duelo-paso { padding:20px 16px; }
+  .duelo-opciones-modo, .duelo-opciones-nivel { grid-template-columns:minmax(0,1fr); }
+  .duelo-navegacion button { flex:1; }
+}
+@media (max-width:480px) {
+  .duelo-cifras dd { font-size:26px; }
+  .resumen-dato { grid-template-columns:76px minmax(0,1fr); }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .duelo *, .duelo *::before, .duelo *::after { animation:none !important; }
+}

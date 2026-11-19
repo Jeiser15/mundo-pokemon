@@ -1,0 +1,12 @@
+# Archivos que git NO guarda.
+
+# Python: archivos compilados que se crean solos al ejecutar el servidor.
+__pycache__/
+*.pyc
+
+# Copia local de PokéAPI (servidor/snapshot.py): pesa unos 225 MB y el servidor
+# la vuelve a descargar solo si no existe.
+datos/
+
+# Versión original de la web y paisajes antiguos que ya no se usan (unos 55 MB).
+archivo/

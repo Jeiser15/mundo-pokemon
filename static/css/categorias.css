@@ -1,0 +1,199 @@
+/* =============================================================================
+   CATEGORÍAS — «la rueda de los tipos» (js/categorias.js).
+   Vista «del mundo»: sin fondo propio (ver «MUNDO» en base.css). La luz del fondo y --tipo-elegido
+   toman el color del tipo elegido, con una transición.
+     .rueda               círculo fijo de 18 medallones (button.rueda-tipo con --x/--y en % y data-relacion:
+                          'fuerte' = el del centro le hace ×2, 'debil' = le hace ×2 al del centro). El elegido
+                          está en el centro: en el portal (su hábitat, .rueda-habitat de habitats.css, su símbolo y
+                          su nombre); en el círculo solo queda su hueco. Los radios (SVG de 100×100) salen del
+                          centro. .rueda-viajero es la copia que vuela entre el círculo y el centro.
+     .tipo-perfil         lema, relaciones al atacar y al defenderse, Pokémon conocidos y botón a la Pokédex
+     .tabla-tipos-bloque  tabla 18×18 plegada (<details>), con la fila y la columna del tipo elegido
+   Lima = bueno para el tipo del centro; rojo = malo.
+   ============================================================================= */
+@property --tipo-elegido { syntax:'<color>'; inherits:true; initial-value:#d8703c; }
+
+.categorias { --fuerte:#c9ed96; --debil:#ff5a5f; transition:--tipo-elegido .9s ease; }
+.categorias-bloque { padding-top:36px; }
+
+.rueda-bloque { display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); align-items:center; gap:56px; }
+.rueda-marco { display:grid; justify-items:center; gap:18px; }
+
+/* --- La rueda ---------------------------------------------------------------------------------- */
+.rueda { position:relative; width:min(640px,100%); aspect-ratio:1; }
+/* Órbita por la que van los medallones (radio 42 %) y otra, punteada, alrededor del centro. */
+.rueda-orbita { position:absolute; inset:8%; border:1px solid color-mix(in srgb,var(--tipo-elegido) 35%,#ffffff1a); border-radius:50%; }
+.rueda-orbita::before { content:''; position:absolute; inset:23%; border:1px dashed color-mix(in srgb,var(--tipo-elegido) 40%,#ffffff1f); border-radius:50%; animation:anillo 90s linear infinite; }
+
+/* Los radios: del centro hacia los que vence (lima) y de los que lo vencen hacia el centro (rojo). */
+.rueda-lineas { position:absolute; inset:0; z-index:1; width:100%; height:100%; overflow:visible; pointer-events:none; }
+.rueda-linea { fill:none; stroke-width:.5; stroke-linecap:round; stroke-dasharray:1; stroke-dashoffset:1; animation:trazar .5s ease-out calc(300ms + var(--n) * 60ms) forwards; }
+.rueda-linea.fuerte { stroke:var(--fuerte); filter:drop-shadow(0 0 .8px #c9ed96); }
+.rueda-linea.debil { stroke:var(--debil); filter:drop-shadow(0 0 .8px #ff5a5f); }
+.rueda-chispa { filter:drop-shadow(0 0 1.2px #fff); }
+.rueda-chispa.fuerte { fill:#f0ffd9; }
+.rueda-chispa.debil { fill:#ffd0d1; }
+
+/* El centro: el hábitat animado del tipo elegido, en redondo, con su símbolo y su nombre delante. */
+.rueda-portal { position:absolute; inset:30%; z-index:2; overflow:hidden; isolation:isolate; border-radius:50%; background:#06110c;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--tipo-elegido) 55%,#ffffff33),0 0 0 10px #ffffff05,0 0 70px color-mix(in srgb,var(--tipo-elegido) 40%,transparent); }
+.rueda-portal::after { content:''; position:absolute; inset:0; z-index:5; border-radius:50%; background:radial-gradient(circle,transparent 50%,#00000085); pointer-events:none; }
+.rueda-habitat { position:absolute; inset:0; opacity:0; transition:opacity .6s ease; }
+.rueda-habitat.visible { opacity:1; }
+.rueda-simbolo { --color-tipo:#d8703c; position:absolute; top:19%; left:30%; z-index:6; display:grid; place-items:center; width:40%; aspect-ratio:1; border-radius:50%; color:#fff;
+  background:radial-gradient(circle at 34% 28%,color-mix(in srgb,var(--color-tipo) 45%,#fff),var(--color-tipo) 58%,color-mix(in srgb,var(--color-tipo) 70%,#0b1a12));
+  box-shadow:0 0 0 3px #ffffff59,0 0 0 9px #ffffff1a,0 12px 24px #00000066,0 0 40px color-mix(in srgb,var(--color-tipo) 70%,#fff); transition:opacity .2s; }
+.rueda-simbolo svg { width:48%; height:48%; filter:drop-shadow(0 2px 3px #00000066); }
+.rueda-nombre { position:absolute; top:66%; right:0; left:0; z-index:6; color:#fff; font-family:var(--serif); font-size:clamp(15px,2.3vw,24px); font-style:italic; text-align:center; text-shadow:0 2px 10px #000,0 0 2px #000; transition:opacity .2s; }
+/* Mientras vuela el nuevo, el centro espera vacío (solo el hábitat). */
+.rueda-portal.esperando :is(.rueda-simbolo, .rueda-nombre) { opacity:0; }
+/* La copia que vuela (mide 100 px; js/categorias.js la mueve y la escala con transform). */
+.rueda-viajero { position:absolute; top:0; left:0; z-index:8; display:grid; place-items:center; width:100px; height:100px; border-radius:50%; color:#fff; pointer-events:none; will-change:transform;
+  background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--color-tipo) 55%,#fff),var(--color-tipo) 70%);
+  box-shadow:0 0 0 3px #ffffff59,0 14px 30px #00000080,0 0 34px color-mix(in srgb,var(--color-tipo) 70%,transparent); }
+.rueda-viajero svg { width:46%; height:46%; }
+
+/* Los 18 medallones */
+.rueda-tipo { position:absolute; top:calc(var(--y) * 1%); left:calc(var(--x) * 1%); z-index:3; padding:0; border:0; border-radius:50%; background:none; color:var(--apagado); translate:-50% -50%; }
+.rueda-medallon { display:grid; place-items:center; width:52px; height:52px; border-radius:50%; color:#fff;
+  background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--color-tipo) 55%,#fff),var(--color-tipo) 70%);
+  box-shadow:0 8px 18px #00000073,inset 0 -3px 6px #00000038; transition:transform .3s cubic-bezier(.2,.8,.3,1.3),filter .3s,outline-color .3s,box-shadow .3s; }
+.rueda-medallon svg { width:24px; height:24px; filter:drop-shadow(0 1px 2px #00000059); }
+/* El nombre, por fuera del círculo: se aparta del medallón en la dirección contraria al centro (--ux, --uy). */
+.rueda-tipo small { position:absolute; top:50%; left:50%; font-size:9.5px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; white-space:nowrap;
+  translate:calc((var(--ux) - 1) * 50% + var(--ux) * 36px) calc((var(--uy) - 1) * 50% + var(--uy) * 34px); transition:color .3s,opacity .3s; }
+.rueda-tipo:hover .rueda-medallon { transform:scale(1.14); }
+.rueda-tipo:focus-visible { outline:none; }
+.rueda-tipo:focus-visible .rueda-medallon, .rueda-tipo[aria-pressed="true"]:focus-visible::before { outline:3px solid #fff; outline-offset:5px; }
+/* Los que no tienen relación con el del centro se apagan; los que sí, llevan un anillo (con hueco transparente). */
+.rueda-tipo[data-relacion=""] .rueda-medallon { filter:saturate(.35) brightness(.62); }
+.rueda-tipo[data-relacion=""] small { opacity:.55; }
+.rueda-tipo[data-relacion=""]:hover .rueda-medallon { filter:none; }
+.rueda-tipo[data-relacion="fuerte"] .rueda-medallon { outline:2px solid var(--fuerte); outline-offset:4px; box-shadow:0 0 22px #c9ed9659,0 8px 18px #00000073; }
+.rueda-tipo[data-relacion="debil"] .rueda-medallon { outline:2px solid var(--debil); outline-offset:4px; box-shadow:0 0 22px #ff5a5f66,0 8px 18px #00000073; }
+.rueda-tipo[data-relacion="ambas"] .rueda-medallon { outline:2px dashed var(--fuerte); outline-offset:4px; }
+.rueda-tipo[data-relacion="fuerte"] small { color:var(--fuerte); }
+.rueda-tipo[data-relacion="debil"] small { color:#ff9a9d; }
+/* El del centro: en el círculo solo queda su hueco (sigue siendo un botón, para el teclado). */
+.rueda-tipo[aria-pressed="true"] .rueda-medallon, .rueda-tipo.volviendo .rueda-medallon { opacity:0; }
+.rueda-tipo[aria-pressed="true"] .rueda-medallon { transform:scale(.5); }
+.rueda-tipo[aria-pressed="true"]::before { content:''; position:absolute; inset:0; border:1.5px dashed color-mix(in srgb,var(--color-tipo) 70%,#ffffff40); border-radius:50%; animation:hueco 2.6s ease-in-out infinite; }
+.rueda-tipo[aria-pressed="true"] small { color:var(--crema); opacity:.7; }
+
+.rueda-leyenda { display:flex; flex-wrap:wrap; justify-content:center; gap:8px 26px; margin:0; padding:0; color:var(--apagado); font-size:12.5px; list-style:none; }
+.rueda-leyenda li { display:flex; align-items:center; gap:9px; }
+.rueda-leyenda i { width:24px; height:2px; border-radius:2px; background:var(--fuerte); box-shadow:0 0 8px var(--fuerte); }
+.leyenda-debil i { background:var(--debil); box-shadow:0 0 8px var(--debil); }
+.rueda-pista { margin:0; color:#7f907c; font-family:var(--serif); font-size:14px; font-style:italic; }
+
+/* --- El perfil del tipo ----------------------------------------------------------------------- */
+.tipo-perfil { --color-tipo:#d8703c; padding:34px 34px 30px; border:1px solid color-mix(in srgb,var(--color-tipo) 35%,#ffffff14); border-radius:26px;
+  background:radial-gradient(120% 80% at 100% 0%,color-mix(in srgb,var(--color-tipo) 16%,transparent),transparent 60%),linear-gradient(150deg,#ffffff0e,#ffffff03);
+  box-shadow:inset 0 1px 0 #ffffff12,0 30px 60px #00000059; transition:opacity .22s ease,translate .22s ease,border-color .6s; }
+.tipo-perfil.cambiando { opacity:0; translate:0 8px; }
+.perfil-numero { color:color-mix(in srgb,var(--color-tipo) 50%,#fff); font-size:10.5px; font-weight:800; letter-spacing:2.4px; text-transform:uppercase; }
+.perfil-cabecera h3 { margin:10px 0 12px; padding-bottom:.1em; font-family:var(--serif); font-size:clamp(50px,5vw,78px); font-style:italic; font-weight:400; line-height:1; letter-spacing:-1.5px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--color-tipo) 25%,#fff),color-mix(in srgb,var(--color-tipo) 80%,#fff)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.perfil-lema { margin:0; color:#d6dccf; font-family:var(--serif); font-size:17px; font-style:italic; line-height:1.6; }
+
+.perfil-relaciones { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; margin:26px 0; padding:22px 0; border-block:1px solid #ffffff14; }
+.perfil-grupo h4, .perfil-pokemon h4 { margin:0 0 14px; color:var(--crema); font-size:10.5px; font-weight:800; letter-spacing:2px; text-transform:uppercase; }
+.perfil-grupo dl { display:grid; gap:14px; margin:0; }
+.perfil-fila dt { display:flex; align-items:center; gap:9px; color:var(--apagado); font-size:12.5px; }
+.perfil-fila dt b { min-width:32px; padding:3px 6px; border-radius:7px; font-size:11px; text-align:center; }
+.perfil-bueno { background:#c9ed96; color:#14301f; }
+.perfil-malo { background:#ff5a5f2b; color:#ff9a9d; box-shadow:inset 0 0 0 1px #ff5a5f66; }
+.perfil-fila dd { display:flex; flex-wrap:wrap; gap:6px; min-height:26px; margin:8px 0 0; }
+.perfil-fila em { color:#7f907c; font-family:var(--serif); font-size:13px; line-height:26px; }
+
+.mini-tipo { display:grid; place-items:center; width:26px; height:26px; padding:0; border:0; border-radius:50%; background:var(--color-tipo); box-shadow:0 2px 6px #0006; color:#fff; }
+.mini-tipo svg { width:14px; height:14px; }
+button.mini-tipo { transition:transform .2s,box-shadow .2s; }
+button.mini-tipo:hover { transform:translateY(-2px) scale(1.12); box-shadow:0 0 0 2px #ffffffcc,0 4px 12px #0008; }
+
+.perfil-pokemon-lista { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.perfil-pokemon-boton { display:grid; justify-items:center; gap:6px; min-width:0; padding:10px 6px 11px; border:1px solid #ffffff14; border-radius:16px; background:#ffffff06; color:var(--crema); font-size:12px; font-weight:bold; transition:transform .25s,border-color .25s,background .25s; }
+.perfil-pokemon-boton > span:last-child { max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.perfil-pokemon-foto { display:grid; place-items:end center; width:100%; height:70px; background:radial-gradient(ellipse 60% 14% at 50% 94%,#0000008c,transparent); }
+.perfil-pokemon-foto img { max-width:100%; max-height:70px; image-rendering:pixelated; }
+.perfil-pokemon-boton:hover { transform:translateY(-3px); border-color:color-mix(in srgb,var(--color-tipo) 60%,transparent); background:color-mix(in srgb,var(--color-tipo) 12%,transparent); }
+
+.perfil-ver { display:flex; justify-content:space-between; align-items:center; gap:14px; width:100%; margin-top:24px; padding:15px 24px; border:0; border-radius:99px;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--color-tipo) 70%,#000),var(--color-tipo)); box-shadow:0 12px 30px color-mix(in srgb,var(--color-tipo) 30%,transparent); color:#fff; font-size:14px; font-weight:bold; text-align:left; text-shadow:0 1px 2px #0006; transition:transform .2s,box-shadow .2s; }
+.perfil-ver:hover { transform:translateY(-2px); box-shadow:0 16px 36px color-mix(in srgb,var(--color-tipo) 45%,transparent); }
+.perfil-ver span:last-child { font-size:18px; transition:translate .2s; }
+.perfil-ver:hover span:last-child { translate:4px 0; }
+
+/* =============================================================================
+   TABLA DE EFECTIVIDAD (plegada)
+   ============================================================================= */
+.tabla-tipos-bloque { margin-top:70px; border:1px solid #ffffff14; border-radius:24px; background:linear-gradient(150deg,#ffffff0b,#ffffff02); }
+.tabla-tipos-bloque summary { display:flex; justify-content:space-between; align-items:center; gap:20px; padding:24px 28px; border-radius:24px; cursor:pointer; list-style:none; }
+.tabla-tipos-bloque summary::-webkit-details-marker { display:none; }
+.tabla-tipos-bloque summary:hover .tabla-abrir { border-color:var(--lima); background:#c9ed9614; }
+.tabla-resumen { display:grid; gap:7px; }
+.tabla-resumen strong { font-family:var(--serif); font-size:clamp(24px,2.4vw,32px); font-weight:400; }
+.tabla-resumen strong em { background:linear-gradient(90deg,#eaf7cf,#c9ed96 45%,#8fbf5e); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.tabla-resumen small { color:var(--apagado); font-size:13px; }
+.tabla-abrir { display:grid; flex:none; place-items:center; width:42px; height:42px; border:1px solid #ffffff26; border-radius:50%; color:var(--lima); font-size:22px; transition:transform .3s,border-color .2s,background .2s; }
+.tabla-tipos-bloque[open] .tabla-abrir { transform:rotate(45deg); }
+
+.tabla-leyenda { display:flex; flex-wrap:wrap; gap:16px; margin:0 28px 14px; padding:0; color:var(--apagado); font-size:11.5px; font-weight:bold; list-style:none; }
+.tabla-leyenda li { display:flex; align-items:center; gap:7px; }
+.tabla-leyenda b { display:grid; place-items:center; width:26px; height:22px; border-radius:6px; font-size:12px; }
+.tabla-tipos-marco { position:relative; overflow-x:auto; margin:0 14px 14px; padding:14px; border-radius:18px; background:#00000038; }
+.tabla-tipos { width:100%; min-width:900px; border-collapse:separate; border-spacing:3px; table-layout:fixed; }
+.tabla-tipos th, .tabla-tipos td { padding:0; }
+.tabla-tipos thead th { height:36px; }
+.tabla-tipos thead .mini-tipo { margin:auto; }
+/* La columna de nombres queda fija al desplazar la tabla en pantallas estrechas. */
+.tabla-esquina, .tabla-tipos tbody th { position:sticky; left:0; z-index:1; background:#0a1611; }
+.tabla-esquina { width:118px; color:#7f907c; font-size:8.5px; font-weight:800; letter-spacing:.8px; text-align:left; text-transform:uppercase; }
+.tabla-esquina span { display:block; }
+.tabla-tipo { display:flex; align-items:center; gap:8px; width:100%; padding:4px 6px; border:0; border-radius:9px; background:none; color:#d6dccf; font-size:12px; font-weight:bold; text-align:left; transition:background .2s,color .2s; }
+.tabla-tipo .mini-tipo { flex:none; width:22px; height:22px; }
+.tabla-tipo .mini-tipo svg { width:12px; height:12px; }
+.tabla-tipo:hover { background:color-mix(in srgb,var(--color-tipo) 22%,transparent); color:#fff; }
+.tabla-tipos td { height:30px; border-radius:6px; background:#ffffff08; color:var(--crema); font-size:12px; font-weight:800; text-align:center; transition:background .15s,transform .15s; }
+.tabla-tipos .x2, .tabla-leyenda .x2 { background:#c9ed96; color:#14301f; }
+.tabla-tipos .x05, .tabla-leyenda .x05 { background:#ff5a5f2b; color:#ff9a9d; }
+.tabla-tipos .x0, .tabla-leyenda .x0 { background:#000000b3; color:#fff; box-shadow:inset 0 0 0 1px #ffffff2e; }
+.tabla-tipos tbody tr:hover td:not(.x2,.x05,.x0) { background:#ffffff12; }
+.tabla-tipos td.columna-activa { box-shadow:inset 0 0 0 2px #ffffff59; }
+.tabla-tipos td:hover { transform:scale(1.18); box-shadow:0 4px 12px #0009; }
+/* La fila (lo que hacen sus ataques) y la columna (lo que recibe) del tipo elegido en la rueda. */
+.tabla-tipos tr.fila-elegida td:not(.x2,.x05,.x0), .tabla-tipos td.columna-elegida:not(.x2,.x05,.x0) { background:color-mix(in srgb,var(--tipo-elegido) 24%,transparent); }
+.tabla-tipos tr.fila-elegida td, .tabla-tipos td.columna-elegida { outline:1px solid color-mix(in srgb,var(--tipo-elegido) 75%,transparent); }
+.tabla-tipos tr.fila-elegida .tabla-tipo { background:color-mix(in srgb,var(--tipo-elegido) 30%,transparent); color:#fff; }
+.tabla-tipos th.columna-elegida .mini-tipo { box-shadow:0 0 0 2px #fff,0 0 12px var(--tipo-elegido); }
+
+@keyframes trazar { to { stroke-dashoffset:0; } }
+@keyframes hueco { 0%,100% { opacity:.45; scale:.92; } 50% { opacity:1; scale:1; } }
+
+/* --- Pantallas medianas y móviles ------------------------------------------------------------- */
+@media (max-width:1100px) {
+  .rueda-bloque { grid-template-columns:minmax(0,1fr); gap:36px; }
+  .rueda { width:min(600px,100%); }
+}
+@media (max-width:700px) {
+  .categorias-bloque { padding-top:24px; }
+  .rueda-medallon { width:36px; height:36px; }
+  .rueda-medallon svg { width:17px; height:17px; }
+  .rueda-tipo small { display:none; } /* en el teléfono no caben 18 nombres: el del elegido va en el centro */
+  .tipo-perfil { padding:26px 20px 22px; border-radius:22px; }
+  .perfil-relaciones { grid-template-columns:minmax(0,1fr); gap:20px; }
+  .perfil-pokemon-lista { gap:7px; }
+  .perfil-pokemon-foto { height:58px; }
+  .perfil-pokemon-foto img { max-height:58px; }
+  .perfil-ver { padding:14px 18px; font-size:13px; }
+  .tabla-tipos-bloque { margin-top:48px; }
+  .tabla-tipos-bloque summary { padding:20px 18px; }
+  .tabla-leyenda { margin:0 18px 12px; }
+  .tabla-tipos-marco { margin:0 8px 8px; padding:10px; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .categorias, .rueda-habitat, .tipo-perfil, .rueda-medallon, .rueda-simbolo, .rueda-nombre { transition:none; }
+  .rueda-orbita::before, .rueda-tipo::before, .rueda-portal * { animation:none !important; }
+  .rueda-linea { animation:none; stroke-dashoffset:0; }
+}

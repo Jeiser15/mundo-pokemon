@@ -1,0 +1,286 @@
+/* =============================================================================
+   FICHA — ventana modal con los datos de un Pokémon (js/ficha.js).
+
+   dialog#ficha.ficha-modal  ← js pone --tipo-a / --tipo-b (colores de sus tipos),
+                               data-rareza="legendario|singular" si toca y --escala (ver abajo)
+     section.detail
+       .device-bar           barra superior tipo Pokédex
+       .detail-head          escenario (hábitat + ilustración) e identidad
+       .detail-columns       rejilla de paneles .data-panel:
+                               .panel-perfil · .panel-estadisticas · .panel-efectividad
+                               .evolution-panel (debajo de los dos primeros)
+   De ahí salen --acento (detalles) y --marco (borde): los colores del tipo.
+   Legendarios y singulares cambian toda la ficha a negro y oro (sección al final de la hoja).
+   El fondo del escenario es un hábitat animado (habitats.css): el de su tipo, o un santuario si es
+   legendario o singular.
+
+   ESTÁTICA: en escritorio la ficha cabe entera en la ventana y no se desplaza. Está compactada
+   para ~830 px de alto; si la ventana es más baja, ficha.js baja --escala (zoom de toda la ficha,
+   mínimo 0,7). En móvil (≤700 px) no cabría legible: ahí se desplaza, sin barra visible.
+   ============================================================================= */
+
+/* --- Ventana y temas ------------------------------------------------------------ */
+body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidden; } /* congela la página de fondo */
+.ficha-modal {
+  --tipo-a:#5f9b60; --tipo-b:#5f9b60;
+  --acento:var(--tipo-a);
+  --acento-texto:color-mix(in srgb,var(--tipo-a) 72%,#12261b);
+  --marco:linear-gradient(135deg,color-mix(in srgb,var(--tipo-a) 85%,#0b1712),color-mix(in srgb,var(--tipo-b) 85%,#0b1712));
+  --escala:1;
+  /* El ancho se reduce con la misma escala: la ficha se ve igual, solo más pequeña, y por dentro
+     mide siempre lo mismo (si no, el texto se repartiría distinto, cambiaría el alto y la escala). */
+  position:fixed; inset:0; width:calc(min(1160px,100% - 32px) * var(--escala)); max-width:none; max-height:calc(100% - 32px); padding:0; overflow:auto; overscroll-behavior:contain; scrollbar-width:none; border:0; border-radius:calc(22px * var(--escala)); background:transparent;
+}
+.ficha-modal::-webkit-scrollbar { display:none; } /* Safari antiguo: no entiende scrollbar-width */
+.ficha-modal::backdrop { background:#091c15bf; backdrop-filter:blur(5px); }
+.cerrar-ficha { zoom:var(--escala); position:sticky; top:12px; z-index:10; float:right; width:38px; height:38px; margin:12px 14px -56px 0; border:1px solid #ffffff70; border-radius:50%; background:color-mix(in srgb,var(--tipo-a) 45%,#0b1712); color:white; font-size:17px; line-height:1; transition:background .2s; }
+.cerrar-ficha:hover { background:var(--acento); }
+.ficha-aviso { min-height:120px; padding:48px 24px; color:#27553b; font-weight:bold; text-align:center; }
+
+/* --- Marco y textos comunes ------------------------------------------------------- */
+.detail { zoom:var(--escala); margin:0; padding:0; overflow:hidden; border:8px solid transparent; border-radius:22px; background:linear-gradient(#f7faf4,#f7faf4) padding-box,var(--marco) border-box; animation:entrada .45s ease both; }
+.detail p { margin:9px 0; color:#607563; font-size:14px; line-height:1.6; }
+.detail h4 { display:flex; align-items:center; gap:9px; margin:0 0 11px; color:#214b35; font-size:15px; letter-spacing:-.1px; }
+.detail h4::before { content:''; display:inline-block; flex:none; width:8px; height:8px; border-radius:50%; background:var(--acento); box-shadow:0 0 0 4px color-mix(in srgb,var(--acento) 18%,transparent); }
+
+.device-bar { display:flex; align-items:center; gap:15px; min-height:44px; padding:8px 22px; background:linear-gradient(90deg,color-mix(in srgb,var(--tipo-a) 55%,#0c1a14),color-mix(in srgb,var(--tipo-b) 45%,#0c1a14)); color:#eef6ea; font-size:10px; font-weight:800; letter-spacing:1.5px; }
+.device-lights { flex:none; width:20px; height:20px; margin-right:42px; border:3px solid #e8fff1; border-radius:50%; background:#81e4e0; box-shadow:0 0 12px #6fe6d7, 28px 0 0 -6px #d8ed77, 42px 0 0 -6px #a9dc91; }
+.device-titulo { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.device-status { margin-right:38px; margin-left:4px; color:#c9ed96; white-space:nowrap; } /* deja hueco al botón de cerrar */
+/* «Añadir a mi equipo» (ficha.js → mi-equipo.js). */
+.ficha-equipo { display:inline-flex; flex:none; align-items:center; gap:7px; margin-left:auto; padding:5px 12px 5px 5px; border:1px solid #ffffff59; border-radius:99px; background:#ffffff1f; color:inherit; font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; transition:background .2s,border-color .2s; }
+.ficha-equipo b { display:grid; place-items:center; width:20px; height:20px; border-radius:50%; background:white; color:#143e2d; font-size:13px; }
+.ficha-equipo:hover:not(:disabled) { border-color:white; background:#ffffff3d; }
+.ficha-equipo:disabled { opacity:.8; cursor:default; }
+
+/* --- Cabecera: escenario ----------------------------------------------------------- */
+.detail-head { position:relative; display:grid; grid-template-columns:1.05fr .95fr; align-items:stretch; background:#e6f3dd; }
+.pokemon-stage { position:relative; min-height:290px; overflow:hidden; background:#0d1a14; }
+.pokemon-stage .habitat { position:absolute; inset:0; } /* hábitat del tipo o santuario: ver habitats.css */
+.habitat-pokemon { position:absolute; top:7%; left:4%; z-index:3; width:92%; height:88%; object-fit:contain; filter:drop-shadow(0 16px 12px #00000059); animation:flotar 4s ease-in-out infinite; }
+.stage-number { position:absolute; top:10px; left:14px; z-index:0; color:#ffffff3d; font-size:84px; font-weight:900; line-height:1; letter-spacing:-7px; }
+.stage-caption { position:absolute; bottom:13px; left:18px; z-index:5; color:#fff; font-size:9px; font-weight:bold; letter-spacing:1.5px; text-shadow:0 1px 5px #000,0 1px 8px #000; }
+
+/* --- Cabecera: identidad ------------------------------------------------------------ */
+.pokemon-identity { position:relative; isolation:isolate; display:flex; flex-direction:column; justify-content:center; align-items:flex-start; padding:24px 32px; overflow:hidden; background:linear-gradient(140deg,color-mix(in srgb,var(--tipo-a) 16%,white),color-mix(in srgb,var(--tipo-b) 26%,white)); color:#173f2d; }
+/* Aro decorativo del color del tipo en la esquina. */
+.pokemon-identity::after { content:''; position:absolute; right:-70px; bottom:-70px; z-index:-1; width:240px; height:240px; border:30px solid color-mix(in srgb,var(--tipo-a) 14%,transparent); border-radius:50%; }
+.pokemon-identity .eyebrow { color:var(--acento-texto); }
+.ficha-sello { margin-top:10px; padding:4px 12px; border-radius:99px; font-size:10px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
+.pokemon-identity h3 { margin:10px 0 2px; font-size:clamp(32px,3.6vw,48px); line-height:1; letter-spacing:-2px; text-transform:capitalize; overflow-wrap:anywhere; }
+.detail .identity-caption { margin:3px 0 12px; color:var(--acento-texto); font-family:Georgia,'Times New Roman',serif; font-size:15px; font-style:italic; }
+.identity-tipos { display:flex; flex-wrap:wrap; gap:6px; }
+.badge { display:inline-flex; align-items:center; gap:6px; padding:6px 13px 6px 8px; border-radius:99px; background:var(--color-etiqueta,#5f9b60); box-shadow:0 4px 12px color-mix(in srgb,var(--color-etiqueta,#5f9b60) 40%,transparent); color:#fff; font-size:12px; font-weight:bold; text-shadow:0 1px 2px #0009; }
+.badge svg { width:15px; height:15px; }
+.identity-region { margin-top:11px; padding:4px 11px; border:1px solid color-mix(in srgb,var(--acento) 40%,transparent); border-radius:99px; color:var(--acento-texto); font-size:11px; font-weight:bold; }
+.detail .identity-descripcion { max-width:480px; margin:10px 0 0; color:#4f6555; font-size:13.5px; line-height:1.6; }
+.detail .identity-descripcion:empty { display:none; }
+
+/* --- Paneles ---------------------------------------------------------------------------
+   Tres columnas: arriba perfil y estadísticas; debajo, la evolución ocupa esas dos columnas.
+   La efectividad llena la tercera columna de arriba abajo. */
+.detail-columns {
+  display:grid; grid-template-columns:minmax(0,.95fr) minmax(0,1.35fr) minmax(0,1.05fr);
+  grid-template-areas:"perfil stats efectividad" "evolucion evolucion efectividad"; grid-template-rows:auto 1fr;
+  gap:10px 12px; padding:12px 14px 14px;
+}
+.panel-perfil { grid-area:perfil; }
+.panel-estadisticas { grid-area:stats; }
+.evolution-panel { grid-area:evolucion; }
+.panel-efectividad { grid-area:efectividad; }
+.data-panel { position:relative; overflow:hidden; padding:15px 16px; border:1px solid #e0eadc; border-radius:14px; background:white; box-shadow:0 5px 18px #254a2908; }
+.data-panel::before { content:''; position:absolute; top:0; left:24px; width:40px; height:3px; border-radius:0 0 5px 5px; background:var(--acento); }
+.data-panel p { margin:5px 0; line-height:1.6; }
+
+/* Perfil: medidas y habilidades. */
+.measure-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+.measure { display:flex; align-items:center; gap:9px; min-width:0; padding:10px; border:1px solid #e7f0e3; border-radius:11px; background:#f7faf5; }
+.measure-icon { display:grid; place-items:center; flex:none; width:32px; height:32px; border-radius:9px; background:color-mix(in srgb,var(--acento) 14%,white); color:var(--acento-texto); font-size:20px; font-weight:bold; }
+.measure small, .ability-box small { display:block; color:#879c88; font-size:9px; font-weight:800; letter-spacing:1px; }
+.measure strong { display:block; margin-top:3px; color:#17492f; font-size:16px; white-space:nowrap; }
+.ability-box { margin-top:8px; padding:10px 12px; border:1px solid #e7f0e3; border-radius:11px; background:#f7faf5; }
+.ability-chip { display:inline-block; margin:8px 6px 0 0; padding:6px 10px; border:1px solid transparent; border-radius:8px; background:color-mix(in srgb,var(--acento) 13%,white); color:var(--acento-texto); font-size:12px; font-weight:bold; text-transform:capitalize; }
+.ability-chip.oculta { border:1px dashed color-mix(in srgb,var(--acento) 50%,white); background:white; }
+
+/* Estadísticas: radar + barras. */
+.stats-cuerpo { display:grid; grid-template-columns:160px minmax(0,1fr); align-items:center; gap:14px; }
+.radar { display:block; width:100%; height:auto; overflow:visible; }
+.radar-rejilla { fill:none; stroke:#dfe8dc; stroke-width:1; }
+.radar-eje { stroke:#e6ede3; stroke-width:1; }
+.radar-valor { fill:color-mix(in srgb,var(--tipo-a) 38%,transparent); stroke:var(--tipo-a); stroke-width:2.5; stroke-linejoin:round; transform-origin:110px 110px; animation:radar-crece .8s cubic-bezier(.2,.8,.3,1.2) both; }
+.radar-etiqueta { fill:#6c8071; font-size:12px; font-weight:bold; }
+.stats { margin:0; padding:0; list-style:none; }
+.stats li { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:3px 0; font-size:13px; }
+.stats li > span:first-child { flex:0 0 96px; color:#69806d; font-size:11.5px; }
+.stats li strong { min-width:25px; color:#245a3e; text-align:right; }
+.stat-track { flex:1; height:8px; overflow:hidden; border-radius:20px; background:#edf2ea; }
+.stat-track span { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,var(--tipo-a),var(--tipo-b)); box-shadow:0 0 8px color-mix(in srgb,var(--tipo-a) 55%,transparent); }
+.stat-total { display:flex; align-items:center; justify-content:space-between; margin-top:7px; padding:7px 12px; border-radius:9px; background:color-mix(in srgb,var(--acento) 12%,white); color:var(--acento-texto); font-size:10px; font-weight:800; letter-spacing:.7px; }
+.stat-total strong { color:var(--acento-texto); font-size:17px; }
+
+/* Evolución: el árbol crece a lo ancho; varias evoluciones finales forman un grupo (.en-grupo). */
+.evolution-panel { background:linear-gradient(135deg,#fff,color-mix(in srgb,var(--tipo-a) 7%,white)); }
+.panel-cabecera { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:2px 14px; }
+.panel-cabecera h4 { margin-bottom:0; }
+.detail .panel-cabecera p { margin:0; color:#829482; font-size:11.5px; }
+.evolution-tree { padding:14px 0 4px; overflow-x:auto; }
+.evolution-branch { display:flex; align-items:center; width:max-content; }
+.evolution-children { position:relative; display:flex; flex-direction:column; gap:10px; padding-left:40px; }
+.evolution-children::before { content:'→'; position:absolute; top:50%; left:11px; color:var(--acento); font-size:19px; transform:translateY(-50%); }
+.evolution-children.en-grupo { display:grid; grid-template-columns:repeat(var(--columnas),auto); gap:8px; padding:7px 7px 7px 47px; }
+/* Contorno discontinuo: «una de estas». */
+.evolution-children.en-grupo::after { content:''; position:absolute; inset:0 0 0 38px; border:1.5px dashed color-mix(in srgb,var(--acento) 45%,transparent); border-radius:16px; pointer-events:none; }
+.evolution-card { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; width:100px; min-height:112px; padding:8px; border:1px solid #dcecd8; border-radius:13px; background:white; box-shadow:0 5px 14px #3b6d3910; color:#23543a; text-align:center; transition:transform .25s,box-shadow .25s,border-color .25s; }
+.evolution-card:hover { transform:translateY(-4px); border-color:var(--acento); box-shadow:0 10px 20px color-mix(in srgb,var(--acento) 22%,transparent); }
+.evolution-card img { width:62px; height:62px; object-fit:contain; transition:transform .25s; }
+.evolution-card:hover img { transform:scale(1.1); }
+.evolution-card small { margin:2px 0 3px; color:#9aac9b; font-size:10px; font-weight:bold; }
+.evolution-card strong { font-size:12.5px; text-transform:capitalize; overflow-wrap:anywhere; }
+/* El Pokémon que estás viendo. */
+.evolution-card.actual { border:2px solid var(--acento); background:color-mix(in srgb,var(--acento) 8%,white); box-shadow:0 0 0 4px color-mix(in srgb,var(--acento) 18%,transparent),0 8px 18px color-mix(in srgb,var(--acento) 22%,transparent); }
+.evolution-card.actual::after { content:'Estás aquí'; position:absolute; top:-10px; left:50%; padding:2px 9px; border-radius:99px; background:var(--acento); color:#fff; font-size:9px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; white-space:nowrap; translate:-50% 0; }
+
+/* Efectividad: un panel con tres grupos (debilidades, resistencias, inmunidades) y la nota al pie. */
+.panel-efectividad { display:flex; flex-direction:column; }
+.efectividad-grupo { --color-grupo:#2f3a33; }
+.efectividad-grupo + .efectividad-grupo { margin-top:12px; }
+.efectividad-grupo.weakness { --color-grupo:#d9542b; }
+.efectividad-grupo.resistance { --color-grupo:#2f7b45; }
+.detail h5 { display:flex; align-items:center; gap:8px; margin:0 0 7px; color:#4f6555; font-size:10.5px; font-weight:800; letter-spacing:.9px; text-transform:uppercase; }
+.detail h5::before { content:''; flex:none; width:7px; height:7px; border-radius:50%; background:var(--color-grupo); box-shadow:0 0 0 3px color-mix(in srgb,var(--color-grupo) 18%,transparent); }
+.efectividad-grupo p { margin:0; font-size:12.5px; }
+.type-chips { display:flex; flex-wrap:wrap; gap:5px; }
+.type-chip { display:inline-flex; align-items:center; gap:5px; padding:3px 4px 3px 3px; border:1px solid color-mix(in srgb,var(--color-tipo) 30%,#fff); border-radius:99px; background:color-mix(in srgb,var(--color-tipo) 10%,#fff); color:color-mix(in srgb,var(--color-tipo) 70%,#1d3326); font-size:11.5px; font-weight:bold; }
+.type-chip-icono { display:grid; place-items:center; width:20px; height:20px; border-radius:50%; background:var(--color-tipo); color:#fff; }
+.type-chip-icono svg { width:12px; height:12px; }
+.type-chip b { padding:1px 6px; border-radius:99px; font-size:10px; }
+.weakness .type-chip b { background:#fde3d6; color:#b2502c; }
+.weakness .type-chip b.extremo { background:#d9542b; color:#fff; }
+.resistance .type-chip b { background:#dcefd8; color:#2f7b45; }
+.resistance .type-chip b.extremo { background:#2f7b45; color:#fff; }
+.immunity .type-chip b { background:#2f3a33; color:#fff; }
+/* La nota baja al fondo del panel. */
+.detail .detail-note { margin:auto 0 0; padding:6px 10px; border-left:3px solid var(--acento); border-radius:0 7px 7px 0; background:color-mix(in srgb,var(--acento) 9%,white); color:#6f8571; font-size:11px; line-height:1.5; }
+.efectividad-grupo:last-of-type { margin-bottom:12px; }
+
+/* =============================================================================
+   LEGENDARIOS Y SINGULARES — toda la ficha en negro y oro, con la misma forma.
+   Solo cambian colores: fondo negro cálido, paneles oscuros con filo dorado y un marco
+   de oro con un brillo que se desliza despacio. Los colores de tipo (etiquetas y chips
+   de efectividad) se mantienen porque dan información.
+   El sello distingue la rareza: relleno de oro (legendario) o contorno de oro (singular).
+   ============================================================================= */
+.ficha-modal[data-rareza] {
+  --negro:#0b0a08; --caja:#1b1710; --linea:#3b311f;
+  --oro:#d9ad4a; --oro-claro:#f6e3a1; --texto:#d8ccb0; --texto-suave:#a3957a;
+  --acento:var(--oro); --acento-texto:#f0cf7a;
+  --marco:linear-gradient(120deg,#6e5016,#b8913f 15%,#f6e3a1 28%,#9c7a2e 42%,#fff0b8 56%,#a8822f 70%,#f3dc92 84%,#6e5016);
+}
+.ficha-modal[data-rareza]::backdrop { background:#050403d9; }
+.ficha-modal[data-rareza] .cerrar-ficha { border-color:#e8c87399; background:var(--negro); color:var(--oro-claro); }
+.ficha-modal[data-rareza] .cerrar-ficha:hover { background:var(--oro); color:var(--negro); }
+.ficha-modal[data-rareza] .detail {
+  background:radial-gradient(ellipse 70% 30% at 50% 0,#d9ad4a17,transparent) padding-box,linear-gradient(var(--negro),var(--negro)) padding-box,var(--marco) border-box;
+  background-size:auto,auto,300% 300%;
+  animation:entrada .45s ease both,marco-oro 9s ease-in-out infinite alternate;
+}
+
+/* Barra superior: luces doradas en vez de verdes. */
+.ficha-modal[data-rareza] .device-bar { border-bottom:1px solid #d9ad4a4d; background:linear-gradient(90deg,var(--negro),#1d170c 50%,var(--negro)); color:#f3dc92; }
+.ficha-modal[data-rareza] .device-lights { border-color:#fff3c4; background:#e8c873; box-shadow:0 0 12px #e8c873, 28px 0 0 -6px #f6e3a1, 42px 0 0 -6px #9c7a2e; }
+.ficha-modal[data-rareza] .device-status { color:#e8c873; }
+.ficha-modal[data-rareza] .ficha-equipo { border-color:#e8c87380; background:#d9ad4a1f; }
+.ficha-modal[data-rareza] .ficha-equipo b { background:#e8c873; color:#1d1406; }
+
+/* Escenario (el santuario está en habitats.css) e identidad: cielo negro con estrellas doradas. */
+.ficha-modal[data-rareza] .habitat-pokemon { filter:drop-shadow(0 0 26px #d9ad4abf) drop-shadow(0 16px 12px #00000080); }
+.ficha-modal[data-rareza] .stage-number { color:#e8c87338; }
+.ficha-modal[data-rareza] .pokemon-identity {
+  background:radial-gradient(circle at 85% 15%,#d9ad4a2e,transparent 55%),radial-gradient(1.2px 1.2px at 30px 40px,#fff3c4,transparent) 0 0/180px 150px,radial-gradient(1px 1px at 120px 100px,#e8c873,transparent) 0 0/180px 150px,linear-gradient(140deg,var(--negro),#18130b);
+  color:var(--texto);
+}
+.ficha-modal[data-rareza] .pokemon-identity::after { border-color:#d9ad4a24; }
+.ficha-modal[data-rareza] .pokemon-identity h3 {
+  font-family:Georgia,'Times New Roman',serif; font-weight:400; letter-spacing:2px; text-transform:uppercase;
+  background:linear-gradient(180deg,#fff6d6,#f0cf7a 50%,#b8913f); -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.ficha-modal[data-rareza] .identity-region { border-color:currentColor; }
+.ficha-modal[data-rareza] .detail .identity-descripcion { color:#cfc4a8; }
+.ficha-modal[data-rareza="legendario"] .ficha-sello { background:linear-gradient(90deg,#b8913f,#f6e3a1 50%,#d9ad4a); color:#1d1406; }
+.ficha-modal[data-rareza="singular"] .ficha-sello { border:1px solid #e8c873; background:#d9ad4a1f; color:#f6e3a1; }
+
+/* Paneles: fondo oscuro con un filo de luz arriba. */
+.ficha-modal[data-rareza] .detail h4 { color:var(--oro-claro); }
+.ficha-modal[data-rareza] .detail h5 { color:var(--texto); }
+.ficha-modal[data-rareza] .data-panel p { color:var(--texto-suave); }
+.ficha-modal[data-rareza] .data-panel { border-color:var(--linea); background:linear-gradient(160deg,#17130d,#0f0d09); box-shadow:inset 0 1px 0 #f6e3a112, 0 8px 22px #00000066; }
+.ficha-modal[data-rareza] .measure, .ficha-modal[data-rareza] .ability-box { border-color:var(--linea); background:var(--caja); }
+.ficha-modal[data-rareza] .measure-icon, .ficha-modal[data-rareza] .ability-chip { background:#d9ad4a1f; }
+.ficha-modal[data-rareza] .ability-chip.oculta { border-color:#d9ad4a80; background:transparent; }
+.ficha-modal[data-rareza] .measure small, .ficha-modal[data-rareza] .ability-box small { color:var(--texto-suave); }
+.ficha-modal[data-rareza] .measure strong { color:#fff3d6; }
+
+/* Radar y barras de estadísticas en oro. */
+.ficha-modal[data-rareza] .radar-rejilla { stroke:#54462b; }
+.ficha-modal[data-rareza] .radar-eje { stroke:#3b311f; }
+.ficha-modal[data-rareza] .radar-valor { fill:#d9ad4a40; stroke:var(--oro); }
+.ficha-modal[data-rareza] .radar-etiqueta { fill:var(--texto-suave); }
+.ficha-modal[data-rareza] .stats li > span:first-child { color:var(--texto-suave); }
+.ficha-modal[data-rareza] .stats li strong { color:#fff3d6; }
+.ficha-modal[data-rareza] .stat-track { background:#262014; }
+.ficha-modal[data-rareza] .stat-track span { background:linear-gradient(90deg,#9c7a2e,#e8c873 60%,#fff3c4); box-shadow:0 0 8px #e8c87399; }
+.ficha-modal[data-rareza] .stat-total { border:1px solid #d9ad4a40; background:linear-gradient(90deg,#d9ad4a29,#d9ad4a0d); }
+
+/* Evolución y efectividad. */
+.ficha-modal[data-rareza] .evolution-card { border-color:var(--linea); background:var(--caja); box-shadow:0 5px 14px #00000080; color:var(--oro-claro); }
+.ficha-modal[data-rareza] .evolution-card small { color:var(--texto-suave); }
+.ficha-modal[data-rareza] .evolution-card.actual { background:#d9ad4a17; }
+.ficha-modal[data-rareza] .evolution-card.actual::after { color:var(--negro); }
+.ficha-modal[data-rareza] .type-chip { border-color:color-mix(in srgb,var(--color-tipo) 45%,transparent); background:color-mix(in srgb,var(--color-tipo) 16%,var(--caja)); color:color-mix(in srgb,var(--color-tipo) 35%,#fff); }
+.ficha-modal[data-rareza] .weakness .type-chip b { background:#d9542b38; color:#ffad8c; }
+.ficha-modal[data-rareza] .resistance .type-chip b { background:#2f7b4547; color:#98deaa; }
+.ficha-modal[data-rareza] .weakness .type-chip b.extremo { background:#d9542b; color:#fff; }
+.ficha-modal[data-rareza] .resistance .type-chip b.extremo { background:#2f7b45; color:#fff; }
+.ficha-modal[data-rareza] .immunity .type-chip b { background:#e8dfc8; color:var(--negro); }
+.ficha-modal[data-rareza] .efectividad-grupo.immunity { --color-grupo:#cfc4a8; }
+.ficha-modal[data-rareza] .detail .detail-note { background:#d9ad4a12; color:var(--texto-suave); }
+
+@keyframes radar-crece { from { opacity:0; transform:scale(.2); } }
+/* El brillo recorre el marco de oro (solo se mueve la capa del borde). */
+@keyframes marco-oro { from { background-position:0 0,0 0,0% 50%; } to { background-position:0 0,0 0,100% 50%; } }
+
+/* Ventanas medianas: dos columnas; la evolución y la efectividad ocupan todo el ancho. */
+@media (max-width:1000px) {
+  .detail-columns { grid-template-columns:minmax(0,1fr) minmax(0,1.3fr); grid-template-areas:"perfil stats" "evolucion evolucion" "efectividad efectividad"; grid-template-rows:auto; }
+  .panel-efectividad { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0 14px; align-items:start; }
+  .panel-efectividad h4, .panel-efectividad .detail-note { grid-column:1/-1; }
+  .efectividad-grupo + .efectividad-grupo { margin-top:0; }
+  .stats-cuerpo { grid-template-columns:150px minmax(0,1fr); gap:10px; }
+}
+
+/* Móvil: una columna y la ficha se desplaza (no cabría legible en la pantalla). */
+@media (max-width:700px) {
+  .ficha-modal { width:calc(100% - 16px); max-height:calc(100% - 16px); border-radius:22px; }
+  .cerrar-ficha { top:8px; margin:8px 10px -46px 0; }
+  .device-bar { padding:10px 12px; font-size:9px; letter-spacing:.6px; }
+  .device-lights { margin-right:30px; }
+  .device-status { display:none; }
+  .ficha-equipo { margin-right:40px; padding-right:10px; font-size:9px; letter-spacing:.4px; }
+  .detail-head { grid-template-columns:1fr; }
+  .pokemon-stage { min-height:280px; }
+  .pokemon-identity { padding:24px; }
+  .detail-columns { grid-template-columns:1fr; grid-template-areas:"perfil" "stats" "evolucion" "efectividad"; padding:12px 12px 14px; }
+  .data-panel { padding:15px; }
+  .stats-cuerpo { grid-template-columns:1fr; }
+  .radar { max-width:230px; margin:0 auto; }
+  .panel-efectividad { display:flex; }
+  .efectividad-grupo + .efectividad-grupo { margin-top:12px; }
+  .evolution-children { padding-left:36px; }
+  .evolution-children::before { left:8px; }
+  .evolution-children.en-grupo { grid-template-columns:auto; padding-left:43px; } /* una columna: a lo ancho no cabe */
+  .evolution-children.en-grupo::after { left:34px; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .radar-valor, .ficha-modal[data-rareza] .detail { animation:none; }
+}

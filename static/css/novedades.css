@@ -1,0 +1,67 @@
+/* =============================================================================
+   INICIO, «Ahora también puedes combatir» (js/novedades.js): el Duelo Pokémon con un combate de muestra
+   en vivo, lo nuevo, tu equipo con tu récord y las seis arenas.
+   Sin fondo propio (ver portada.css): al llegar aquí, la luz del fondo del Inicio se vuelve color brasa
+   (data-luz en index.html), la misma del Duelo, y se funde con la de antes y la de después.
+   ============================================================================= */
+.inicio-novedades { --brasa:#ff8f4d; --brasa-clara:#ffc27a; --brasa-oscura:#d9652c; }
+.inicio-novedades .mundo-sello { color:var(--brasa); }
+.inicio-novedades h2 em { background-image:linear-gradient(90deg,#ffd8b3,var(--brasa) 55%,var(--brasa-oscura)); }
+
+/* --- La muestra en vivo y lo nuevo del Duelo ------------------------------------------------ */
+.novedades-escaparate { display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); align-items:center; gap:56px; }
+.novedades-muestra { margin:0; }
+.novedades-lienzo-marco { position:relative; overflow:hidden; border:1px solid #ff8f4d4d; border-radius:20px; background:#050a08; box-shadow:0 30px 70px #000a,0 0 0 7px #ffffff06,0 0 70px #ff8f4d1f; }
+.novedades-lienzo { display:block; width:100%; height:auto; aspect-ratio:16 / 9; image-rendering:pixelated; }
+.novedades-en-vivo, .novedades-arena-nombre { position:absolute; top:12px; display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border:1px solid #ffffff26; border-radius:99px; background:#07110dcc; color:var(--crema); font-size:10px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
+.novedades-en-vivo { left:12px; }
+.novedades-en-vivo i { width:7px; height:7px; border-radius:50%; background:#ff4a3a; box-shadow:0 0 8px #ff4a3a; animation:novedades-late 1.4s ease-in-out infinite; }
+.novedades-arena-nombre { right:12px; color:var(--brasa-clara); font-family:var(--serif); font-size:12px; font-weight:400; letter-spacing:.5px; text-transform:none; }
+.novedades-rotulo { display:flex; align-items:center; gap:10px; min-height:22px; margin-top:14px; color:var(--apagado); font-family:var(--serif); font-size:15px; font-style:italic; }
+.novedades-rotulo i { flex:none; width:10px; height:10px; border-radius:3px; background:var(--color-tipo); box-shadow:0 0 10px var(--color-tipo); }
+
+.novedades-texto h2 { margin:12px 0; font-size:clamp(36px,3.9vw,56px); line-height:1.04; letter-spacing:-1px; }
+.novedades-texto > p { margin:0 0 24px; color:var(--apagado); font-size:15px; line-height:1.7; }
+.novedades-lista { display:grid; gap:14px; margin:0; padding:0; list-style:none; }
+.novedades-lista li { display:grid; grid-template-columns:38px 1fr; gap:14px; align-items:center; }
+.novedad-icono { display:grid; place-items:center; width:38px; height:38px; border:1px solid #ff8f4d4d; border-radius:12px; background:linear-gradient(150deg,#ffffff10,#ffffff03); color:var(--brasa-clara); }
+.novedad-icono svg { width:18px; height:18px; }
+.novedades-lista strong { display:block; color:var(--crema); font-size:14.5px; }
+.novedades-lista p { margin:2px 0 0; color:var(--apagado); font-size:13px; line-height:1.5; }
+
+.novedades-acciones { display:flex; flex-wrap:wrap; align-items:center; gap:14px 16px; margin-top:28px; }
+.novedades-boton { display:inline-flex; align-items:center; gap:8px; padding:13px 24px; border-radius:99px; background:linear-gradient(90deg,#d9652c,#ffb470); box-shadow:0 10px 26px #d9652c55; color:#2a1206; font-size:14px; font-weight:bold; text-decoration:none; transition:transform .2s,box-shadow .2s; }
+.novedades-boton:hover { transform:translateY(-2px); box-shadow:0 14px 32px #d9652c77; }
+/* Tu equipo: seis huecos y tu récord, en una píldora de vidrio junto al botón */
+.novedades-mi-equipo { display:inline-flex; align-items:center; gap:12px; padding:5px 16px 5px 6px; border:1px solid #ffffff1a; border-radius:99px; background:#ffffff07; text-decoration:none; transition:border-color .2s,background .2s; }
+.novedades-mi-equipo:hover { border-color:#ff8f4d77; background:#ff8f4d10; }
+.novedades-equipo { display:flex; }
+.novedades-equipo img, .novedades-hueco { width:36px; height:36px; margin-right:-9px; border:1px solid #ffffff26; border-radius:50%; background:radial-gradient(circle at 50% 40%,#1b2a22,#0b1510); image-rendering:pixelated; object-fit:contain; }
+.novedades-hueco { display:block; border:1px dashed #ffc27a59; background:#ff8f4d0a; }
+.novedades-mi-equipo small { margin-left:9px; color:var(--brasa-clara); font-family:var(--serif); font-size:13px; font-style:italic; }
+
+/* --- Las seis arenas ------------------------------------------------------------------------- */
+.novedades-arenas-cabecera { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 16px; margin:60px 0 16px; }
+.novedades-arenas-cabecera p { margin:0; color:var(--apagado); font-size:13px; }
+.novedades-arenas { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; }
+.novedades-arena { display:flex; flex-direction:column; gap:9px; padding:7px 7px 12px; border:1px solid #ffffff14; border-radius:16px; background:linear-gradient(150deg,#ffffff0e,#ffffff02); color:var(--crema); font-family:var(--serif); font-size:14px; text-align:left; transition:transform .25s,border-color .25s,box-shadow .25s; }
+.novedades-arena-vista { display:block; width:100%; height:auto; aspect-ratio:16 / 9; border-radius:10px; image-rendering:pixelated; }
+.novedades-arena span { padding:0 5px; }
+.novedades-arena:hover { transform:translateY(-4px); border-color:#ff8f4d88; box-shadow:0 14px 30px #0008,0 0 24px #ff8f4d22; }
+
+@keyframes novedades-late { 50% { opacity:.35; } }
+
+@media (max-width:1100px) {
+  .novedades-arenas { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:900px) {
+  .novedades-escaparate { grid-template-columns:minmax(0,1fr); gap:30px; }
+}
+@media (max-width:700px) {
+  .novedades-arenas { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .novedades-equipo img, .novedades-hueco { width:30px; height:30px; margin-right:-8px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .novedades-en-vivo i { animation:none; }
+  .novedades-boton, .novedades-arena, .novedades-mi-equipo { transition:none; }
+}
