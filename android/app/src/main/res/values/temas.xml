@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Oscuro y sin barra de título: la web ya tiene su cabecera. Barras del sistema del color del fondo. -->
+    <style name="Tema" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/noche</item>
+        <item name="android:statusBarColor">@color/noche</item>
+        <item name="android:navigationBarColor">@color/noche</item>
+    </style>
+</resources>

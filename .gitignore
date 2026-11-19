@@ -10,3 +10,10 @@ datos/
 
 # Versión original de la web y paisajes antiguos que ya no se usan (unos 55 MB).
 archivo/
+
+# App de Android: lo que genera la compilación y la copia de la web (se hace al compilar).
+android/.gradle/
+android/build/
+android/app/build/
+android/app/src/main/assets/
+android/local.properties

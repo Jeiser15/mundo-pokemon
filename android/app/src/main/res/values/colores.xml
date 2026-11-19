@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Los colores de la web (base.css): verde noche del fondo y verde bosque del logo. -->
+    <color name="noche">#06110C</color>
+    <color name="icono_fondo">#0C1D15</color>
+</resources>

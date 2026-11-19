@@ -1,0 +1,30 @@
+plugins {
+    id 'com.android.application'
+}
+
+// GitHub Actions pasa el número de compilación (-PversionCode=…) para que cada APK sea una versión nueva.
+def numeroVersion = (project.findProperty('versionCode') ?: '1').toString().toInteger()
+
+android {
+    namespace 'io.github.jeiser15.mundopokemon'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.github.jeiser15.mundopokemon'
+        minSdk 26        // Android 8.0 o superior (permite un icono adaptable sin imágenes PNG)
+        targetSdk 34
+        versionCode numeroVersion
+        versionName "1.${numeroVersion}"
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // WebViewAssetLoader: sirve los archivos de la web (assets/) como si vinieran de una dirección https,
+    // para que los módulos de JavaScript funcionen dentro de la app.
+    implementation 'androidx.webkit:webkit:1.11.0'
+}

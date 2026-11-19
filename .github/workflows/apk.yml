@@ -1,0 +1,78 @@
+# Compila la app de Android (android/) con la web dentro y la publica en «Releases» como mundo-pokemon.apk.
+# Se ejecuta sola cada vez que se suben cambios de la web o de la app a main; también a mano desde la pestaña
+# «Actions» (Run workflow). Todo ocurre en los servidores de GitHub: no hace falta Java ni Android en el PC.
+name: APK para Android
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - 'static/**'
+      - 'android/**'
+      - '.github/workflows/apk.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # para crear la publicación (release) con el APK
+
+concurrency:
+  group: apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el proyecto
+        uses: actions/checkout@v4
+
+      - name: Preparar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Preparar Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      # El APK se firma con una llave de pruebas. Si cambiara en cada compilación, Android no dejaría
+      # actualizar la app sin desinstalarla; por eso se guarda entre compilaciones.
+      - name: Recordar la llave de firma
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: llave-de-firma-mundo-pokemon
+
+      - name: Copiar la web dentro de la app
+        run: |
+          mkdir -p android/app/src/main/assets
+          cp index.html android/app/src/main/assets/
+          cp -r static android/app/src/main/assets/
+
+      - name: Compilar el APK
+        run: gradle -p android assembleDebug -PversionCode=${{ github.run_number }} --no-daemon
+
+      - name: Publicar en Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk mundo-pokemon.apk
+          gh release delete apk --yes --cleanup-tag || true
+          cat > notas.md <<'NOTAS'
+          La última versión de **Mundo Pokémon** para Android (8.0 o superior), compilada a partir del último cambio.
+
+          **Cómo instalarla**
+          1. Descarga `mundo-pokemon.apk` desde el celular (abajo, en «Assets»).
+          2. Ábrela. Si Android avisa de que es de un origen desconocido, permite instalar apps desde tu navegador.
+          3. Abre **Mundo Pokémon**. Necesita internet: los datos llegan de PokéAPI.
+
+          Es una versión de pruebas, firmada con una llave de pruebas: si Android no deja actualizarla, desinstala la anterior.
+          NOTAS
+          gh release create apk mundo-pokemon.apk \
+            --target "$GITHUB_SHA" \
+            --title "Mundo Pokémon para Android · versión 1.${{ github.run_number }}" \
+            --notes-file notas.md \
+            --latest

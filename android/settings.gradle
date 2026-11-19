@@ -1,0 +1,18 @@
+// App de Android de Mundo Pokémon: una WebView que muestra la web, que va dentro del APK.
+// La compila GitHub Actions (.github/workflows/apk.yml); ver android/LEEME.md.
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+rootProject.name = 'MundoPokemon'
+include ':app'

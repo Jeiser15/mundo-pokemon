@@ -23,6 +23,13 @@ python app.py --puerto 8080  # si el 8000 está ocupado
 
 Necesita internet para actualizar PokéAPI y cargar sprites de GitHub. Las pruebas del snapshot no necesitan internet.
 
+**Repositorio público:** https://github.com/Jeiser15/mundo-pokemon (rama `main`). **App de Android:** cada push que
+toque `index.html`, `static/`, `android/` o el flujo hace que GitHub Actions (`.github/workflows/apk.yml`) compile
+`android/` con la web dentro y publique `mundo-pokemon.apk` en la release `apk` (se borra y se vuelve a crear:
+el enlace `releases/latest/download/mundo-pokemon.apk` no cambia). APK de depuración, firmado con una llave de
+pruebas que se guarda en la caché de Actions para poder actualizar sin desinstalar (si la caché caduca, 7 días
+sin uso, habrá que desinstalar una vez). En este PC no hay Java ni SDK de Android: solo compila GitHub.
+
 ## Arquitectura
 
 ```
@@ -92,7 +99,9 @@ static/
                         categoría, tipos, medidas, descripción letra a letra, estadísticas, grito); ‹ › siguen la
                         lista del archivo (vecino) y «Al azar»; lleva la cuenta de vistos (pokedex.vistos)
     especies.js         Descarga /api/pokedex una vez y la comparte (cargarEspecies, tiposDe)
-    api.js              fetch al servidor local; lanza Error con el mensaje del servidor
+    api.js              Datos de dos maneras: con el servidor local (/api/…) o, si no lo hay (la app de Android,
+                        usaServidor() lo averigua una vez), directo a PokéAPI con los mismos mensajes de error;
+                        en ese modo arma la Pokédex compacta como el servidor (19 consultas) y la guarda 7 días
     utilidades.js       crear() para construir DOM, crearIcono() (iconos de tipo), crearImagen(), urlIlustracion(),
                         urlSprite(), urlAnimado() (GIF de Showdown)...
     vistas.js           Navegación por #hash (inicio, categorias, legendarios, catalogo, duelo, quien;
@@ -148,7 +157,10 @@ static/
     quien.js            ¿Quién es ese Pokémon?: modos, regiones, pistas, contrarreloj, racha (mejor racha guardada)
   img/
     icono.svg
-archivo/                Versión original y paisajes que no se usan. No se sirve; se puede borrar.
+archivo/                Versión original y paisajes que no se usan. No se sirve ni está en git; se puede borrar.
+android/                App de Android (WebView con la web dentro, servida con WebViewAssetLoader desde
+                        https://appassets.androidplatform.net). Ver android/LEEME.md
+.github/workflows/apk.yml  Compila el APK en GitHub Actions y lo publica en Releases
 ```
 
 ### API del servidor local
@@ -166,7 +178,9 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
 
 - **Todo en español**: nombres de variables, funciones, archivos, clases CSS nuevas y textos. Las clases CSS
   antiguas en inglés (`.detail`, `.pokemon-card`...) se mantienen; no renombrarlas sin motivo.
-- **Sin dependencias ni build.** Nada de npm, frameworks ni pip. Si algo lo requiere, consultarlo antes.
+- **Sin dependencias ni build.** Nada de npm, frameworks ni pip. Si algo lo requiere, consultarlo antes. La única
+  excepción es `android/` (Gradle, compilado solo en GitHub Actions); la web sigue sin build y debe funcionar
+  igual con el servidor y sin él (no añadir nada que dependa solo de `/api/…` sin su versión directa en api.js).
 - **DOM con `crear(etiqueta, opciones, ...hijos)`** (utilidades.js) en vez de `innerHTML`: evita inyección de HTML
   con datos de la API.
 - **Respuestas que llegan tarde**: `ficha.js` (`versionBusqueda`), `escaner.js` (`versionEscaneo`) y `legendarios.js`
@@ -182,7 +196,8 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   `pokedex.luchador` (el del uno contra uno), `pokedex.sonido` (efectos y música encendidos o no),
   `pokedex.simulacro` (récord `{ equipo: {nivel: {v, d}}, duelo: {…} }`), `pokedex.duelo` (última
   configuración: modo, nivel, escenario, pantalla completa), `pokedex.quien.mejor-racha` y `pokedex.vistos`
-  (los Pokémon escaneados en la Pokédex: el contador «Vistos por ti»).
+  (los Pokémon escaneados en la Pokédex: el contador «Vistos por ti») y, solo sin servidor, `pokedex.especies`
+  (la Pokédex compacta armada desde PokéAPI, `{ fecha, lista }`, vale 7 días).
 
 ## Cómo hacer cambios habituales
 

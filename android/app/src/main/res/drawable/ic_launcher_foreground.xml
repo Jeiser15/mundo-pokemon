@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- El logo de la web (static/img/icono.svg) para el icono de la app: viewport de 108 con el dibujo en la
+     zona segura central (el sistema recorta el borde con forma de círculo, gota, cuadrado…). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Círculo exterior -->
+    <path
+        android:fillColor="#153F2D"
+        android:pathData="M28.5,54a25.5,25.5 0,1 0,51 0a25.5,25.5 0,1 0,-51 0z" />
+    <!-- Mitad de arriba (lima) y de abajo (crema) -->
+    <path
+        android:fillColor="#C9ED96"
+        android:pathData="M32.75,51.45a21.25,21.25 0,0 1,42.5 0z" />
+    <path
+        android:fillColor="#F5FAED"
+        android:pathData="M32.75,56.55a21.25,21.25 0,0 0,42.5 0z" />
+    <!-- Franja del centro -->
+    <path
+        android:strokeColor="#153F2D"
+        android:strokeWidth="5.1"
+        android:pathData="M31.9,54h44.2" />
+    <!-- Botón -->
+    <path
+        android:fillColor="#153F2D"
+        android:pathData="M46.35,54a7.65,7.65 0,1 0,15.3 0a7.65,7.65 0,1 0,-15.3 0z" />
+    <path
+        android:fillColor="#F5FAED"
+        android:pathData="M49.75,54a4.25,4.25 0,1 0,8.5 0a4.25,4.25 0,1 0,-8.5 0z" />
+</vector>

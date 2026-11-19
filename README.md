@@ -13,6 +13,17 @@ Una aplicación para buscar Pokémon por nombre en inglés o por número y ver s
 
 Necesitas conexión a internet para consultar PokéAPI y cargar las imágenes. Si el puerto 8000 está ocupado, el programa te avisará; usa otro con `python app.py --puerto 8080` y abre http://127.0.0.1:8080.
 
+## En el celular (Android)
+
+Cada vez que se suben cambios, GitHub compila una app de Android con la web dentro y la publica en
+[**Releases**](https://github.com/Jeiser15/mundo-pokemon/releases/latest).
+
+1. Desde el celular, descarga [`mundo-pokemon.apk`](https://github.com/Jeiser15/mundo-pokemon/releases/latest/download/mundo-pokemon.apk).
+2. Ábrelo y, si Android lo pide, permite instalar apps desde tu navegador.
+3. Abre **Mundo Pokémon**. Necesita internet: sin el servidor de Python, pide los datos directamente a PokéAPI.
+
+La app está en la carpeta `android/` (ver `android/LEEME.md`).
+
 ## ¿Cómo está organizado?
 
 ```

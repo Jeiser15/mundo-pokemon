@@ -1,6 +1,13 @@
-// Muestra el progreso de la copia local sin bloquear la navegación.
-export function iniciarEstadoSnapshot() {
+// Muestra en el pie el progreso de la copia local (servidor/snapshot.py) sin bloquear la navegación.
+// Sin servidor (la app de Android), los datos llegan en directo de PokéAPI y no hay copia que mostrar.
+import { usaServidor } from './api.js';
+
+export async function iniciarEstadoSnapshot() {
   const indicador = document.querySelector('#estado-snapshot');
+  if (!(await usaServidor())) {
+    indicador.textContent = 'Datos en directo de PokéAPI';
+    return;
+  }
   async function actualizar() {
     try {
       const respuesta = await fetch('/api/snapshot');
