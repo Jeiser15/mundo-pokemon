@@ -6,7 +6,7 @@
 
 import { obtenerPokemon, obtenerRecurso } from './api.js';
 import { mostrarGeneracion, mostrarTipo } from './catalogo.js';
-import { COLOR_POR_DEFECTO, GENERACIONES, NOMBRES_ESTADISTICAS, TIPOS, TOTAL_ESPECIES } from './datos.js';
+import { COLOR_POR_DEFECTO, GENERACIONES, LEGENDARIOS, NOMBRES_ESTADISTICAS, TIPOS, TOTAL_ESPECIES } from './datos.js';
 import { buscarPokemon } from './ficha.js';
 import { ponerLuz } from './mundo.js';
 import { alAzar, crear, crearIcono, crearImagen, nombreLegible, numeroPokedex, urlAnimado, urlIlustracion, urlSprite } from './utilidades.js';
@@ -94,7 +94,8 @@ function mostrarEsqueleto(tile) {
 function pintarPokemonDelDia(tile, pokemon, especie) {
   const enEspanol = lista => lista.find(x => x.language.name === 'es');
   const nombre = enEspanol(especie.names)?.name || nombreLegible(pokemon.name);
-  const categoria = enEspanol(especie.genera)?.genus || 'Pokémon';
+  // Las especies 899–1025 no tienen la categoría en español: la de las leyendas está traducida; si no, no se pone.
+  const categoria = enEspanol(especie.genera)?.genus || LEGENDARIOS.find(l => l.id === pokemon.id)?.especie;
   const descripcion = enEspanol(especie.flavor_text_entries)?.flavor_text.replace(/\s+/g, ' ') || 'Aún no hay descripción en español para esta especie.';
   const tipos = pokemon.types.map(t => t.type.name);
   const hoy = new Date().toLocaleDateString('es', { day: 'numeric', month: 'long' });
@@ -113,7 +114,7 @@ function pintarPokemonDelDia(tile, pokemon, especie) {
     crear('div', { clase: 'del-dia-info' },
       crear('span', { clase: 'mundo-sello', texto: `✦ Pokémon del día · ${hoy}` }),
       crear('h2', { texto: nombre }),
-      crear('span', { clase: 'del-dia-especie', texto: `N.º ${numeroPokedex(pokemon.id)} · ${categoria}` }),
+      crear('span', { clase: 'del-dia-especie', texto: `N.º ${numeroPokedex(pokemon.id)}${categoria ? ' · ' + categoria : ''}` }),
       crear('div', { clase: 'del-dia-tipos' }, ...tipos.map(tipo => crear('span', {
         texto: TIPOS[tipo]?.nombre || tipo, estilos: { '--color-etiqueta': TIPOS[tipo]?.color || COLOR_POR_DEFECTO } }))),
       crear('p', { clase: 'del-dia-descripcion', texto: descripcion }),

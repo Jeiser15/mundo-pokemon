@@ -7,9 +7,18 @@ const ALIAS = { explorar: 'catalogo', equipo: 'duelo', batalla: 'duelo' };
 // Vistas «del mundo»: comparten el fondo continuo oscuro de base.css (<body data-mundo>).
 const VISTAS_DEL_MUNDO = ['inicio', 'categorias'];
 
-export function mostrarVista() {
+let vistaActual = null;
+
+/**
+ * Enseña la vista del #hash. Sube al principio si cambia de vista o si se pide (`subir`: un enlace del menú). Al
+ * volver atrás en el historial dentro de la misma vista (cerrar una ficha con «Atrás»: ver ficha.js) no se mueve.
+ */
+export function mostrarVista(subir = false) {
   const solicitada = ALIAS[location.hash.slice(1)] || location.hash.slice(1);
   const activa = VISTAS.includes(solicitada) ? solicitada : 'inicio';
+  const cambia = activa !== vistaActual;
+  vistaActual = activa;
+  if (!cambia && !subir) return;
   document.body.dataset.vista = activa; // Permite que el CSS adapte cabecera y pie a cada vista.
   document.body.toggleAttribute('data-mundo', VISTAS_DEL_MUNDO.includes(activa));
   for (const id of VISTAS) document.getElementById(id).hidden = id !== activa; // #inicio envuelve todas sus partes
@@ -24,12 +33,12 @@ export function mostrarVista() {
 /** Cambia de vista y la guarda en el historial (el botón «Atrás» del navegador funciona). */
 export function irA(vista) {
   if (location.hash !== '#' + vista) history.pushState(null, '', '#' + vista);
-  mostrarVista();
+  mostrarVista(true);
 }
 
 export function iniciarVistas() {
-  window.addEventListener('hashchange', mostrarVista);
-  window.addEventListener('popstate', mostrarVista);
+  window.addEventListener('hashchange', () => mostrarVista());
+  window.addEventListener('popstate', () => mostrarVista());
   document.querySelectorAll('a[href^="#"]').forEach(enlace => enlace.addEventListener('click', evento => {
     const destino = enlace.hash.slice(1);
     if (!VISTAS.includes(destino)) return;

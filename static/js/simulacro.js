@@ -86,9 +86,24 @@ const PREPARA = {
 export function iniciarSimulacro() {
   // Cerrar la ventana (✕, Esc) a mitad de combate es abandonarlo.
   ventana.addEventListener('close', () => { if (fase !== 'inactivo') abandonar(); });
+  // «Atrás» (navegador o celular) también: al abrirla se añadió un paso al historial. Antes, en la app de Android,
+  // «Atrás» cambiaba de vista por detrás del combate o cerraba la app.
+  window.addEventListener('popstate', () => { if (ventana.open && !history.state?.batalla) abandonar(); });
+  // Esc en pantalla completa solo sale de ella: no cierra la ventana. Según el navegador, la tecla llega a la ventana
+  // antes o justo después de salir de la pantalla completa, así que se miran las dos cosas. Antes el mismo Esc
+  // salía de la pantalla completa Y abandonaba el combate.
+  let salioDePantallaCompleta = -Infinity;
+  ventana.addEventListener('cancel', evento => {
+    if (!enPantallaCompleta() && !document.fullscreenElement && performance.now() - salioDePantallaCompleta > 400) return;
+    evento.preventDefault();
+    if (enPantallaCompleta()) ponerPantallaCompleta(false);
+  });
   // Si sales de la pantalla completa con Esc, la ventana vuelve a su forma normal.
   document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement) arena.classList.remove('en-pantalla-completa');
+    if (!document.fullscreenElement) {
+      salioDePantallaCompleta = performance.now();
+      arena.classList.remove('en-pantalla-completa');
+    }
     pintarBotonPantalla();
   });
 }
@@ -131,6 +146,7 @@ function abrirVentana() {
   if (!ventana.open) {
     ventana.showModal();
     document.body.classList.add('batalla-abierta'); // congela la página de fondo
+    if (!history.state?.batalla) history.pushState({ batalla: true }, ''); // «Atrás» la cerrará (iniciarSimulacro)
   }
   if (quierePantallaCompleta) ponerPantallaCompleta(true);
 }
@@ -177,6 +193,7 @@ function abandonar() {
   ponerPantallaCompleta(false);
   if (ventana.open) ventana.close();
   document.body.classList.remove('batalla-abierta');
+  if (history.state?.batalla) history.back(); // se quita su paso del historial
 }
 
 // --- Preparar un combate ----------------------------------------------------------------------

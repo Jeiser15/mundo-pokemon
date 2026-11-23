@@ -9,7 +9,8 @@ import { enPantalla, escanear, haSidoVisto, iniciarEscaner } from './escaner.js'
 import { cargarEspecies } from './especies.js';
 import { buscarPokemon } from './ficha.js';
 import { crearTarjetaPokemon } from './tarjetas.js';
-import { crear, crearIcono, normalizar } from './utilidades.js';
+import { FORMAS } from './datos-formas.js';
+import { contieneNombre, crear, crearIcono, esSuNombre, normalizar } from './utilidades.js';
 import { irA } from './vistas.js';
 
 const POR_TANDA = 24; // 6 filas de 4; al acercarse al final (o con «Ver más») llegan otras 24.
@@ -37,7 +38,7 @@ const ORDENES = {
 function coincideTexto(especie, texto) {
   if (!texto) return true;
   if (/^\d+$/.test(texto)) return String(especie.id).startsWith(String(Number(texto))); // «25» → 25, 250–259
-  return normalizar(especie.nombre).includes(texto);
+  return contieneNombre(especie.nombre, texto); // su clave o su nombre en español («Ferrodada»)
 }
 
 /** Vuelve a calcular la lista con los filtros actuales y la pinta desde el principio. */
@@ -118,7 +119,7 @@ function crearFiltros() {
     aplicarFiltros();
     if (resultado.length === 1) escanear(resultado[0].id, { mostrar: true });
   });
-  botonPokeAPI.addEventListener('click', () => buscarPokemon(filtros.texto.trim()));
+  botonPokeAPI.addEventListener('click', () => buscarPokemon(claveDe(filtros.texto)));
   selectorOrden.addEventListener('change', () => { filtros.orden = selectorOrden.value; aplicarFiltros(); });
   const limpiar = () => {
     Object.assign(filtros, { texto: '', gen: null, tipo: null, orden: 'numero' });
@@ -181,9 +182,16 @@ export function mostrarTipo(clave) {
   irA('catalogo');
 }
 
+/** La forma cuya clave o nombre en español es exactamente el texto (ya normalizado), o undefined. */
+const formaDe = normal => Object.keys(FORMAS).find(clave => esSuNombre(clave, normal));
+
+/** Lo que se pide a PokéAPI para lo escrito: la clave de la forma si es una («Mega-Charizard X» → 'charizard-mega-x');
+ *  si no, el texto en minúsculas con guiones en vez de espacios (como las claves de PokéAPI). */
+const claveDe = texto => formaDe(normalizar(texto)) || texto.trim().toLowerCase().replace(/\s+/g, '-');
+
 /**
- * Buscador de la portada. Si el texto es un número o el nombre exacto de una especie, abre su ficha;
- * si no («char»), abre la Pokédex con los que coinciden.
+ * Buscador de la portada. Si el texto es un número o el nombre exacto de una especie (en inglés o en español) o de
+ * una forma («charizard-mega-x»), abre su ficha; si no («char»), abre la Pokédex con los que coinciden.
  */
 export async function buscarDesdePortada(texto) {
   const consulta = texto.trim();
@@ -193,8 +201,11 @@ export async function buscarDesdePortada(texto) {
   const normal = normalizar(consulta);
   const exacta = /^\d+$/.test(normal)
     ? lista.find(e => e.id === Number(normal))
-    : lista.find(e => normalizar(e.nombre) === normal);
+    : lista.find(e => esSuNombre(e.nombre, normal));
   if (exacta) { buscarPokemon(String(exacta.id)); return; }
+  // Una forma («charizard-mega-x», «Mega-Charizard X»): no está en la lista de especies, pero sí en FORMAS.
+  const forma = formaDe(normal);
+  if (forma) { buscarPokemon(forma); return; }
   if (!especies.length) especies = lista;
   Object.assign(filtros, { texto: consulta, gen: null, tipo: null });
   buscador.value = consulta;

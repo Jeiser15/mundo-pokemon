@@ -265,6 +265,16 @@ export const LEGENDARIOS = [
  * Los 23 Pokémon singulares (míticos) hasta la novena generación. Comprobado con PokéAPI (is_mythical)
  * en las 1025 especies: no falta ninguno.
  */
+// Gritos con VOZ. En los juegos casi todos los Pokémon «rugen» (un sonido electrónico); solo Pikachu y Eevee hablan,
+// con las voces del anime («¡Pikachu!», «¡Vui!»), desde Pokémon: Let's Go. PokéAPI guarda esas voces como el grito de
+// sus formas «compañero» (pikachu-starter y eevee-starter). Especie → número del Pokémon cuyo grito se usa
+// (utilidades.js → urlGrito y gritoDe). Comprobado: el de 25 es ruido sin tono; el de 10158, sílabas con tono de voz.
+export const GRITOS_CON_VOZ = { 25: 10158, 133: 10159 };
+
+// Las 14 especies sin GIF animado de Showdown en PokéAPI (casi todas, los Paradoja «Ferro-»): urlAnimado (utilidades.js)
+// da su sprite fijo en vez de pedir un archivo que no existe (la petición fallida salía como error en la consola).
+export const SIN_GIF_SHOWDOWN = new Set([990, 991, 992, 993, 994, 995, 1006, 1008, 1010, 1017, 1022, 1023, 1024, 1025]);
+
 export const SINGULARES = [151, 251, 385, 386, 489, 490, 491, 492, 493, 494, 647, 648, 649, 719, 720, 721, 801, 802, 807, 808, 809, 893, 1025];
 
 const ID_LEGENDARIOS = new Set(LEGENDARIOS.map(leyenda => leyenda.id));

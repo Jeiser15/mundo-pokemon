@@ -1,6 +1,6 @@
 # Mundo Pokémon
 
-Una aplicación para buscar Pokémon por nombre en inglés o por número y ver sus tipos, tamaño, habilidades, estadísticas base, evolución y debilidades.
+Una aplicación para buscar Pokémon por su nombre (en español o en inglés) o por número y ver sus tipos, tamaño, habilidades, estadísticas base, evolución y debilidades.
 
 ## Cómo ejecutarla
 

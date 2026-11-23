@@ -85,7 +85,7 @@ export async function obtenerPokedex() {
   if (await usaServidor()) return pedirAlServidor('/api/pokedex', 'No se pudo cargar la Pokédex.');
   try {
     const guardada = JSON.parse(localStorage.getItem(CLAVE_POKEDEX));
-    if (guardada && Date.now() - guardada.fecha < VIGENCIA_POKEDEX_MS) return guardada.lista;
+    if (Array.isArray(guardada?.lista) && guardada.lista.length && Date.now() - guardada.fecha < VIGENCIA_POKEDEX_MS) return guardada.lista;
   } catch { /* sin almacenamiento o dato roto: se vuelve a armar */ }
   const lista = await armarPokedex();
   try { localStorage.setItem(CLAVE_POKEDEX, JSON.stringify({ fecha: Date.now(), lista })); } catch { /* sin almacenamiento */ }

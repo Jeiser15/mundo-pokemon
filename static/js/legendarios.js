@@ -43,8 +43,13 @@ function mostrarDestacada(indice) {
   const imagen = document.querySelector('#destacada-imagen');
   const descripcion = document.querySelector('#destacada-descripcion');
 
+  // La descripción llega aparte desde PokéAPI. Cambia a la vez que el resto de la carta: antes el «Consultando…»
+  // salía al instante, aún con la leyenda anterior en pantalla.
+  let texto = null, pintada = false;
   const pintar = () => {
     if (version !== versionDestacada) return;
+    pintada = true;
+    descripcion.textContent = texto ?? 'Consultando los archivos antiguos...';
     const gen = generacionDe(leyenda.id);
     for (const [variable, color] of Object.entries(coloresDe(leyenda.tipos))) seccion.style.setProperty(variable, color);
     document.querySelector('#destacada-grupo').textContent = `${leyenda.grupo} · Gen ${gen.numero} · ${gen.region}`;
@@ -60,12 +65,14 @@ function mostrarDestacada(indice) {
     imagen.classList.remove('cambiando');
   };
 
-  // La descripción llega aparte desde PokéAPI.
-  descripcion.textContent = 'Consultando los archivos antiguos...';
   obtenerRecurso('pokemon-species', leyenda.id)
     .then(especie => especie.flavor_text_entries.find(d => d.language.name === 'es')?.flavor_text.replace(/\s+/g, ' ') || 'Aún no hay descripción en español para esta leyenda.')
     .catch(() => 'No se pudo cargar la descripción. Comprueba tu conexión.')
-    .then(texto => { if (version === versionDestacada) descripcion.textContent = texto; });
+    .then(llegado => {
+      if (version !== versionDestacada) return;
+      texto = llegado;
+      if (pintada) descripcion.textContent = llegado;
+    });
 
   // La primera vez se pinta directamente; después, con un fundido y la imagen ya descargada.
   if (!imagen.getAttribute('src')) { pintar(); return; }

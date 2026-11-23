@@ -10,10 +10,10 @@
 // Las respuestas que llegan tarde se descartan (versionEscaneo), como en ficha.js.
 
 import { obtenerPokemon, obtenerRecurso } from './api.js';
-import { COLOR_POR_DEFECTO, GENERACIONES, rarezaDe, TIPOS, TOTAL_ESPECIES } from './datos.js';
+import { COLOR_POR_DEFECTO, GENERACIONES, LEGENDARIOS, rarezaDe, TIPOS, TOTAL_ESPECIES } from './datos.js';
 import { buscarPokemon } from './ficha.js';
 import { grito, prepararSonido } from './sonido.js';
-import { crear, nombreLegible, numeroPokedex, urlIlustracion } from './utilidades.js';
+import { crear, gritoDe, nombreLegible, numeroPokedex, urlIlustracion } from './utilidades.js';
 
 const CLAVE_VISTOS = 'pokedex.vistos';
 const LETRAS_POR_PASO = 2;   // la descripción se escribe de dos en dos letras…
@@ -110,7 +110,8 @@ function precargarImagen(url) {
 function pintar(id, pokemon, especie) {
   const enEspanol = lista => [...lista].reverse().find(x => x.language.name === 'es'); // la más reciente
   const nombre = enEspanol(especie.names)?.name || nombreLegible(pokemon.name);
-  const categoria = enEspanol(especie.genera)?.genus || 'Pokémon';
+  // Las especies 899–1025 no tienen la categoría en español en PokéAPI: la de las leyendas está traducida en LEGENDARIOS.
+  const categoria = enEspanol(especie.genera)?.genus || LEGENDARIOS.find(l => l.id === id)?.especie || 'Pokémon';
   const descripcion = enEspanol(especie.flavor_text_entries)?.flavor_text.replace(/\s+/g, ' ') || 'Aún no hay descripción en español para esta especie.';
   const tipos = pokemon.types.map(t => t.type.name);
   const gen = GENERACIONES.find(g => id >= g.desde && id <= g.hasta);
@@ -124,7 +125,7 @@ function pintar(id, pokemon, especie) {
   numero.textContent = numeroPokedex(id);
   imagen.src = urlIlustracion(id);
   imagen.alt = 'Ilustración de ' + nombre;
-  urlGrito = pokemon.cries?.latest || pokemon.cries?.legacy || null;
+  urlGrito = gritoDe(pokemon);
   botonGrito.disabled = !urlGrito;
 
   const parrafo = crear('span', { atributos: { 'aria-hidden': 'true' } });
@@ -178,7 +179,7 @@ export function iniciarEscaner({ vecino: elVecino, azar }) {
   document.querySelector('#escaner-ficha').addEventListener('click', () => { if (actual) buscarPokemon(String(actual)); });
   botonGrito.addEventListener('click', () => {
     prepararSonido(); // los navegadores solo dejan sonar tras un clic: este lo es
-    grito(urlGrito, { volumen: 0.6 });
+    grito(urlGrito, { volumen: 0.6, pedido: true });
     botonGrito.classList.remove('sonando');
     void botonGrito.offsetWidth;
     botonGrito.classList.add('sonando');

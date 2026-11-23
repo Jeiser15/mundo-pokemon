@@ -552,7 +552,7 @@ function contenidoPista(clave) {
 
 function sonarGrito(boton) {
   prepararSonido(); // dentro del clic
-  grito(urlGrito(pregunta.especie.id), { volumen: 0.6 });
+  grito(urlGrito(pregunta.especie.id), { volumen: 0.6, pedido: true });
   reiniciarAnimacion(boton, 'sonando');
 }
 

@@ -9,7 +9,7 @@ import { cargarEspecies } from './especies.js';
 import { buscarPokemon } from './ficha.js';
 import { crearHabitat } from './habitats.js';
 import { agregarAlEquipo, detallesDe, miLista, quitarDelEquipo, reemplazarEquipo, tamanoLista } from './mi-equipo.js';
-import { barajar, crear, crearIcono, crearImagen, nombreTitulo, normalizar, numeroPokedex, urlSprite } from './utilidades.js';
+import { barajar, contieneNombre, crear, crearIcono, crearImagen, nombreTitulo, normalizar, numeroPokedex, urlSprite } from './utilidades.js';
 
 const cinturon = document.querySelector('#equipo-cinturon');
 const buscador = document.querySelector('#equipo-buscar');
@@ -76,7 +76,7 @@ async function mostrarResultados() {
   if (normalizar(buscador.value) !== texto) return; // el texto cambió mientras cargaba
   const encontrados = (/^\d+$/.test(texto)
     ? especies.filter(e => String(e.id).startsWith(String(Number(texto))))
-    : especies.filter(e => normalizar(e.nombre).includes(texto))).slice(0, 8);
+    : especies.filter(e => contieneNombre(e.nombre, texto))).slice(0, 8); // clave o nombre en español
   resultados.replaceChildren(...(encontrados.length
     ? encontrados.map(crearResultado)
     : [crear('p', { clase: 'equipo-sin-resultados', texto: 'Ningún Pokémon coincide con tu búsqueda.' })]));

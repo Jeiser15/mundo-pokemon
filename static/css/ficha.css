@@ -17,6 +17,9 @@
    ESTÁTICA: en escritorio la ficha cabe entera en la ventana y no se desplaza. Está compactada
    para ~830 px de alto; si la ventana es más baja, ficha.js baja --escala (zoom de toda la ficha,
    mínimo 0,7). En móvil (≤700 px) no cabría legible: ahí se desplaza, sin barra visible.
+
+   SIN PARPADEOS: se abre ya completa (o, si tarda, con una carga sencilla del mismo alto: .ficha-cargando)
+   y, al pulsar una evolución o una forma, no se vacía: un fundido suave (ver «Transiciones», al final).
    ============================================================================= */
 
 /* --- Ventana y temas ------------------------------------------------------------ */
@@ -30,6 +33,9 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
   /* El ancho se reduce con la misma escala: la ficha se ve igual, solo más pequeña, y por dentro
      mide siempre lo mismo (si no, el texto se repartiría distinto, cambiaría el alto y la escala). */
   position:fixed; inset:0; width:calc(min(1160px,100% - 32px) * var(--escala)); max-width:none; max-height:calc(100% - 32px); padding:0; overflow:auto; overscroll-behavior:contain; scrollbar-width:none; border:0; border-radius:calc(22px * var(--escala)); background:transparent;
+  /* Al pasar a otro Pokémon, los colores de la ficha se funden con los nuevos (--tipo-a y --tipo-b están
+     registradas como colores con @property en legendarios.css; sin eso cambiarían de golpe). */
+  transition:--tipo-a .6s ease,--tipo-b .6s ease;
 }
 .ficha-modal::-webkit-scrollbar { display:none; } /* Safari antiguo: no entiende scrollbar-width */
 .ficha-modal.cabe { overflow:hidden; } /* encajarFicha (ficha.js): cabe entera, nada que desplazar */
@@ -39,12 +45,12 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
 .ficha-aviso { min-height:120px; padding:48px 24px; color:#27553b; font-weight:bold; text-align:center; }
 
 /* --- Marco y textos comunes ------------------------------------------------------- */
-.detail { zoom:var(--escala); margin:0; padding:0; overflow:hidden; border:8px solid transparent; border-radius:22px; background:linear-gradient(#f7faf4,#f7faf4) padding-box,var(--marco) border-box; animation:entrada .45s ease both; }
+.detail { zoom:var(--escala); position:relative; margin:0; padding:0; overflow:hidden; border:8px solid transparent; border-radius:22px; background:linear-gradient(#f7faf4,#f7faf4) padding-box,var(--marco) border-box; animation:entrada .45s ease both; }
 .detail p { margin:9px 0; color:#607563; font-size:14px; line-height:1.6; }
 .detail h4 { display:flex; align-items:center; gap:9px; margin:0 0 11px; color:#214b35; font-size:15px; letter-spacing:-.1px; }
 .detail h4::before { content:''; display:inline-block; flex:none; width:8px; height:8px; border-radius:50%; background:var(--acento); box-shadow:0 0 0 4px color-mix(in srgb,var(--acento) 18%,transparent); }
 
-.device-bar { display:flex; align-items:center; gap:15px; min-height:44px; padding:8px 22px; background:linear-gradient(90deg,color-mix(in srgb,var(--tipo-a) 55%,#0c1a14),color-mix(in srgb,var(--tipo-b) 45%,#0c1a14)); color:#eef6ea; font-size:10px; font-weight:800; letter-spacing:1.5px; }
+.device-bar { position:relative; display:flex; align-items:center; overflow:hidden; gap:15px; min-height:44px; padding:8px 22px; background:linear-gradient(90deg,color-mix(in srgb,var(--tipo-a) 55%,#0c1a14),color-mix(in srgb,var(--tipo-b) 45%,#0c1a14)); color:#eef6ea; font-size:10px; font-weight:800; letter-spacing:1.5px; }
 .device-lights { flex:none; width:20px; height:20px; margin-right:42px; border:3px solid #e8fff1; border-radius:50%; background:#81e4e0; box-shadow:0 0 12px #6fe6d7, 28px 0 0 -6px #d8ed77, 42px 0 0 -6px #a9dc91; }
 .device-titulo { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .device-status { margin-right:38px; margin-left:4px; color:#c9ed96; white-space:nowrap; } /* deja hueco al botón de cerrar */
@@ -123,7 +129,12 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
 .stat-total { display:flex; align-items:center; justify-content:space-between; margin-top:7px; padding:7px 12px; border-radius:9px; background:color-mix(in srgb,var(--acento) 12%,white); color:var(--acento-texto); font-size:10px; font-weight:800; letter-spacing:.7px; }
 .stat-total strong { color:var(--acento-texto); font-size:17px; }
 
-/* Evolución: el árbol crece a lo ancho; varias evoluciones finales forman un grupo (.en-grupo). */
+/* Evolución: el árbol crece a lo ancho. Carta → paso (una línea fina con un círculo y su flecha; debajo, cómo
+   evoluciona) → carta; varias evoluciones posibles forman un grupo (.en-grupo) y cada carta dice dentro cómo se llega.
+   Cada carta lleva los colores de SUS tipos (--carta-a y --carta-b, de ficha.js): un halo detrás del Pokémon, el
+   borde y un filo abajo. Están registradas para fundirse si los tipos llegan después de verse la carta. */
+@property --carta-a { syntax:'<color>'; inherits:true; initial-value:#5f9b60; }
+@property --carta-b { syntax:'<color>'; inherits:true; initial-value:#5f9b60; }
 .evolution-panel { background:linear-gradient(135deg,#fff,color-mix(in srgb,var(--tipo-a) 7%,white)); }
 .panel-cabecera { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:2px 14px; }
 .panel-cabecera h4 { margin-bottom:0; }
@@ -131,8 +142,8 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
 /* Cuerpo: el árbol y, a su lado, sus otras formas (o «No evoluciona»). */
 /* El hueco de arriba va DENTRO del árbol: como se desplaza a lo ancho, recorta lo que sobresale (la pastilla
    «Estás aquí» salía cortada). El del cuerpo deja sitio a la etiqueta de «Otras formas». */
-.evolution-cuerpo { display:flex; flex-wrap:wrap; align-items:center; gap:10px 30px; padding-top:6px; }
-.evolution-tree { min-width:0; max-width:100%; padding:10px 0 4px; overflow-x:auto; }
+.evolution-cuerpo { display:flex; flex-wrap:wrap; align-items:center; gap:10px 26px; padding-top:6px; }
+.evolution-tree { min-width:0; max-width:100%; padding:10px 0 4px; overflow-x:auto; scrollbar-width:none; }
 .detail .evolution-nota { max-width:260px; margin:0; color:var(--acento-texto); font-family:var(--serif); font-size:15px; font-style:italic; line-height:1.45; }
 /* Otras formas: recuadro discontinuo con su etiqueta sobre el borde (no suma alto al panel). */
 .evolution-formas { position:relative; padding:7px; border:1.5px dashed color-mix(in srgb,var(--acento) 45%,transparent); border-radius:16px; }
@@ -141,25 +152,64 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
 .evolution-card.forma { border-style:dashed; }
 .evolution-mas { padding:0 4px; color:#829482; font-size:11.5px; font-weight:bold; }
 .evolution-branch { display:flex; align-items:center; width:max-content; }
-.evolution-children { position:relative; display:flex; flex-direction:column; gap:10px; padding-left:40px; }
-.evolution-children::before { content:'→'; position:absolute; top:50%; left:11px; color:var(--acento); font-size:19px; transform:translateY(-50%); }
-.evolution-children.en-grupo { display:grid; grid-template-columns:repeat(var(--columnas),auto); align-items:center; gap:8px; padding:7px 7px 7px 47px; }
-/* Más de cuatro evoluciones (Eevee): todas en una fila, con cartas más pequeñas. */
-.evolution-children.compacto { gap:6px; }
-.compacto .evolution-card { width:66px; min-height:94px; padding:6px 3px; }
-.compacto .evolution-card img { width:44px; height:44px; }
-.compacto .evolution-card strong { font-size:10.5px; }
-.compacto .evolution-card small { margin:1px 0 2px; font-size:9px; }
-/* Contorno discontinuo: «una de estas». */
-.evolution-children.en-grupo::after { content:''; position:absolute; inset:0 0 0 38px; border:1.5px dashed color-mix(in srgb,var(--acento) 45%,transparent); border-radius:16px; pointer-events:none; }
-.evolution-card { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; width:100px; min-height:112px; padding:8px; border:1px solid #dcecd8; border-radius:13px; background:white; box-shadow:0 5px 14px #3b6d3910; color:#23543a; text-align:center; transition:transform .25s,box-shadow .25s,border-color .25s; }
-.evolution-card:hover { transform:translateY(-4px); border-color:var(--acento); box-shadow:0 10px 20px color-mix(in srgb,var(--acento) 22%,transparent); }
-.evolution-card img { width:62px; height:62px; object-fit:contain; transition:transform .25s; }
+/* Paso + lo que sale de él. El paso es tan alto como lo que sigue: su flecha queda a media altura de la carta. */
+.evolution-children { display:flex; align-items:stretch; }
+.evolution-hijos { display:flex; flex-direction:column; justify-content:center; gap:10px; }
+/* Grupo: contorno discontinuo («una de estas»), todas en una fila. */
+.evolution-hijos.en-grupo { display:grid; grid-template-columns:repeat(var(--columnas),auto); align-items:stretch; gap:8px; padding:5px; border:1.5px dashed color-mix(in srgb,var(--acento) 45%,transparent); border-radius:16px; }
+.en-grupo > .evolution-branch { align-items:stretch; }
+
+/* El paso: una línea fina de carta a carta con, en medio, un círculo con la flecha; debajo, cómo evoluciona
+   («Nv. 16», «Piedra Agua»…): la primera parte resaltada y las demás en su línea. */
+.evolution-paso { position:relative; flex:none; width:70px; }
+.evolution-paso.sin-condicion { width:44px; }
+.evolution-paso::before { content:''; position:absolute; top:50%; right:5px; left:5px; height:1px; background:color-mix(in srgb,var(--acento) 35%,transparent); }
+.evolution-flecha { position:absolute; top:50%; left:50%; width:22px; height:22px; margin:-11px 0 0 -11px; border:1px solid color-mix(in srgb,var(--acento) 45%,transparent); border-radius:50%; background:#fff; }
+.evolution-flecha::after { content:''; position:absolute; top:50%; left:50%; width:6px; height:6px; border-top:1.5px solid var(--acento); border-right:1.5px solid var(--acento); translate:-70% -50%; rotate:45deg; }
+.evolution-paso .evolution-condicion { position:absolute; top:calc(50% + 16px); right:0; left:0; display:flex; flex-direction:column; align-items:center; gap:1px; text-align:center; line-height:1.2; }
+.evolution-condicion b { color:var(--acento-texto); font-size:10px; font-weight:800; }
+.evolution-condicion span { color:#7b8f7c; font-size:9.5px; font-weight:600; }
+.evolution-condicion em { color:#7b8f7c; font-family:var(--serif); font-size:10px; }
+
+.evolution-card {
+  --carta-a:var(--acento); --carta-b:var(--carta-a);
+  position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; width:96px; min-height:116px; padding:8px 6px 11px;
+  border:1px solid color-mix(in srgb,var(--carta-a) 26%,#e2ebdf); border-radius:14px;
+  background:radial-gradient(circle at 50% 34%,color-mix(in srgb,var(--carta-a) 24%,transparent),transparent 56%),linear-gradient(175deg,#fff 45%,color-mix(in srgb,var(--carta-b) 10%,#fff));
+  box-shadow:0 5px 14px #3b6d3910; color:#23543a; text-align:center;
+  transition:transform .25s,box-shadow .25s,border-color .25s,--carta-a .6s,--carta-b .6s;
+}
+/* Filo abajo con los colores de sus tipos. */
+.evolution-card::before { content:''; position:absolute; right:18px; bottom:-1px; left:18px; height:3px; border-radius:3px 3px 0 0; background:linear-gradient(90deg,var(--carta-a),var(--carta-b)); }
+.evolution-card:hover { transform:translateY(-4px); border-color:var(--carta-a); box-shadow:0 10px 20px color-mix(in srgb,var(--carta-a) 26%,transparent); }
+.evolution-card img { width:62px; height:62px; object-fit:contain; filter:drop-shadow(0 5px 4px #0000002b); transition:transform .25s; }
 .evolution-card:hover img { transform:scale(1.1); }
-.evolution-card small { margin:2px 0 3px; color:#9aac9b; font-size:10px; font-weight:bold; }
-.evolution-card strong { font-size:12.5px; text-transform:capitalize; overflow-wrap:anywhere; }
-/* El Pokémon que estás viendo. */
-.evolution-card.actual { border:2px solid var(--acento); background:color-mix(in srgb,var(--acento) 8%,white); box-shadow:0 0 0 4px color-mix(in srgb,var(--acento) 18%,transparent),0 8px 18px color-mix(in srgb,var(--acento) 22%,transparent); }
+.evolution-card small { margin:3px 0 1px; color:#98aa99; font-size:9.5px; font-weight:800; letter-spacing:.8px; }
+.evolution-card strong { font-family:var(--serif); font-size:13.5px; font-weight:600; line-height:1.15; overflow-wrap:anywhere; }
+/* Dentro de una carta (grupos), la condición va seguida, al pie, separada por una línea fina. */
+.evolution-card .evolution-condicion { display:block; align-self:stretch; margin-top:5px; padding-top:5px; border-top:1px solid color-mix(in srgb,var(--carta-a) 22%,transparent); color:color-mix(in srgb,var(--carta-a) 55%,#1d3326); font-size:9px; font-weight:800; line-height:1.3; }
+.evolution-card .evolution-condicion > * { display:inline; color:inherit; font:inherit; }
+.evolution-card .evolution-condicion > :not(:first-child)::before { content:' · '; }
+/* En un grupo, las cartas comparten alto (la condición, abajo) y el Pokémon es algo menor: así la condición no hace
+   crecer la ficha. Las de la primera fila del grupo son un poco más anchas para que quepa en dos líneas. */
+.en-grupo .evolution-card { min-height:0; padding:7px 5px 9px; justify-content:flex-start; }
+.en-grupo:not(.compacto) > .evolution-branch > .evolution-card { width:104px; }
+.en-grupo .evolution-card img { width:52px; height:52px; }
+.en-grupo .evolution-card strong { margin-bottom:5px; }
+.en-grupo .evolution-card .evolution-condicion { margin-top:auto; font-size:8.5px; }
+/* Más de cuatro evoluciones (Eevee): todas en una fila, con cartas más pequeñas. */
+.evolution-hijos.compacto { gap:6px; }
+.compacto .evolution-card { width:66px; min-height:96px; padding:6px 3px 9px; }
+.compacto .evolution-card::before { right:12px; left:12px; }
+.compacto .evolution-card img { width:44px; height:44px; }
+.compacto .evolution-card strong { font-size:11.5px; }
+.compacto .evolution-card small { margin:1px 0; font-size:8.5px; letter-spacing:.3px; }
+.compacto .evolution-card .evolution-condicion { margin-top:4px; padding-top:4px; font-size:8px; }
+/* El Pokémon que estás viendo (no es un botón: ya estás en él). */
+.evolution-card.actual { border:2px solid var(--acento); background:radial-gradient(circle at 50% 34%,color-mix(in srgb,var(--carta-a) 24%,transparent),transparent 56%),color-mix(in srgb,var(--acento) 9%,white); box-shadow:0 0 0 4px color-mix(in srgb,var(--acento) 18%,transparent),0 8px 18px color-mix(in srgb,var(--acento) 22%,transparent); }
+.evolution-card.actual:hover { transform:none; }
+.evolution-card.actual:hover img { transform:none; }
+.evolution-card.actual:focus:not(:focus-visible) { outline:none; }
 .evolution-card.actual::after { content:'Estás aquí'; position:absolute; top:-10px; left:50%; padding:2px 9px; border-radius:99px; background:var(--acento); color:#fff; font-size:9px; font-weight:800; letter-spacing:.8px; text-transform:uppercase; white-space:nowrap; translate:-50% 0; }
 
 /* Efectividad: un panel con tres grupos (debilidades, resistencias, inmunidades) y la nota al pie. */
@@ -254,9 +304,13 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
 .ficha-modal[data-rareza] .stat-total { border:1px solid #d9ad4a40; background:linear-gradient(90deg,#d9ad4a29,#d9ad4a0d); }
 
 /* Evolución y efectividad. */
-.ficha-modal[data-rareza] .evolution-card { border-color:var(--linea); background:var(--caja); box-shadow:0 5px 14px #00000080; color:var(--oro-claro); }
+.ficha-modal[data-rareza] .evolution-card { border-color:color-mix(in srgb,var(--carta-a) 30%,var(--linea)); background:radial-gradient(circle at 50% 34%,color-mix(in srgb,var(--carta-a) 26%,transparent),transparent 58%),var(--caja); box-shadow:0 5px 14px #00000080; color:var(--oro-claro); }
 .ficha-modal[data-rareza] .evolution-card small { color:var(--texto-suave); }
-.ficha-modal[data-rareza] .evolution-card.actual { background:#d9ad4a17; }
+.ficha-modal[data-rareza] .evolution-card.actual { background:radial-gradient(circle at 50% 34%,color-mix(in srgb,var(--carta-a) 26%,transparent),transparent 58%),#d9ad4a17; }
+.ficha-modal[data-rareza] .evolution-card .evolution-condicion { border-color:color-mix(in srgb,var(--carta-a) 30%,transparent); color:color-mix(in srgb,var(--carta-a) 35%,#fff); }
+.ficha-modal[data-rareza] .evolution-flecha { background:var(--caja); }
+.ficha-modal[data-rareza] .evolution-condicion span, .ficha-modal[data-rareza] .evolution-condicion em { color:var(--texto-suave); }
+.ficha-modal[data-rareza] .evolution-hijos.en-grupo { border-color:#d9ad4a59; }
 .ficha-modal[data-rareza] .evolution-card.actual::after { color:var(--negro); }
 .ficha-modal[data-rareza] .evolution-formas { border-color:#d9ad4a59; }
 .ficha-modal[data-rareza] .evolution-formas > small { background:#16120c; }
@@ -271,9 +325,38 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
 .ficha-modal[data-rareza] .efectividad-grupo.immunity { --color-grupo:#cfc4a8; }
 .ficha-modal[data-rareza] .detail .detail-note { background:#d9ad4a12; color:var(--texto-suave); }
 
+/* =============================================================================
+   TRANSICIONES — pasar de un Pokémon a otro con un fundido suave, sin parpadeos (ficha.js).
+   .cambiando (al pulsar una evolución o una forma, mientras llegan sus datos): la cabecera y los paneles se
+   apagan un poco; si tarda, una luz recorre la barra de arriba. data-entrada="cambio" (llega el nuevo): aparece
+   desde ese mismo punto, sin hueco vacío. data-entrada="carga" (tras la carga): aparece desde cero.
+   ============================================================================= */
+.detail-head, .detail-columns { transition:opacity .16s ease; }
+.detail.cambiando { cursor:progress; }
+.detail.cambiando .detail-head, .detail.cambiando .detail-columns { opacity:.35; }
+.detail.cambiando .device-bar::after { content:''; position:absolute; bottom:0; left:0; width:25%; height:2px; background:linear-gradient(90deg,transparent,#fff,transparent); animation:ficha-barrido 1.1s .3s ease-in-out infinite both; }
+.detail[data-entrada="cambio"] .detail-head, .detail[data-entrada="cambio"] .detail-columns { animation:ficha-fundido .3s ease both; }
+.detail[data-entrada="carga"] .detail-head, .detail[data-entrada="carga"] .detail-columns, .data-panel.llega-tarde { animation:ficha-aparece .3s ease both; }
+
+/* Si falla el cambio, se queda el Pokémon de antes y este aviso flota bajo la barra unos segundos. */
+.detail .ficha-error { position:absolute; top:54px; left:50%; z-index:6; max-width:calc(100% - 40px); margin:0; padding:8px 16px; border-radius:99px; background:#2b1410eb; box-shadow:0 8px 20px #0000004d; color:#ffd9cc; font-size:12px; font-weight:700; translate:-50% 0; pointer-events:none; animation:ficha-aparece .3s ease both,ficha-desaparece .5s 4.5s ease forwards; }
+
+/* --- Carga ------------------------------------------------------------------------------------------
+   Solo si la ficha tarda (ficha.js → mostrarCarga): la barra y un anillo que gira, casi del alto de la ficha para
+   que no crezca de golpe al llegar. Con datos rápidos la ventana se abre ya completa y esto no se ve. */
+.ficha-cargando { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; min-height:min(790px,calc(100vh - 92px)); }
+.ficha-cargando-anillo { width:34px; height:34px; border:2.5px solid color-mix(in srgb,var(--acento) 18%,transparent); border-top-color:var(--acento); border-radius:50%; animation:anillo .9s linear infinite; }
+.detail .ficha-cargando p { margin:0; color:#7b8f7c; font-size:13px; }
+/* Hueco de la evolución mientras llega (si la ficha ya se ve): del alto del panel de verdad. */
+.evolution-panel.panel-reserva { min-height:207px; }
+
 @keyframes radar-crece { from { opacity:0; transform:scale(.2); } }
 /* El brillo recorre el marco de oro (solo se mueve la capa del borde). */
 @keyframes marco-oro { from { background-position:0 0,0 0,0% 50%; } to { background-position:0 0,0 0,100% 50%; } }
+@keyframes ficha-fundido { from { opacity:.35; } }
+@keyframes ficha-aparece { from { opacity:0; } }
+@keyframes ficha-desaparece { to { opacity:0; } }
+@keyframes ficha-barrido { from { translate:-100% 0; } to { translate:400% 0; } }
 
 /* Ventanas medianas: dos columnas; la evolución y la efectividad ocupan todo el ancho. */
 @media (max-width:1000px) {
@@ -301,13 +384,16 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
   .radar { max-width:230px; margin:0 auto; }
   .panel-efectividad { display:flex; }
   .efectividad-grupo + .efectividad-grupo { margin-top:12px; }
-  .evolution-children { padding-left:36px; }
-  .evolution-children::before { left:8px; }
-  .evolution-children.en-grupo { grid-template-columns:auto; padding-left:43px; } /* una columna: a lo ancho no cabe */
-  .evolution-children.en-grupo.compacto { grid-template-columns:repeat(2,auto); }
-  .evolution-children.en-grupo::after { left:34px; }
+  .evolution-paso { width:64px; }
+  .evolution-paso.sin-condicion { width:34px; }
+  .evolution-hijos.en-grupo { grid-template-columns:auto; } /* una columna: a lo ancho no cabe */
+  .evolution-hijos.en-grupo.compacto { grid-template-columns:repeat(2,auto); }
+  .evolution-panel.panel-reserva { min-height:180px; }
+  .ficha-cargando { min-height:calc(100vh - 76px); } /* la ventana ya ocupa toda la pantalla mientras carga */
 }
 
 @media (prefers-reduced-motion:reduce) {
   .radar-valor, .ficha-modal[data-rareza] .detail { animation:none; }
+  /* Sin luces que se mueven ni anillo que gira; los fundidos (solo opacidad) se quedan. */
+  .detail.cambiando .device-bar::after, .ficha-cargando-anillo { animation:none; }
 }

@@ -1,7 +1,7 @@
 // Pequeñas funciones que usan varios módulos.
 
 import { FORMAS } from './datos-formas.js';
-import { NOMBRES_ESPANOL } from './datos.js';
+import { GRITOS_CON_VOZ, NOMBRES_ESPANOL, SIN_GIF_SHOWDOWN } from './datos.js';
 
 /**
  * Crea un elemento HTML en una sola llamada.
@@ -50,12 +50,22 @@ export const urlSprite = id =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
 
 /** Sprite ANIMADO (GIF de Pokémon Showdown). No todos los Pokémon lo tienen: usar con respaldo (urlSprite). */
-export const urlAnimado = id =>
-  `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${id}.gif`;
+export const urlAnimado = id => (SIN_GIF_SHOWDOWN.has(Number(id)) ? urlSprite(id)
+  : `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${id}.gif`);
 
-/** Grito de la especie (.ogg de PokéAPI). Las 1025 lo tienen en esta dirección (pokemon → cries.latest). */
+/**
+ * Grito de la especie (.ogg de PokéAPI). Las 1025 lo tienen en esta dirección (pokemon → cries.latest).
+ * Pikachu y Eevee usan su VOZ (GRITOS_CON_VOZ, datos.js): «¡Pikachu!» en vez del grito electrónico.
+ */
 export const urlGrito = id =>
-  `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${id}.ogg`;
+  `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${GRITOS_CON_VOZ[id] ?? id}.ogg`;
+
+/** Grito de un Pokémon de PokéAPI (también de sus formas): su voz si la tiene (Pikachu, Eevee); si no, el suyo. */
+export function gritoDe(pokemon) {
+  const especie = Number(idDesdeUrl(pokemon.species?.url || ''));
+  if (GRITOS_CON_VOZ[especie]) return urlGrito(especie);
+  return pokemon.cries?.latest || pokemon.cries?.legacy || null;
+}
 
 /** 25 → "025" */
 export const numeroPokedex = id => String(id).padStart(3, '0');
@@ -94,8 +104,22 @@ export function nombreForma(clave) {
   return forma ? forma[0] || mayusculas(clave.slice(forma[1].length + 1)) : null;
 }
 
-/** "Mr-Mímé" → "mr mime": sin mayúsculas, tildes ni guiones, para comparar al buscar. */
-export const normalizar = texto => texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replaceAll('-', ' ').trim();
+/**
+ * "Mr. Mímé" → "mr mime": sin mayúsculas, tildes, guiones ni signos, para comparar al buscar. Antes el punto de
+ * «Mr. Mime» o el apóstrofo de «Farfetch'd» se quedaban y esas búsquedas no encontraban nada. ♀ y ♂ se escriben
+ * como en las claves de PokéAPI ('nidoran-f').
+ */
+export const normalizar = texto => texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replaceAll('♀', ' f').replaceAll('♂', ' m').replace(/[^a-z0-9]+/g, ' ').trim();
+
+/**
+ * ¿El nombre de esta especie o forma contiene el texto (ya normalizado)? Vale su clave de PokéAPI ('iron-treads') y
+ * su nombre en español («Ferrodada»): las tarjetas enseñan el español y antes buscarlo no encontraba nada.
+ */
+export const contieneNombre = (clave, texto) => normalizar(clave).includes(texto) || normalizar(nombreTitulo(clave)).includes(texto);
+
+/** ¿El texto (ya normalizado) es exactamente su clave o su nombre en español? */
+export const esSuNombre = (clave, texto) => normalizar(clave) === texto || normalizar(nombreTitulo(clave)) === texto;
 
 /** Copia de la lista en orden aleatorio (Fisher-Yates). */
 export function barajar(lista, azar = Math.random) {

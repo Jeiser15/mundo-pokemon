@@ -6,7 +6,7 @@
 // listas duran lo que dure la visita.
 
 import { obtenerPokemon } from './api.js';
-import { idDesdeUrl, urlIlustracion } from './utilidades.js';
+import { gritoDe, idDesdeUrl, urlIlustracion } from './utilidades.js';
 
 const LISTAS = {
   equipo: { clave: 'pokedex.equipo', tamano: 6 },
@@ -97,7 +97,7 @@ export function detallesDe(id) {
         sprite: pokemon.sprites.front_default || null, // sprite pixelado (96 px) para la arena
         // Sprites animados (GIF) para la arena, por orden de preferencia: Showdown y Blanco/Negro.
         animados: [pokemon.sprites.other?.showdown?.front_default, pokemon.sprites.versions?.['generation-v']?.['black-white']?.animated?.front_default].filter(Boolean),
-        grito: pokemon.cries?.latest || pokemon.cries?.legacy || null, // .ogg de PokéAPI (sonido.js)
+        grito: gritoDe(pokemon), // .ogg de PokéAPI (sonido.js); Pikachu y Eevee, con su voz
         aprende: (pokemon.moves || []).map(m => [m.move.name, m.version_group_details.some(v => v.move_learn_method.name === 'level-up')]),
       };
     }).catch(error => { detalles.delete(id); throw error; }); // Si falla, el siguiente intento vuelve a pedirlo.

@@ -42,6 +42,8 @@ servidor/
 herramientas/
   generar_movimientos.py  Genera static/js/datos-movimientos.js desde PokéAPI (solo si salen movimientos nuevos)
   generar_formas.py       Genera static/js/datos-formas.js desde PokéAPI (solo si salen especies o formas nuevas)
+  generar_evoluciones.py  Genera static/js/datos-evoluciones.js desde PokéAPI (solo si salen especies o cambian
+                          sus evoluciones)
 index.html              Toda la página: 6 vistas (el Inicio es un <div id="inicio"> con 5 partes; las demás, <section>)
                         + 2 ventanas (<dialog>): la ficha y la batalla. <body data-vista="inicio"> de entrada
 static/
@@ -62,7 +64,9 @@ static/
     ficha.css           Ficha: toma los colores de sus tipos (--tipo-a/--tipo-b en #ficha) y, si es legendario
                         o singular, toda la ficha en negro y oro (#ficha[data-rareza], sección al final de la hoja);
                         radar SVG de estadísticas. Paneles en rejilla de 3 columnas (perfil, estadísticas,
-                        efectividad; evolución debajo) para que la ficha sea estática (ver «Detalles»)
+                        efectividad; evolución debajo) para que la ficha sea estática (ver «Detalles»). Cartas de
+                        la evolución con los colores de sus tipos (--carta-a/--carta-b), carga (anillo) y
+                        «Transiciones» (cambiar de Pokémon sin parpadear)
     duelo.css           Vista Duelo Pokémon («la arena»): mismo lenguaje que Legendarios (oscuro, serifa, líneas
                         finas, vidrio) en verde bosque y brasa; brasas que suben, maqueta 3D de la arena (el
                         escenario inclinado con tus Pokémon de pie), récord, pasos I·II·III y paneles de vidrio
@@ -89,11 +93,15 @@ static/
     datos-formas.js     GENERADO (no editar): FORMAS, las 363 claves de PokéAPI que no son la de su especie
                         (formas por defecto con apellido como 'giratina-altered' y formas alternativas) →
                         [nombre de la forma en español, clave de la especie, 1 si es la forma por defecto]
+    datos-evoluciones.js GENERADO (no editar): COMO_EVOLUCIONA, cómo se llega a cada una de las 484 especies que
+                        evolucionan, en pocas palabras ('ivysaur' → «Nv. 16», 'politoed' → «Intercambio · con Roca
+                        del Rey»; [texto, región] si solo evoluciona desde una forma regional: Runerigus, Galar)
     mundo.js            Inicio: la luz del fondo continuo. Cada parte lleva data-luz="#a #b"; la que cruza el centro
                         de la pantalla (IntersectionObserver) pasa sus colores a --luz-a/--luz-b. ponerLuz() los cambia
     portada.js          Héroe: sigue la hora local (momentos del día: título, relato con nombres pulsables, cielo y
-                        Pokémon del altar; el reloj deja ver otro momento), buscador (nombre exacto o número →
-                        ficha; si no → Pokédex filtrada), sugerencias, destacado que rota (miniaturas) y cinta
+                        Pokémon del altar; el reloj deja ver otro momento), buscador (número, nombre exacto en
+                        español o inglés o una forma → ficha; si no → Pokédex filtrada), sugerencias, destacado que
+                        rota (miniaturas) y cinta
     guia.js             Inicio: caminos (18 tipos → Pokédex filtrada, estante animado, silueta de ¿Quién es?),
                         Pokémon del día (cambia cada día; su tipo tiñe la luz) y las 9 regiones
     novedades.js        Inicio, Duelo en vivo: combate de muestra EN VIVO (arena-pixel + combate), lo nuevo, tu
@@ -101,8 +109,9 @@ static/
     catalogo.js         Pokédex, el archivo (la única vista de búsqueda): buscador, filtros por región y tipo, orden
                         y tandas de 24 que se cargan solas al bajar (o con «Ver más»). Pulsar una tarjeta la ESCANEA
                         (escaner.js). Exporta mostrarGeneracion(), mostrarTipo() y buscarDesdePortada() para que
-                        otras vistas la abran ya filtrada (y escanea el primero). Sin resultados ofrece «Buscar en
-                        PokéAPI» (para formas como charizard-mega-x, que no están en la lista de especies)
+                        otras vistas la abran ya filtrada (y escanea el primero). Busca por la clave Y por el nombre
+                        en español («Ferrodada», «Código Cero»: contieneNombre de utilidades.js). Sin resultados
+                        ofrece «Buscar en PokéAPI» (para formas: «Mega-Charizard X» o charizard-mega-x, claveDe)
     escaner.js          Pokédex, el escáner: escanear(id) lee el registro (ilustración que se materializa, nombre,
                         categoría, tipos, medidas, descripción letra a letra, estadísticas, grito); ‹ › siguen la
                         lista del archivo (vecino) y «Al azar»; lleva la cuenta de vistos (pokedex.vistos)
@@ -111,15 +120,21 @@ static/
                         usaServidor() lo averigua una vez), directo a PokéAPI con los mismos mensajes de error;
                         en ese modo arma la Pokédex compacta como el servidor (19 consultas) y la guarda 7 días
     utilidades.js       crear() para construir DOM, crearIcono() (iconos de tipo), crearImagen(), urlIlustracion(),
-                        urlSprite(), urlAnimado() (GIF de Showdown), urlGrito() (.ogg; las 1025 siguen ese patrón),
+                        urlSprite(), urlAnimado() (GIF de Showdown; las 14 de SIN_GIF_SHOWDOWN, su sprite fijo),
+                        urlGrito() (.ogg; las 1025 siguen ese patrón) y gritoDe(pokemon) (Pikachu y Eevee, con su
+                        VOZ: GRITOS_CON_VOZ), normalizar(), contieneNombre() y esSuNombre() (buscar por clave o
+                        nombre en español, sin tildes ni signos: «Mr. Mime», «Farfetch'd», «Nidoran♀»),
                         nombreTitulo(clave): el nombre oficial en español de una especie o forma ('mr-mime' → «Mr. Mime»,
                         'giratina-altered' → «Giratina», 'charizard-mega-x' → «Mega-Charizard X») y nombreForma()...
     vistas.js           Navegación por #hash (inicio, categorias, legendarios, catalogo, duelo, quien;
                         alias: #explorar → catalogo, #equipo y #batalla → duelo). Pone <body data-vista> y, en
-                        las vistas de VISTAS_DEL_MUNDO (inicio, categorias), <body data-mundo>
+                        las vistas de VISTAS_DEL_MUNDO (inicio, categorias), <body data-mundo>. Sube arriba solo si
+                        cambia de vista o se pulsa el menú (cerrar una ficha con «Atrás» no mueve la página)
     habitats.js         crearHabitat({ tipo, rareza, semilla }): la escena animada (12 partículas con reparto fijo)
     ficha.js            buscarPokemon(): abre y rellena la ficha (tema por tipo y rareza, especie, radar,
-                        etiqueta de su forma, evolución con «Estás aquí» y otras formas, efectividad con iconos)
+                        etiqueta de su forma, evolución con «Estás aquí», cómo evoluciona cada una y otras formas,
+                        efectividad con iconos). La arma fuera de la página y la enseña de una vez; con la ficha
+                        abierta, pasa de un Pokémon a otro con una transición (ver «Ficha sin parpadeos»)
     efectividad.js      Lógica pura: calcularMultiplicadores() (ficha, datos de PokéAPI) y
                         multiplicador() / fuerteContra() / debilAnte() (TABLA_TIPOS)
     categorias.js       La rueda de los tipos (elegir(): vuelo al centro, radios, portal, perfil, luz) y la tabla 18×18
@@ -273,8 +288,8 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   y NO `hidden`: con hidden, el escáner dejaría de quedarse fijo. Al escanear: `.escaneando` (lente rápida, luces,
   barrido en bucle) mientras llegan el Pokémon, la especie (en caché) y la ilustración; luego `.materializando`
   (la ilustración aparece de arriba abajo tras la línea de barrido). La descripción es la más reciente en español;
-  se escribe letra a letra (el texto entero va en un `.solo-lectores`). El grito usa `grito()` de sonido.js (suena
-  solo si los efectos están activados en el Duelo). Cada visita empieza por una especie al azar (o por la primera
+  se escribe letra a letra (el texto entero va en un `.solo-lectores`). El grito usa `grito()` de sonido.js con
+  `pedido: true`: lo pides con el botón, así que suena aunque los efectos del Duelo estén apagados. Cada visita empieza por una especie al azar (o por la primera
   de la lista si se llega con un filtro). Las tandas se cargan solas con un IntersectionObserver sobre «Ver más»
   (se vuelve a observar tras cada tanda para pantallas altas). En ≤1100 px el escáner pasa arriba a lo ancho y
   pulsar una tarjeta sube hasta él.
@@ -291,14 +306,36 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   «Giratina Altered». La forma va en su etiqueta junto a la región («Forma Modificada», «Mega-Charizard X»). Los
   nombres de especies y formas salen de `NOMBRES_ESPANOL` (datos.js) y `FORMAS` (datos-formas.js): úsese siempre
   `nombreTitulo()` para mostrar un Pokémon. La categoría que PokéAPI no tiene en español (especies 899–1025) sale de
-  `LEGENDARIOS` o no se muestra (nunca en inglés). Evolución: varias posibles van en UN grupo en una sola fila
-  (`.en-grupo`; con más de cuatro, Eevee, cartas `.compacto`; si alguna sigue evolucionando, Wurmple o Applin, su rama
-  entera): en dos filas o apiladas, esas fichas no cabían. Al lado, sus otras formas (`species.varieties`, sin las
-  «Dominante», solo las que tienen nombre en español —`formaConNombre`— y una por nombre; 4, 3 o 2 según las fases
-  para no partir la fila, con «+N más»); si no evoluciona, lo dice. El sello de legendario o singular va en la línea
-  del registro (`.identity-cabecera`): debajo, esas fichas no cabían en 900 px. Revisadas las 1025 en Chrome sin
-  ventana (`auditar-fichas.mjs`, fuera del proyecto) a 1440×900 y 1366×768: ninguna parpadea, se desplaza, se
-  desborda ni pierde imágenes; a 900 px de alto solo Dragalge y Crabominable usan un zoom de 0,98.
+  `LEGENDARIOS` o no se muestra (nunca en inglés). Evolución: cada carta lleva los colores de SUS tipos (halo, borde
+  y filo; `tiposDe()` de especies.js y, en las formas, su /pokemon). Entre una y la siguiente, el paso: una línea fina
+  con un círculo y su flecha en medio y, DEBAJO, cómo evoluciona (`COMO_EVOLUCIONA`, datos-evoluciones.js; «Forma de
+  Galar» al final si solo evoluciona desde esa forma). Una versión anterior con el texto encima y una luz que
+  recorría la flecha se descartó: «se ve muy raro». Varias posibles van en UN grupo en una sola fila (`.en-grupo`, y
+  cada carta dice al pie cómo se llega a ella; con más de cuatro, Eevee, cartas `.compacto`; si alguna sigue evolucionando, Wurmple o Applin, su rama
+  entera): en dos filas o apiladas, esas fichas no cabían. En un grupo las cartas comparten alto y el Pokémon es algo
+  menor: si no, Scyther o Yamask medían 885 px y se encogían. Si ves una forma (Blastoise Gigamax), la carta «Estás
+  aquí» la enseña a ella (antes salía la normal, repetida en «Otras formas»); esa carta no es un botón. Al lado, sus
+  otras formas (`species.varieties`, sin las «Dominante», solo las que tienen nombre en español —`formaConNombre`— y
+  una por nombre; 4, 3 o 2 según las fases para no partir la fila, con «+N más»); si no evoluciona, lo dice. El sello
+  de legendario o singular va en la línea del registro (`.identity-cabecera`): debajo, esas fichas no cabían en 900 px.
+  Revisadas las 1025 en Chrome sin ventana (`auditar-fichas.mjs`, fuera del proyecto) a 1440×900 y 1366×768: ninguna
+  parpadea, se desplaza, se desborda ni pierde imágenes. Con la cadena nueva se revisaron 167 (una de cada 7 y las
+  difíciles, `auditar.mjs`): a 1440×900 todas caben sin zoom (la más alta, 863 px; Dragalge y Crabominable también).
+- **Ficha sin parpadeos** (ficha.js + «Transiciones» al final de ficha.css). Antes, pulsar una evolución vaciaba la
+  ficha («Buscando…»: se encogía y perdía sus colores) y volvía de golpe, con la evolución y la efectividad llegando
+  después. Ahora: (1) la ficha nueva se arma FUERA de la página y se enseña cuando está casi todo (especie, cadena,
+  tipos, habilidades e ilustración; como mucho `ESPERA_MAXIMA`, 1,5 s; lo que llegue después ocupa el sitio de su
+  panel de espera, `.panel-reserva` con su título y «Cargando…», y aparece con fundido); (2) al abrirla, la ventana
+  espera hasta `ESPERA_APERTURA` (400 ms) y se abre YA COMPLETA (con el servidor tarda 20–220 ms); solo si tarda más
+  se ve la carga: la barra y un anillo que gira (`.ficha-cargando`, casi del alto de la ficha); (3) con la ficha
+  abierta (`hayFicha`), un fundido suave: `.cambiando` baja la cabecera y los paneles a 0,35 (`SALIDA_MINIMA`,
+  160 ms) y lo nuevo aparece desde ese mismo punto (`data-entrada="cambio"`, `ficha-fundido` 0,3 s; desde cero no:
+  quedaría un hueco vacío donde se pulsó); los colores se funden con `transition` sobre `--tipo-a/--tipo-b`
+  (registradas con `@property` en legendarios.css); (4) la ventana va centrada: si la nueva mide distinto (Blastoise
+  tiene «Otras formas» y Wartortle no: 848 y 833 px), saltaba 8 px; ahora se desliza a su sitio (`ficha.animate` con
+  `translate`, tras `encajarFicha()`). Si el cambio falla, se queda la de antes con un aviso (`.ficha-error`). El foco
+  pasa a la nueva carta «Estás aquí». Se probó antes una transición «de evolución» (silueta blanca, difuminado,
+  cascada, esqueleto con líneas que brillan) y el usuario la rechazó: «se ve muy raro». Quiere un fundido discreto.
 - `api.js` reintenta una vez si el servidor rechaza la conexión (abrir fichas muy deprisa supera sus 5 conexiones)
   y, si vuelve a fallar, da un mensaje en español (antes salía «Failed to fetch»).
 - **Batalla (simulacro)**: reglas inspiradas en los juegos, simplificadas, descritas al principio de `combate.js`.
@@ -354,7 +391,13 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   - Poké Ball al salir (y rayo rojo al volver), grito al salir y al caer (más grave), transición de entrada,
     confeti al ganar.
   - Sonido (sonido.js): los navegadores solo dejan sonar tras un clic, así que `prepararSonido()` se llama
-    al empezar `empezar()` (dentro del clic de «Iniciar combate»). La arena avisa con `sonar(nombre)`; los
+    al empezar `empezar()` (dentro del clic de «Iniciar combate»). Gritos: los .ogg de PokéAPI (`gritoDe`). En los
+    juegos casi todos «rugen» con un sonido electrónico (al usuario le sonaban «todos iguales»); solo Pikachu y
+    Eevee HABLAN, con las voces del anime, y PokéAPI guarda esas voces como el grito de sus formas «compañero» de
+    Let's Go (10158 y 10159): `GRITOS_CON_VOZ` (datos.js) las usa en el escáner, ¿Quién es? y el Duelo. Comprobado
+    analizando el audio: el 25 es ruido sin tono; el 10158, sílabas con tono de voz (580–770 Hz). No hay voces de
+    los demás (las del anime no son públicas). Un grito `pedido` (botón «Escuchar», pista del grito) suena aunque
+    los efectos estén apagados; los automáticos respetan el interruptor. La arena avisa con `sonar(nombre)`; los
     sonidos de los ataques los pide simulacro.js. La música es original (Lam–Fa–Sol–Mi7), se acelera con
     `tensionMusica` (último Pokémon o vida baja) y se para al cerrar.
 - **Duelo Pokémon** (#duelo): un paso visible a la vez. Paso 1: modo («Equipo contra equipo» o «Uno contra uno»,
@@ -366,7 +409,8 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   La clase `.en-pantalla-completa` deja solo la arena con los marcadores, la barra y el mando flotando encima
   (el mando se oculta mientras se anima el turno; el registro, siempre). Si la API falla o no existe (iPhone),
   la clase sola hace que la ventana ocupe la del navegador. Esc sale de la pantalla completa (fullscreenchange
-  quita la clase) sin cerrar la ventana. Para probarla en Chrome sin ventana: CDP `Browser.setPermission`
+  quita la clase) sin cerrar la ventana: el `cancel` de la ventana se anula si está (o acaba de estar, 400 ms) en
+  pantalla completa; antes el mismo Esc salía Y abandonaba el combate. Para probarla en Chrome sin ventana: CDP `Browser.setPermission`
   ({ name: 'fullscreen', allowWithoutGesture: true }); sin eso responde «not granted».
 - **Arenas** (`ESCENARIOS` en datos.js, dibujadas en escenarios.js): seis lugares de verdad, no campos con líneas
   (los de antes parecían canchas de fútbol): bosque antiguo (troncos gigantes, arroyo, corro de setas, rayos de
@@ -465,6 +509,12 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   con `arena.pausar()` si sale de la pantalla, cambias de vista o de pestaña (un IntersectionObserver, un
   MutationObserver sobre el `hidden` de `#inicio` y visibilitychange). Con movimiento reducido, una escena quieta.
   No usar `<header>` dentro: base.css le pone el estilo de la cabecera de la web.
+- **«Atrás» cierra la ficha y el combate** (navegador y botón del celular en la app de Android, que hace
+  `web.goBack()`): al abrir cada ventana se añade un paso al historial (`history.pushState({ ficha: true })`,
+  `{ batalla: true }`) y `popstate` la cierra; cerrarla con ✕ o Esc quita ese paso (`history.back()`). Antes «Atrás»
+  cambiaba de vista por detrás de la ficha o, recién abierta la app, salía de ella. Cambiar de Pokémon dentro de la
+  ficha no añade pasos. `mostrarVista()` (vistas.js) solo sube arriba si cambia de vista: así, al cerrar una ficha
+  con «Atrás», la Pokédex se queda donde estaba.
 - La ficha tiene «Añadir a mi equipo» en la barra superior (no le quita alto: la ficha sigue estática).
 - El servidor (ThreadingHTTPServer) solo encola 5 conexiones: el navegador abre 6 como mucho y va bien, pero un
   script que lance 30 peticiones a la vez recibe «connection refused». Limitar la concurrencia en pruebas.
@@ -479,7 +529,7 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   tipo al abrir la pista «Tipo» o al revelar: tiñe la pantalla y el fondo de la sección. Al responder
   (`data-estado="revelado"`) aparece el hábitat del tipo o el santuario (habitats.js), destello, chispas lima si
   aciertas, temblor y borde rojo si no, y suena su grito (`urlGrito`, respeta el interruptor de efectos de
-  sonido.js, el mismo del Duelo; el botón del escenario lo cambia). Pistas: cuatro cartas selladas que se eligen
+  sonido.js, el mismo del Duelo; el botón del escenario lo cambia; la pista del grito suena siempre: la pagaste). Pistas: cuatro cartas selladas que se eligen
   (tipo, región —o la veintena de su número si ya elegiste región—, categoría —o su color en las 127 especies de la
   899 a la 1025, que no la tienen en español— y grito), −3 cada una. La de la inicial se quitó a propósito: con
   ella era demasiado fácil. Puntos: 10 + segundos que sobran

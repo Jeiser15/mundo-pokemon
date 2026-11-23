@@ -5,14 +5,24 @@
 // Es estática: en escritorio cabe entera en la ventana (encajarFicha) y no se desplaza.
 //
 // Orden de carga:
-//   1. /api/pokemon/<consulta>           → hábitat, cabecera, perfil, estadísticas y radar (se muestran ya)
+//   1. /api/pokemon/<consulta>           → hábitat, cabecera, perfil, estadísticas y radar
 //   2. /api/ability/<nombre> (en paralelo) → traducción de cada habilidad
 //   3. /api/pokemon-species + /api/type   → especie, descripción y efectividad
-//   4. /api/evolution-chain/<id>          → árbol evolutivo
+//   4. /api/evolution-chain/<id>          → árbol evolutivo (cómo evoluciona cada una: datos-evoluciones.js)
+// La ficha se arma FUERA de la página y se enseña de una vez cuando está casi todo (como mucho ESPERA_MAXIMA):
+// así no crece ni salta mientras llegan los datos. Al abrirla, si eso tarda menos de ESPERA_APERTURA (lo normal),
+// la ventana se abre ya completa; si tarda más, se ve una carga sencilla (mostrarCarga). Lo que llegue aún más
+// tarde ocupa el sitio de su panel de espera (.panel-reserva) con un fundido.
+//
+// Cambiar de Pokémon con la ficha abierta (pulsar una evolución o una forma) NO la vacía: es un fundido suave.
+// Lo de antes se apaga un poco (.cambiando) y lo nuevo aparece desde ese mismo punto (data-entrada="cambio").
+// Antes se quedaba un instante en «Buscando…» (se encogía y perdía sus colores) y volvía de golpe: parpadeaba.
 
 import { obtenerPokemon, obtenerRecurso } from './api.js';
 import { COLOR_POR_DEFECTO, GENERACIONES, LEGENDARIOS, NOMBRES_ESTADISTICAS, rarezaDe, TIPOS } from './datos.js';
+import { COMO_EVOLUCIONA } from './datos-evoluciones.js';
 import { calcularMultiplicadores } from './efectividad.js';
+import { cargarEspecies, tiposDe } from './especies.js';
 import { crearHabitat } from './habitats.js';
 import { agregarAlEquipo, equipoLleno, estaEnEquipo } from './mi-equipo.js';
 import {
@@ -30,6 +40,16 @@ let versionBusqueda = 0;
 // Al abrir la ficha se congela la página; al cerrarla se vuelve al mismo sitio.
 let desplazamientoAnterior = 0;
 let elementoAnterior = null;
+// true si la ventana enseña un Pokémon (no la carga ni un aviso): pulsar otro lo cambia sin vaciarla.
+let hayFicha = false;
+let temporizadorCarga = 0; // Enseña la carga si la ficha tarda en estar lista.
+
+// Tiempos (ms).
+const ESPERA_APERTURA = 400; // Si la ficha está lista antes, se abre ya completa, sin pantalla de carga.
+const ESPERA_MAXIMA = 1500;  // Lo que se espera a la especie, la evolución, la efectividad y la ilustración.
+const SALIDA_MINIMA = 160;   // Lo que tarda en apagarse lo de antes (ficha.css: .cambiando): lo nuevo sale de ahí.
+const espera = ms => new Promise(listo => setTimeout(listo, Math.max(0, ms)));
+const movimientoReducido = matchMedia('(prefers-reduced-motion: reduce)');
 
 // La ficha es estática: en escritorio cabe entera en la ventana. Si la ventana es más baja que la
 // ficha, se reduce (zoom con --escala) en vez de desplazarse. En móvil no cabría legible y se desplaza.
@@ -51,24 +71,40 @@ export function iniciarFicha() {
     // no hay que cancelarla ni descongelar la página.
     if (ficha.open) return;
     versionBusqueda++; // Descarta lo que aún estuviera cargando.
+    resultado.classList.remove('cambiando');
     document.body.classList.remove('ficha-abierta');
     document.body.style.top = '';
     window.scrollTo({ top: desplazamientoAnterior, behavior: 'instant' });
     if (elementoAnterior?.isConnected) elementoAnterior.focus({ preventScroll: true });
+    if (history.state?.ficha) history.back(); // Cerrada con ✕ o Esc: se quita su paso del historial.
   });
+  // «Atrás» (el del navegador o el del celular en la app de Android) cierra la ficha en vez de cambiar de vista por
+  // detrás o, recién abierta la app, salir de ella: al abrirla se añade un paso al historial (abrirVentana).
+  window.addEventListener('popstate', () => { if (ficha.open && !history.state?.ficha) ficha.close(); });
 }
 
 /** Abre la ficha y la rellena. `consulta` es un nombre en inglés o un número. */
 export async function buscarPokemon(consulta) {
   const version = ++versionBusqueda;
   const vigente = () => version === versionBusqueda;
+  const cambio = ficha.open && hayFicha;
+  const inicio = performance.now();
 
-  aplicarTema([], null); // Colores neutros mientras busca.
-  escalaTope = 1;
-  mostrarAviso('Buscando en PokéAPI...');
+  clearTimeout(temporizadorCarga);
   resultado.setAttribute('aria-busy', 'true'); // Avisa a los lectores de pantalla de que está cargando.
-  abrirVentana();
-  ficha.scrollTop = 0;
+  cargarEspecies().catch(() => {}); // Los tipos de cada carta de la evolución (llega antes que la cadena).
+  if (cambio) resultado.classList.add('cambiando');
+  else if (ficha.open) mostrarCarga(); // Abierta con un aviso o con la carga: se queda en la carga.
+  else {
+    // Cerrada: se abre cuando la ficha esté lista o, si tarda, con la carga.
+    temporizadorCarga = setTimeout(() => {
+      if (!vigente()) return;
+      aplicarTema([], null); // Colores neutros mientras busca.
+      mostrarCarga();
+      abrirVentana();
+      ficha.scrollTop = 0;
+    }, ESPERA_APERTURA);
+  }
 
   try {
     const pokemon = await obtenerPokemon(consulta.trim().toLowerCase());
@@ -78,20 +114,37 @@ export async function buscarPokemon(consulta) {
     const idEspecie = Number(idDesdeUrl(pokemon.species.url));
     const tipos = pokemon.types.map(t => t.type.name);
     const rareza = rarezaDe(idEspecie);
-    aplicarTema(tipos, rareza);
-
+    const cabecera = crearCabecera(pokemon, tipos, idEspecie, rareza);
     const { columnas, chipsHabilidades } = crearColumnas(pokemon);
-    resultado.replaceChildren(crearBarra(rareza, pokemon), crearCabecera(pokemon, tipos, idEspecie, rareza), columnas);
-    traducirHabilidades(pokemon.abilities, chipsHabilidades, vigente);
-    await completarDatosExtra(pokemon, columnas, vigente);
+    const extras = completarDatosExtra(pokemon, cabecera, columnas, vigente);
+    const listo = Promise.allSettled([
+      extras,
+      traducirHabilidades(pokemon.abilities, chipsHabilidades, vigente),
+      cabecera.querySelector('.habitat-pokemon')?.decode(),
+    ]);
+    await Promise.race([listo, espera(ESPERA_MAXIMA - (performance.now() - inicio))]);
+    if (cambio) await espera(SALIDA_MINIMA - (performance.now() - inicio));
+    if (!vigente()) return;
+
+    clearTimeout(temporizadorCarga);
+    mostrarFicha([crearBarra(rareza, pokemon), cabecera, columnas], tipos, rareza, cambio);
+    await extras;
   } catch (error) {
-    if (vigente()) mostrarAviso(error.message || 'No se pudo completar la búsqueda.');
+    if (!vigente()) return;
+    clearTimeout(temporizadorCarga);
+    const texto = error.message || 'No se pudo completar la búsqueda.';
+    if (cambio) avisarCambioFallido(texto);
+    else {
+      aplicarTema([], null);
+      mostrarAviso(texto);
+      abrirVentana();
+    }
   } finally {
     if (vigente()) resultado.setAttribute('aria-busy', 'false');
   }
 }
 
-// --- Ventana y tema ----------------------------------------------------------------
+// --- Ventana, tema y transiciones ---------------------------------------------------
 
 function abrirVentana() {
   if (ficha.open) return;
@@ -102,6 +155,7 @@ function abrirVentana() {
     document.body.classList.add('ficha-abierta');
   }
   ficha.showModal();
+  if (!history.state?.ficha) history.pushState({ ficha: true }, ''); // «Atrás» la cerrará (iniciarFicha)
   botonCerrar.focus({ preventScroll: true });
 }
 
@@ -116,6 +170,58 @@ function aplicarTema(tipos, rareza) {
   }
   if (rareza) ficha.dataset.rareza = rareza;
   else delete ficha.dataset.rareza;
+}
+
+/**
+ * Pone en la ventana la ficha ya armada. Cerrada, la abre (entra con su propia animación). Abierta, lo nuevo aparece
+ * con un fundido: desde lo apagado si había otro Pokémon (data-entrada="cambio"), desde cero tras la carga ("carga").
+ */
+function mostrarFicha(contenido, tipos, rareza, cambio) {
+  const abierta = ficha.open;
+  const teniaFoco = resultado.contains(document.activeElement);
+  const altoAntes = ficha.getBoundingClientRect().height;
+  aplicarTema(tipos, rareza);
+  escalaTope = 1;
+  hayFicha = true;
+  resultado.classList.remove('cambiando');
+  if (abierta) resultado.dataset.entrada = cambio ? 'cambio' : 'carga';
+  else delete resultado.dataset.entrada;
+  resultado.replaceChildren(...contenido);
+  if (!abierta) {
+    abrirVentana();
+    ficha.scrollTop = 0;
+    return;
+  }
+  // La ventana va centrada: si la ficha nueva mide distinto (Blastoise tiene «Otras formas» y Wartortle no), saltaría
+  // unos píxeles. En vez de eso, sale de donde estaba y se desliza a su sitio. Se encaja antes (zoom) para medirla
+  // ya con su tamaño final.
+  encajarFicha();
+  const desfase = (altoAntes - ficha.getBoundingClientRect().height) / 2;
+  if (Math.abs(desfase) > 1 && !movimientoReducido.matches) {
+    ficha.animate([{ translate: `0 ${-desfase}px` }, { translate: '0 0' }], { duration: 400, easing: 'cubic-bezier(.2,.7,.3,1)' });
+  }
+  if (!cambio) return;
+  ficha.scrollTo({ top: 0, behavior: movimientoReducido.matches ? 'instant' : 'smooth' }); // En el móvil se desplaza.
+  // La carta pulsada ya no existe: el foco pasa a la nueva «Estás aquí» (si no, se perdería por la página).
+  if (teniaFoco) (resultado.querySelector('.evolution-card.actual') || botonCerrar).focus({ preventScroll: true });
+}
+
+/**
+ * Si la ficha tarda en estar lista (conexión lenta): la barra y, en medio, un anillo que gira con «Buscando en
+ * PokéAPI…». Casi del alto de la ficha, para que no crezca de golpe al llegar. Con datos rápidos no se llega a ver.
+ */
+function mostrarCarga() {
+  hayFicha = false;
+  resultado.classList.remove('cambiando');
+  delete resultado.dataset.entrada;
+  resultado.replaceChildren(
+    crear('div', { clase: 'device-bar' },
+      crear('span', { clase: 'device-lights', atributos: { 'aria-hidden': 'true' } }),
+      crear('span', { clase: 'device-titulo', texto: 'POKÉDEX  /  ARCHIVO DE ESPECIES' })),
+    crear('div', { clase: 'ficha-cargando', atributos: { role: 'status' } },
+      crear('span', { clase: 'ficha-cargando-anillo', atributos: { 'aria-hidden': 'true' } }),
+      crear('p', { texto: 'Buscando en PokéAPI…' })),
+  );
 }
 
 /**
@@ -140,7 +246,17 @@ function encajarFicha() {
 }
 
 function mostrarAviso(texto) {
+  hayFicha = false;
+  resultado.classList.remove('cambiando');
+  delete resultado.dataset.entrada;
   resultado.replaceChildren(crear('p', { clase: 'ficha-aviso', texto }));
+}
+
+/** Si falla el cambio a otro Pokémon, se queda el de antes y un aviso bajo la barra lo explica. */
+function avisarCambioFallido(texto) {
+  resultado.classList.remove('cambiando');
+  resultado.querySelector('.ficha-error')?.remove();
+  resultado.querySelector('.device-bar')?.after(crear('p', { clase: 'ficha-error', atributos: { role: 'alert' }, texto }));
 }
 
 // --- Parte superior: barra, escenario e identidad -----------------------------
@@ -238,7 +354,8 @@ function crearColumnas(pokemon) {
       )),
   );
 
-  // Las habilidades se muestran ya en inglés y se traducen cuando llega la respuesta.
+  // Las habilidades se escriben ya en inglés y se traducen cuando llega la respuesta (casi siempre antes de
+  // que se vea la ficha: buscarPokemon la espera).
   const chipsHabilidades = pokemon.abilities.map(a => crear('span', {
     clase: 'ability-chip' + (a.is_hidden ? ' oculta' : ''),
     texto: nombreLegible(a.ability.name) + ' · buscando traducción' + (a.is_hidden ? ' · oculta' : ''),
@@ -259,11 +376,17 @@ function crearColumnas(pokemon) {
     crear('strong', { texto: pokemon.stats.reduce((suma, s) => suma + s.base_stat, 0) }),
   );
 
-  // Rejilla de paneles: la evolución y la efectividad se añaden aquí cuando llegan (completarDatosExtra).
+  // Rejilla de paneles. La evolución y la efectividad llegan después (completarDatosExtra): mientras tanto, su hueco
+  // lo ocupa un panel de espera con su título y «Cargando…» (.panel-reserva). Casi siempre se sustituye antes de verse
+  // la ficha; con una conexión lenta se ve un momento, y la ficha no crece de golpe al llegar.
+  const reserva = (clase, titulo) => crear('section', { clase: `data-panel ${clase} panel-reserva` },
+    crear('h4', { texto: titulo }), crear('p', { texto: 'Cargando…' }));
   const columnas = crear('div', { clase: 'detail-columns' },
     crear('section', { clase: 'data-panel panel-perfil' }, crear('h4', { texto: 'Perfil del Pokémon' }), medidas, habilidades),
     crear('section', { clase: 'data-panel panel-estadisticas' }, crear('h4', { texto: 'Estadísticas base' }),
       crear('div', { clase: 'stats-cuerpo' }, crearRadar(pokemon.stats), crear('div', {}, estadisticas, total))),
+    reserva('evolution-panel', 'Cadena evolutiva'),
+    reserva('panel-efectividad', 'Efectividad en combate'),
   );
   return { columnas, chipsHabilidades };
 }
@@ -302,8 +425,9 @@ function crearRadar(stats) {
   return svg;
 }
 
+/** Traduce cada habilidad (en paralelo). Devuelve una promesa que se cumple cuando han llegado todas. */
 function traducirHabilidades(habilidades, chips, vigente) {
-  habilidades.forEach(async (a, indice) => {
+  return Promise.all(habilidades.map(async (a, indice) => {
     let nombre = nombreLegible(a.ability.name), sinTraduccion = true;
     try {
       const datos = await obtenerRecurso('ability', a.ability.name);
@@ -312,18 +436,25 @@ function traducirHabilidades(habilidades, chips, vigente) {
     } catch { /* Si falla, se queda el nombre en inglés. */ }
     if (!vigente()) return;
     chips[indice].textContent = nombre + (sinTraduccion ? ' · sin traducción' : '') + (a.is_hidden ? ' · oculta' : '');
-  });
+  }));
 }
 
 // --- Especie, evolución y efectividad -----------------------------------------------
 
-async function completarDatosExtra(pokemon, columnas, vigente) {
+async function completarDatosExtra(pokemon, cabecera, columnas, vigente) {
+  // Cada panel ocupa el sitio de su panel de espera (crearColumnas). Si la ficha ya se ve, entra con un fundido.
+  const poner = panel => {
+    const hueco = [...columnas.querySelectorAll('.panel-reserva')].find(r => panel.classList.contains(r.classList[1]));
+    if (resultado.contains(columnas)) panel.classList.add('llega-tarde');
+    if (hueco) hueco.replaceWith(panel);
+    else columnas.append(panel);
+  };
   // Panel con solo un aviso; `clase` lo coloca en el hueco de la evolución o de la efectividad.
-  const agregarTexto = (titulo, contenido, clase) => columnas.append(
+  const agregarTexto = (titulo, contenido, clase) => poner(
     crear('section', { clase: 'data-panel ' + clase }, crear('h4', { texto: titulo }), crear('p', { texto: contenido })),
   );
-  const especieTexto = resultado.querySelector('.identity-caption');
-  const descripcion = resultado.querySelector('.identity-descripcion');
+  const especieTexto = cabecera.querySelector('.identity-caption');
+  const descripcion = cabecera.querySelector('.identity-descripcion');
 
   const [especieRes, ...tiposRes] = await Promise.allSettled([
     obtenerRecurso('pokemon-species', pokemon.species.name),
@@ -345,7 +476,7 @@ async function completarDatosExtra(pokemon, columnas, vigente) {
       try {
         const cadena = await obtenerRecurso('evolution-chain', idDesdeUrl(especie.evolution_chain.url));
         if (!vigente()) return;
-        columnas.append(crearPanelEvolucion(cadena.chain, pokemon, especie.varieties || []));
+        poner(crearPanelEvolucion(cadena.chain, pokemon, especie.varieties || []));
       } catch {
         if (vigente()) agregarTexto('Cadena evolutiva', 'No se pudo cargar la cadena evolutiva.', 'evolution-panel');
       }
@@ -359,7 +490,7 @@ async function completarDatosExtra(pokemon, columnas, vigente) {
 
   if (tiposRes.every(r => r.status === 'fulfilled')) {
     const multiplicadores = calcularMultiplicadores(tiposRes.map(r => r.value.damage_relations), Object.keys(TIPOS));
-    columnas.append(crear('section', { clase: 'data-panel panel-efectividad' },
+    poner(crear('section', { clase: 'data-panel panel-efectividad' },
       crear('h4', { texto: 'Efectividad en combate' }),
       crearGrupoEfectividad('Debilidades', multiplicadores, v => v > 1, 'weakness', (a, b) => b - a),
       crearGrupoEfectividad('Resistencias', multiplicadores, v => v > 0 && v < 1, 'resistance', (a, b) => a - b),
@@ -383,47 +514,92 @@ function imagenDeForma(id) {
   return imagen;
 }
 
+/** Colores de los tipos de una carta de la evolución (--carta-a, --carta-b): si llegan después, se funden. */
+function pintarCarta(carta, tipos) {
+  if (!tipos.length) return;
+  carta.style.setProperty('--carta-a', colorDe(tipos[0]));
+  carta.style.setProperty('--carta-b', colorDe(tipos[1] || tipos[0]));
+}
+
 /**
- * Árbol evolutivo: cada especie es un botón; la que estás viendo queda marcada. A su lado, sus OTRAS FORMAS
- * (species.varieties: megaevoluciones, Gigamax, formas regionales, Giratina Origen…) si el árbol deja sitio.
- * Si no evoluciona, el panel lo dice (antes quedaba una carta sola en un panel vacío).
+ * Cómo se llega a `clave` desde `padre` (datos-evoluciones.js): «Nv. 16», «Piedra Agua», «Intercambio · con…».
+ * La primera parte va resaltada y cada una de las demás en su línea (bajo la flecha) o seguidas (dentro de una carta).
+ * Si solo evoluciona desde una forma regional (Obstagoon desde el Linoone de Galar), lo dice al final.
+ */
+function crearCondicion(clave, padre) {
+  const dato = COMO_EVOLUCIONA[clave];
+  if (!dato) return null;
+  const [texto, region] = Array.isArray(dato) ? dato : [dato, null];
+  const [principal, ...resto] = texto.split(' · ');
+  const aclaracion = region ? ` (solo desde ${nombreTitulo(padre)} de ${region})` : '';
+  return crear('span', { clase: 'evolution-condicion', title: `${nombreTitulo(clave)}: ${texto}${aclaracion}` },
+    crear('b', { texto: principal }),
+    ...resto.map(parte => crear('span', { texto: parte })),
+    ...(region ? [crear('em', { texto: 'Forma de ' + region })] : []));
+}
+
+/**
+ * Árbol evolutivo. Cada especie es una carta con los colores de SUS tipos; entre una y la siguiente, la flecha dice
+ * cómo evoluciona. Si son varias posibles (Eevee), van juntas en un grupo y cada carta lo dice dentro. La que estás
+ * viendo queda marcada («Estás aquí») y, si es una forma (Blastoise Gigamax), la carta la enseña a ella: antes salía
+ * la normal, repetida en «Otras formas». A su lado, sus OTRAS FORMAS (species.varieties) si el árbol deja sitio.
+ * Si no evoluciona, el panel lo dice. Pulsar una carta cambia la ficha a ese Pokémon (con un fundido).
  */
 function crearPanelEvolucion(raiz, pokemon, variedades) {
   const especieActual = pokemon.species.name;
   const idEspecie = idDesdeUrl(pokemon.species.url);
-  const crearRama = nodo => {
-    const id = idDesdeUrl(nodo.species.url);
+  // ¿Una forma (Mega, Gigamax, de Alola…)? La forma por defecto de algunas especies lleva apellido ('giratina-altered')
+  // pero tiene el número de la especie: esa no cuenta.
+  const enForma = pokemon.id !== Number(idEspecie);
+  const etiqueta = v => nombreForma(v.pokemon.name) || nombreTitulo(v.pokemon.name);
+  const elegir = consulta => () => buscarPokemon(consulta);
+
+  // `padre`: la especie anterior, para decir dentro de la carta cómo se llega a ella (solo en un grupo).
+  const crearCarta = (nodo, padre) => {
+    const id = Number(idDesdeUrl(nodo.species.url));
     const esActual = nodo.species.name === especieActual;
-    const rama = crear('div', { clase: 'evolution-branch' },
-      crear('button', {
-        type: 'button',
-        clase: 'evolution-card' + (esActual ? ' actual' : ''),
-        atributos: esActual ? { 'aria-current': 'true' } : {},
-        alPulsar: () => buscarPokemon(nodo.species.name),
-      },
-        crearImagen(urlIlustracion(id)),
-        crear('small', { texto: '#' + numeroPokedex(id) }),
-        crear('strong', { texto: nombreTitulo(nodo.species.name) }),
-      ),
-    );
-    if (nodo.evolves_to.length) rama.append(crearHijos(nodo.evolves_to));
+    const muestraForma = esActual && enForma;
+    const contenido = [
+      muestraForma ? imagenDeForma(pokemon.id) : crearImagen(urlIlustracion(id)),
+      crear('small', { texto: '#' + numeroPokedex(id) }),
+      crear('strong', { texto: muestraForma ? nombreForma(pokemon.name) || nombreTitulo(pokemon.name) : nombreTitulo(nodo.species.name) }),
+      ...(padre ? [crearCondicion(nodo.species.name, padre)].filter(Boolean) : []),
+    ];
+    // La actual no lleva a ninguna parte (ya estás en ella): no es un botón, pero recibe el foco tras un cambio.
+    const carta = esActual
+      ? crear('div', { clase: 'evolution-card actual', tabIndex: -1, atributos: { 'aria-current': 'true' } }, ...contenido)
+      : crear('button', { type: 'button', clase: 'evolution-card', alPulsar: elegir(nodo.species.name) }, ...contenido);
+    if (esActual) pintarCarta(carta, pokemon.types.map(t => t.type.name));
+    else {
+      carta.dataset.especie = id;
+      pintarCarta(carta, tiposDe(id));
+    }
+    return carta;
+  };
+  const crearRama = (nodo, padre = null) => {
+    const rama = crear('div', { clase: 'evolution-branch' }, crearCarta(nodo, padre));
+    if (nodo.evolves_to.length) rama.append(crearHijos(nodo));
     return rama;
   };
-  // Varias evoluciones posibles van juntas en un grupo («una de estas»), TODAS EN UNA FILA: así el árbol crece
-  // a lo ancho y la ficha cabe en la pantalla sin encogerse. Si alguna sigue evolucionando (Wurmple, Applin),
-  // va su rama entera; con más de cuatro (Eevee y sus ocho), las cartas son más pequeñas (.compacto).
-  // Antes Eevee iba en dos filas y Wurmple y Applin en ramas apiladas: esas fichas no cabían y se encogían.
-  const crearHijos = hijos => {
+  // Una evolución: flecha con su condición. Varias posibles van juntas en un grupo («una de estas»), TODAS EN UNA
+  // FILA: así el árbol crece a lo ancho y la ficha cabe sin encogerse. Si alguna sigue evolucionando (Wurmple,
+  // Applin), va su rama entera; con más de cuatro (Eevee y sus ocho), las cartas son más pequeñas (.compacto).
+  const crearHijos = nodo => {
+    const hijos = nodo.evolves_to;
     const enGrupo = hijos.length > 1;
-    return crear('div', {
-      clase: 'evolution-children' + (enGrupo ? ' en-grupo' : '') + (hijos.length > 4 ? ' compacto' : ''),
-      estilos: enGrupo ? { '--columnas': hijos.length } : {},
-    }, ...hijos.map(crearRama));
+    const condicion = enGrupo ? null : crearCondicion(hijos[0].species.name, nodo.species.name);
+    return crear('div', { clase: 'evolution-children' },
+      crear('span', { clase: 'evolution-paso' + (condicion ? '' : ' sin-condicion') },
+        ...(condicion ? [condicion] : []),
+        crear('i', { clase: 'evolution-flecha', atributos: { 'aria-hidden': 'true' } })),
+      crear('div', {
+        clase: 'evolution-hijos' + (enGrupo ? ' en-grupo' : '') + (hijos.length > 4 ? ' compacto' : ''),
+        estilos: enGrupo ? { '--columnas': hijos.length } : {},
+      }, ...hijos.map(hijo => crearRama(hijo, enGrupo ? nodo.species.name : null))));
   };
 
   // Las formas «Dominante» (totem) son iguales que la normal, solo más grandes: no se cuentan. Y una por
   // nombre: Minior tiene siete «Forma Meteorito» (una por color) y Tatsugiri, tres «Mega-Tatsugiri».
-  const etiqueta = v => nombreForma(v.pokemon.name) || nombreTitulo(v.pokemon.name);
   // Solo las que tienen nombre oficial en español (formaConNombre): las otras (las formas de Koraidon y Miraidon,
   // los disfraces de Pikachu) salían en inglés y, varias, sin imagen en PokéAPI.
   const otras = [...new Map(variedades
@@ -434,19 +610,26 @@ function crearPanelEvolucion(raiz, pokemon, variedades) {
   const ramifica = nodo => nodo.evolves_to.length > 1 || nodo.evolves_to.some(ramifica);
   const visibles = otras.slice(0, ramifica(raiz) ? 0 : FORMAS_QUE_CABEN[fases(raiz) - 1] ?? 0);
   const sinEvolucion = !raiz.evolves_to.length;
+  const crearForma = v => {
+    const carta = crear('button', { type: 'button', clase: 'evolution-card forma', alPulsar: elegir(v.pokemon.name) },
+      imagenDeForma(idDesdeUrl(v.pokemon.url)),
+      crear('small', { texto: '#' + numeroPokedex(idEspecie) }),
+      crear('strong', { texto: etiqueta(v) }));
+    // Mientras tanto, los de su especie; después, los suyos (Mega-Charizard X es Fuego y Dragón).
+    pintarCarta(carta, tiposDe(idEspecie));
+    obtenerPokemon(v.pokemon.name).then(forma => pintarCarta(carta, forma.types.map(t => t.type.name))).catch(() => {});
+    return carta;
+  };
   const formas = visibles.length ? crear('div', { clase: 'evolution-formas' },
     crear('small', { texto: otras.length === 1 ? 'Otra forma' : 'Otras formas' }),
     crear('div', { clase: 'evolution-formas-lista' },
-      ...visibles.map(v => crear('button', { type: 'button', clase: 'evolution-card forma', alPulsar: () => buscarPokemon(v.pokemon.name) },
-        imagenDeForma(idDesdeUrl(v.pokemon.url)),
-        crear('small', { texto: '#' + numeroPokedex(idEspecie) }),
-        crear('strong', { texto: etiqueta(v) }))),
+      ...visibles.map(crearForma),
       ...(otras.length > visibles.length ? [crear('span', { clase: 'evolution-mas', texto: `+${otras.length - visibles.length} más` })] : []))) : null;
   const ayuda = sinEvolucion
     ? (visibles.length ? 'No evoluciona, pero tiene otras formas: pulsa una para ver su ficha.' : 'No evoluciona: esta es su única forma.')
     : (visibles.length ? 'Pulsa una especie o una forma para ver su ficha.' : 'Pulsa una especie para ver su ficha; las ramas son evoluciones posibles.');
 
-  return crear('section', { clase: 'data-panel evolution-panel' },
+  const panel = crear('section', { clase: 'data-panel evolution-panel' },
     crear('div', { clase: 'panel-cabecera' },
       crear('h4', { texto: 'Cadena evolutiva' }),
       crear('p', { texto: ayuda }),
@@ -456,6 +639,13 @@ function crearPanelEvolucion(raiz, pokemon, variedades) {
       ...(sinEvolucion && !formas ? [crear('p', { clase: 'evolution-nota', texto: 'No evoluciona: es una especie de una sola fase.' })] : []),
       ...(formas ? [formas] : [])),
   );
+  // Si la lista de especies (con sus tipos) aún no había llegado, las cartas se tiñen en cuanto llega.
+  if (!tiposDe(idEspecie).length) {
+    cargarEspecies().then(() => {
+      for (const carta of panel.querySelectorAll('[data-especie]')) pintarCarta(carta, tiposDe(carta.dataset.especie));
+    }).catch(() => {});
+  }
+  return panel;
 }
 
 const SIMBOLO = { 4: '×4', 2: '×2', 0.5: '×½', 0.25: '×¼', 0: '×0' };

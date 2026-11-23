@@ -12,6 +12,7 @@ const ajustes = leer();
 const gritos = new Map();
 let ctx = null;
 let buses = {};
+let salida = null; // compresor final: el grito pedido a propósito va aquí aunque los efectos estén apagados
 let ruidoBlanco = null;
 let musica = null;
 
@@ -31,7 +32,7 @@ export function prepararSonido() {
   if (!Contexto) return;
   if (!ctx) {
     ctx = new Contexto();
-    const salida = ctx.createDynamicsCompressor(); // evita que se sature cuando suenan muchas cosas a la vez
+    salida = ctx.createDynamicsCompressor(); // evita que se sature cuando suenan muchas cosas a la vez
     salida.connect(ctx.destination);
     for (const bus of ['efectos', 'musica']) {
       buses[bus] = ctx.createGain();
@@ -178,9 +179,13 @@ export function precargarGritos(urls) {
   }
 }
 
-/** El grito de un Pokémon. `tono` < 1 lo hace más grave (al quedar K.O.). */
-export async function grito(url, { tono = 1, volumen = 0.55 } = {}) {
-  if (!ctx || !url || !ajustes.efectos) return;
+/**
+ * El grito de un Pokémon. `tono` < 1 lo hace más grave (al quedar K.O.). `pedido`: lo pidió la persona con un botón
+ * («Escuchar su grito», la pista del grito): suena aunque los efectos estén apagados (antes no hacía nada y la pista
+ * de ¿Quién es? costaba 3 puntos sin sonar). Los automáticos (combate, revelación) respetan el interruptor.
+ */
+export async function grito(url, { tono = 1, volumen = 0.55, pedido = false } = {}) {
+  if (!ctx || !url || (!ajustes.efectos && !pedido)) return;
   precargarGritos([url]);
   const buffer = await gritos.get(url);
   if (!buffer) return;
@@ -188,8 +193,8 @@ export async function grito(url, { tono = 1, volumen = 0.55 } = {}) {
   fuente.buffer = buffer;
   fuente.playbackRate.value = tono;
   const g = ctx.createGain();
-  g.gain.value = volumen;
-  fuente.connect(g).connect(buses.efectos);
+  g.gain.value = pedido ? volumen * VOLUMEN.efectos : volumen; // el mismo volumen que por el bus de efectos
+  fuente.connect(g).connect(pedido ? salida : buses.efectos);
   fuente.start();
 }
 
