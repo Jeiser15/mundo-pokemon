@@ -1,123 +1,364 @@
 /* =============================================================================
-   ¿QUIÉN ES ESE POKÉMON? — cabecera con marcador, selectores de modo y región y el tablero
-   (js/quien.js): a la izquierda el escenario con la silueta; a la derecha, respuestas y pistas.
-   Al responder, .revelado quita el filtro de la silueta y muestra el hábitat de su tipo
-   (.quien-habitat); .acierto / .fallo dan el destello verde o rojo.
+   ¿QUIÉN ES ESE POKÉMON? — «El teatro de las sombras» (js/quien.js).
+   Mismo lenguaje que Legendarios, la Pokédex y el Duelo (fondo oscuro, títulos con serifa y una palabra en
+   cursiva, líneas finas, paneles de vidrio, etiquetas pequeñas en versalitas, cifras grandes) con su propia
+   paleta: VIOLETA noche y lavanda. Verde lima = acierto y rojo = fallo, como en el resto de la web.
+     .quien-ambiente     interrogantes que flotan y polvo de luz que sube
+     .quien-portada      texto, escenario, panel de la pregunta y tus últimas respuestas (.quien-rastro)
+     .quien-escenario    una pantalla redonda a contraluz (.quien-luz) con la silueta; el anillo de runas, el
+                         del contrarreloj (.quien-cuenta, --restante de 1 a 0) y, al revelar, el hábitat de su
+                         tipo (habitats.css), un destello, chispas si aciertas y la placa con su nombre.
+                         data-estado: cargando · pregunta · revelado · error; data-resultado: acierto · fallo
+     .quien-panel        cabecera (pregunta n.º, modo, región, reloj), la pregunta, las respuestas y la zona de
+                         abajo: cuatro pistas como cartas selladas (.quien-sello) o, al responder, la revelación
+     .quien-cifras       marcador y tu colección (especies adivinadas alguna vez, con barra)
+     .quien-ajustes      modo (tres tarjetas) y región (con lo adivinado en cada una), en un panel de vidrio
+   --quien-luz es el color de la luz: violeta; el del tipo al abrir la pista «Tipo» o al revelar.
    ============================================================================= */
 
-.quien-cabecera { display:flex; justify-content:space-between; align-items:end; gap:24px; margin-bottom:20px; }
-.quien-cabecera h2 { font-size:clamp(28px,3.2vw,40px); letter-spacing:-1.4px; }
-.quien-cabecera p { max-width:560px; margin:0; color:var(--muted); font-size:14px; line-height:1.6; }
-.quien-cifras { display:flex; gap:10px; margin:0; }
-.quien-cifras div { min-width:92px; padding:12px 16px; border:1px solid var(--border); border-radius:14px; background:white; }
-.quien-cifras dt { color:#7c917f; font-size:9px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; }
-.quien-cifras dd { margin:4px 0 0; color:var(--forest); font-size:26px; font-weight:800; letter-spacing:-1px; }
+/* Registrada para que la luz cambie de color con una transición. */
+@property --quien-luz { syntax:'<color>'; inherits:true; initial-value:#9b7bff; }
 
-/* --- Modo y región ------------------------------------------------------------------- */
-.quien-controles { display:flex; flex-direction:column; gap:10px; margin-bottom:18px; }
-.quien-modos, .quien-regiones { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
-.quien-chip { display:flex; flex-direction:column; align-items:flex-start; gap:2px; padding:9px 14px; border:1px solid #d6e6d2; border-radius:12px; background:white; color:#43634d; text-align:left; transition:border-color .2s,background .2s,transform .2s; }
-.quien-chip:hover { border-color:#7fb27a; transform:translateY(-1px); }
-.quien-chip strong { font-size:13px; }
-.quien-chip small { color:#89a08b; font-size:11px; }
-.quien-regiones .quien-chip { padding:7px 13px; border-radius:99px; }
-.quien-chip[aria-pressed="true"] { border-color:var(--dark); background:var(--dark); color:white; }
-.quien-chip[aria-pressed="true"] small { color:#b9d6b3; }
-.quien-reiniciar { margin-left:auto; padding:7px 4px; border:0; background:none; color:#6c8f72; font-size:12px; font-weight:bold; text-decoration:underline; }
+.quien { --violeta:#a98bff; --lavanda:#ddd1ff; --crema:#efeaf9; --apagado:#a59fbb; --tinta:#1a1033;
+  --vidrio:linear-gradient(150deg,#ffffff0f,#ffffff03);
+  --pildora:linear-gradient(90deg,#9a7cff,#d9cbff); --bien:#c9ed96; --mal:#ff7a7a;
+  position:relative; isolation:isolate; overflow:hidden; margin-top:24px; padding:16px 0 90px; color:var(--crema);
+  background:
+    radial-gradient(ellipse at 78% 22%,color-mix(in srgb,var(--quien-luz) 24%,transparent),transparent 55%),
+    radial-gradient(ellipse at 4% 70%,#c25ad61a,transparent 50%),
+    linear-gradient(#0b0818,#110b26 45%,#0a0716);
+  transition:--quien-luz 1s ease; }
 
-/* --- Tablero ----------------------------------------------------------------------------- */
-.quien-tablero { display:grid; grid-template-columns:minmax(0,1.15fr) minmax(0,1fr); min-height:470px; overflow:hidden; border:1px solid var(--border); border-radius:26px; background:white; box-shadow:0 22px 50px #0f2c2026; animation:entrada .4s ease both; }
+/* --- Cabecera, barra «Volver» y pie a juego --------------------------------------------------
+   js/vistas.js pone <body data-vista="quien"> mientras esta vista está abierta. */
+body[data-vista="quien"] { background:#0b0818; }
+body[data-vista="quien"] header { border-bottom-color:#a98bff1f; background:#0b0818; }
+body[data-vista="quien"] header::before { background:linear-gradient(90deg,#3b2384 0 25%,#6c4ee0 25% 50%,#a98bff 50% 75%,#ddd1ff 75%); }
+body[data-vista="quien"] .logo { color:#efeaf9; }
+body[data-vista="quien"] .logo-icon { --dark:#a98bff; background:#161033; }
+body[data-vista="quien"] .logo-punto { color:#a98bff; }
+body[data-vista="quien"] .brand-note { border-left-color:#a98bff33; color:#a59fbb; }
+body[data-vista="quien"] nav a { color:#cbc4dd; }
+body[data-vista="quien"] nav a:hover { background:#ffffff0f; color:#e6dcff; }
+body[data-vista="quien"] nav a[aria-current="page"] { background:#a98bff24; color:#e6dcff; }
+body[data-vista="quien"] .volver-inicio a { color:#a98bff; }
+body[data-vista="quien"] .volver-inicio span { color:#a59fbb; }
+body[data-vista="quien"] footer { border-top:1px solid #a98bff1a; background:#070512; color:#a59fbb; }
+body[data-vista="quien"] footer a { color:#a98bff; }
+.quien :focus-visible { outline-color:var(--violeta); }
 
-/* Escenario: un foco de luz con rayos que giran; la silueta, en negro. */
-.quien-escenario { position:relative; isolation:isolate; min-height:470px; overflow:hidden; background:radial-gradient(circle at 50% 50%,#fffbe0 0 16%,#e9f5c8 40%,#9bc975 75%,#5f9b60); }
-.quien-rayos { position:absolute; inset:-50%; z-index:0; background:repeating-conic-gradient(from 0deg,#ffffff5c 0 6deg,transparent 6deg 18deg); transition:opacity .6s; animation:anillo 40s linear infinite; }
-.quien-habitat { position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .7s ease; }
+/* --- Ambiente: interrogantes y polvo de luz (cada capa sube lo que mide su dibujo: sin saltos) --- */
+.quien-ambiente { position:absolute; inset:0; z-index:-1; overflow:hidden; pointer-events:none; }
+.quien-ambiente::before, .quien-ambiente::after { content:''; position:absolute; inset:0 0 -320px; background-image:radial-gradient(1.4px 1.4px at 40px 60px,#ddd1ff,transparent),radial-gradient(1px 1px at 150px 200px,#a98bffcc,transparent),radial-gradient(1.8px 1.8px at 230px 110px,#fff3dc99,transparent),radial-gradient(1px 1px at 300px 280px,#ffffffaa,transparent); background-size:320px 320px; opacity:.5; animation:quien-polvo 34s linear infinite; }
+.quien-ambiente::after { bottom:-420px; background-size:420px 420px; background-position:160px 90px; opacity:.3; animation-duration:52s; animation-name:quien-polvo-lejos; }
+.quien-ambiente i { position:absolute; color:var(--violeta); opacity:.06; font-family:var(--serif); font-style:italic; line-height:1; animation:flotar 7s ease-in-out infinite; }
+.quien-ambiente i:nth-child(1) { top:4%; left:46%; font-size:150px; rotate:-10deg; }
+.quien-ambiente i:nth-child(2) { top:58%; left:-1%; font-size:190px; rotate:12deg; animation-delay:-2s; }
+.quien-ambiente i:nth-child(3) { top:30%; right:2%; font-size:120px; rotate:8deg; animation-delay:-4s; }
+.quien-ambiente i:nth-child(4) { top:72%; right:30%; font-size:90px; rotate:-6deg; animation-delay:-1s; }
+.quien-ambiente i:nth-child(5) { bottom:4%; left:20%; font-size:110px; rotate:-14deg; animation-delay:-5s; }
+
+/* --- Portada: texto, escenario, panel y rastro -------------------------------------------------
+   Escritorio: a la izquierda el texto y el panel; a la derecha el escenario y debajo, el rastro. */
+.quien-portada { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); grid-template-rows:auto 1fr auto;
+  grid-template-areas:"texto escenario" "panel escenario" "panel rastro"; column-gap:56px; row-gap:24px; padding:26px 0 38px; }
+.quien-texto { grid-area:texto; }
+.quien-escenario { grid-area:escenario; }
+.quien-panel { grid-area:panel; }
+.quien-rastro-bloque { grid-area:rastro; }
+
+.quien-kicker { display:inline-block; color:var(--violeta); font-size:10px; font-weight:800; letter-spacing:2.4px; text-transform:uppercase; }
+.quien-texto h2 { margin:12px 0 10px; font-family:var(--serif); font-size:clamp(38px,4.2vw,58px); font-weight:400; line-height:1.02; letter-spacing:-1px; }
+.quien-texto h2 em, .quien-ajustes-cabecera h3 em { padding-right:.08em; background:linear-gradient(90deg,#f1ebff,var(--violeta) 55%,#7a5cf0); -webkit-background-clip:text; background-clip:text; color:transparent; font-style:italic; }
+.quien-texto h2 em { display:block; }
+.quien-texto > p { max-width:560px; margin:0; color:#c9c2da; font-size:15px; line-height:1.7; }
+
+/* =============================================================================
+   EL ESCENARIO
+   ============================================================================= */
+.quien-escenario { position:relative; display:flex; flex-direction:column; align-items:center; gap:10px; justify-self:center; width:min(520px,100%); margin:0; }
+.quien-teatro { position:relative; display:grid; place-items:center; width:100%; aspect-ratio:1; container-type:inline-size; }
+.quien-teatro > *, .quien-teatro::before { grid-area:1/1; }
+/* Aura detrás de la pantalla, del color de la luz. */
+.quien-teatro::before { content:''; width:92%; height:92%; border-radius:50%; background:radial-gradient(circle,color-mix(in srgb,var(--quien-luz) 42%,transparent),transparent 70%); filter:blur(18px); animation:quien-aura 4.5s ease-in-out infinite; }
+/* Anillo de runas (como el altar de Legendarios) y anillo del contrarreloj. */
+.quien-runas { width:100%; height:100%; border-radius:50%; background:repeating-conic-gradient(#b9a2ffa6 0 .8deg,transparent .8deg 6deg); mask:radial-gradient(closest-side,transparent 92%,#000 92.5% 97%,transparent 97.5%); animation:anillo 90s linear infinite; }
+.quien-cuenta { --cuenta:var(--lavanda); width:100%; height:100%; border-radius:50%; background:conic-gradient(var(--cuenta) calc(var(--restante, 1) * 1turn),#ffffff12 0); mask:radial-gradient(closest-side,transparent 85.5%,#000 86% 88.5%,transparent 89%); opacity:0; transition:opacity .4s ease; }
+.quien-cuenta[data-activa="true"] { opacity:1; }
+.quien-cuenta[data-urgente="true"] { --cuenta:var(--mal); animation:quien-late .5s ease-in-out infinite alternate; }
+
+/* La pantalla: un círculo iluminado desde detrás (la sombra se recorta sobre la luz). */
+.quien-pantalla { position:relative; isolation:isolate; width:80%; height:80%; overflow:hidden; border-radius:50%;
+  box-shadow:0 0 0 1px #a98bff59,0 0 0 9px #a98bff0d,0 0 60px color-mix(in srgb,var(--quien-luz) 40%,transparent),0 30px 60px #00000080;
+  transition:box-shadow .6s ease; }
+.quien-luz { position:absolute; inset:0; z-index:0; background:radial-gradient(circle,#fffaf0 0,color-mix(in srgb,var(--quien-luz) 14%,#fff6ea) 24%,color-mix(in srgb,var(--quien-luz) 55%,#f4eeff) 46%,var(--quien-luz) 70%,color-mix(in srgb,var(--quien-luz) 55%,#120a2a) 100%); transition:opacity .9s ease .2s; }
+.quien-luz::before { content:''; position:absolute; inset:-30%; background:repeating-conic-gradient(from 0deg,#ffffff40 0 5deg,transparent 5deg 15deg); animation:anillo 60s linear infinite; }
+.quien-luz::after { content:''; position:absolute; inset:0; border-radius:50%; box-shadow:inset 0 0 50px #120a2a73; }
+.quien-habitat { position:absolute; inset:0; z-index:1; opacity:0; transition:opacity .8s ease; }
 .quien-habitat .habitat { position:absolute; inset:0; }
-.quien-interrogantes i { position:absolute; z-index:2; color:#143e2d2e; font-size:84px; font-style:normal; font-weight:900; transition:opacity .4s; animation:flotar 5s ease-in-out infinite; }
-.quien-interrogantes i:nth-child(1) { top:8%; left:8%; rotate:-14deg; }
-.quien-interrogantes i:nth-child(2) { top:12%; right:10%; font-size:60px; rotate:12deg; animation-delay:-1.6s; }
-.quien-interrogantes i:nth-child(3) { right:16%; bottom:8%; font-size:70px; rotate:-6deg; animation-delay:-3.1s; }
-.quien-silueta { position:absolute; top:8%; left:12%; z-index:3; width:76%; height:84%; object-fit:contain; filter:brightness(0) drop-shadow(0 0 3px #ffffffcc); user-select:none; transition:filter .7s ease,transform .7s cubic-bezier(.2,.8,.3,1.4); animation:quien-aparece .6s cubic-bezier(.2,.8,.3,1.3) backwards; }
-.quien-numero { position:absolute; top:16px; left:18px; z-index:4; padding:5px 11px; border-radius:99px; background:#143e2dd9; color:#e6f2df; font-size:10px; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; }
-.quien-escenario.revelado .quien-silueta { filter:drop-shadow(0 16px 12px #00000066); transform:scale(1.05); }
-.quien-escenario.revelado .quien-habitat { opacity:1; }
-.quien-escenario.revelado .quien-rayos, .quien-escenario.revelado .quien-interrogantes i { opacity:0; }
-.quien-escenario.revelado::after { content:''; position:absolute; inset:0; z-index:5; pointer-events:none; animation:quien-destello .8s ease forwards; }
-.quien-escenario.acierto::after { background:radial-gradient(circle,#ffffffe6,#b9e08f66 45%,transparent 70%); }
-.quien-escenario.fallo::after { background:radial-gradient(circle,#ffffffb3,#f07a5559 45%,transparent 70%); }
-.quien-tablero.cargando .quien-escenario::after { content:''; position:absolute; top:50%; left:50%; z-index:4; width:44px; height:44px; border:5px solid #143e2d26; border-top-color:#143e2d; border-radius:50%; translate:-50% -50%; animation:anillo 1s linear infinite; }
+.quien-silueta { position:absolute; inset:11%; z-index:2; width:78%; height:78%; object-fit:contain; filter:brightness(0); user-select:none; -webkit-user-drag:none;
+  transition:filter .8s ease,transform .8s cubic-bezier(.2,.8,.3,1.3); animation:quien-aparece .6s cubic-bezier(.2,.8,.3,1.3) backwards; }
+.quien-silueta:not([src]) { visibility:hidden; }
+.quien-destello { position:absolute; inset:0; z-index:3; opacity:0; pointer-events:none; background:radial-gradient(circle,#fff 0,#ffffffd9 32%,transparent 72%); }
 
-/* Panel: reloj, respuestas, pistas y resultado. */
-.quien-panel { display:flex; flex-direction:column; justify-content:center; gap:14px; min-width:0; padding:30px; }
-.quien-espera { color:var(--muted); font-weight:bold; }
-.quien-error { padding:40px 20px; border:2px dashed #f1b7a2; border-radius:20px; color:#9c3c1f; font-weight:bold; text-align:center; }
-.quien-etiqueta { color:#4b8c59; font-size:10px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
-.quien-panel h3 { margin:0; color:var(--forest); font-size:clamp(24px,2.4vw,32px); letter-spacing:-1px; }
-.quien-reloj { position:relative; height:26px; overflow:hidden; border-radius:99px; background:#edf2ea; }
-.quien-reloj i { position:absolute; inset:0 auto 0 0; width:calc(var(--restante,1) * 100%); background:linear-gradient(90deg,#4f9a5c,#9bc975); transition:width .1s linear; }
-.quien-reloj[data-urgente="true"] i { background:linear-gradient(90deg,#c4472a,#f07a55); }
-.quien-reloj span { position:relative; display:block; color:#143e2d; font-size:12px; font-weight:800; line-height:26px; text-align:center; }
+.quien-escenario[data-estado="revelado"] .quien-silueta { filter:drop-shadow(0 14px 14px #00000073); transform:scale(1.04); animation:flotar 4.5s ease-in-out .8s infinite; }
+.quien-escenario[data-estado="revelado"] .quien-habitat { opacity:1; }
+.quien-escenario[data-estado="revelado"] .quien-luz { opacity:0; }
+.quien-escenario[data-estado="revelado"] .quien-destello { animation:quien-destello .9s ease-out; }
+.quien-escenario[data-resultado="acierto"] .quien-pantalla { box-shadow:0 0 0 2px var(--bien),0 0 0 9px #c9ed9614,0 0 70px #c9ed9659,0 30px 60px #00000080; }
+.quien-escenario[data-resultado="fallo"] .quien-pantalla { box-shadow:0 0 0 2px var(--mal),0 0 0 9px #ff7a7a14,0 0 70px #ff7a7a4d,0 30px 60px #00000080; }
+.quien-escenario[data-resultado="fallo"] .quien-teatro { animation:quien-no .45s ease; }
+/* Cargando: la sombra se va y un anillo gira; con error, la luz se apaga. */
+.quien-escenario[data-estado="cargando"] .quien-silueta { opacity:0; }
+.quien-escenario[data-estado="cargando"] .quien-pantalla::after { content:''; position:absolute; top:50%; left:50%; z-index:4; width:46px; height:46px; margin:-23px 0 0 -23px; border:3px solid #1a103333; border-top-color:#1a1033; border-radius:50%; animation:anillo 1s linear infinite; }
+.quien-escenario[data-estado="error"] .quien-luz { filter:grayscale(.8) brightness(.45); }
+.quien-escenario[data-estado="error"] .quien-silueta { opacity:0; }
 
-.quien-respuestas { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-.quien-opcion { display:flex; align-items:center; gap:10px; padding:14px; border:1px solid #d6e6d2; border-radius:14px; background:#f8fbf5; color:var(--forest); font-size:15px; font-weight:bold; text-align:left; text-transform:capitalize; transition:transform .15s,border-color .2s,background .2s; }
-.quien-opcion:hover:not(:disabled) { border-color:#7fb27a; background:white; transform:translateY(-2px); }
-.quien-opcion:disabled { opacity:.55; cursor:default; }
-.quien-opcion kbd { display:grid; flex:none; place-items:center; width:24px; height:24px; border-radius:7px; background:#e5f1dd; color:#2d6a43; font:bold 12px Arial,sans-serif; }
-.quien-opcion[data-resultado="correcta"] { border-color:#3f9a5b; background:#e7f6ea; box-shadow:0 0 0 3px #3f9a5b33; color:#1f6b3a; opacity:1; }
-.quien-opcion[data-resultado="correcta"] kbd { background:#3f9a5b; color:white; }
-.quien-opcion[data-resultado="elegida"] { border-color:#d9542b; background:#fff0ea; color:#9c3c1f; opacity:1; animation:quien-no .4s ease; }
+/* Chispas del acierto (--a: dirección; --d: distancia en fracción del ancho del teatro). */
+.quien-chispas { position:relative; width:0; height:0; pointer-events:none; }
+.quien-chispas i { position:absolute; top:-5px; left:-5px; width:10px; height:10px; background:var(--bien); clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%); filter:drop-shadow(0 0 4px #c9ed96); opacity:0; }
+.quien-chispas i:nth-child(3n) { background:#fff6d6; }
+.quien-chispas.estallido i { animation:quien-chispa .95s cubic-bezier(.15,.7,.3,1) calc(var(--i) * 12ms) both; }
+
+/* Esquinas del teatro: la racha (arriba a la izquierda) y el sonido (arriba a la derecha). */
+.quien-sello-racha { justify-self:start; align-self:start; padding:6px 13px; border:1px solid #a98bff59; border-radius:99px; background:#120c26d9; color:var(--lavanda); font-family:var(--serif); font-size:13px; font-style:italic; animation:entrada .4s ease both; }
+.quien-sello-racha[data-hito="true"] { border-color:var(--bien); color:var(--bien); box-shadow:0 0 18px #c9ed9640; }
+.quien-sonido { justify-self:end; align-self:start; display:grid; place-items:center; width:40px; height:40px; padding:0; border:1px solid #a98bff59; border-radius:50%; background:#120c26b3; color:var(--lavanda); transition:background .2s,border-color .2s,transform .2s; }
+.quien-sonido:hover { border-color:var(--violeta); background:#a98bff26; transform:scale(1.06); }
+.quien-sonido[aria-pressed="false"] { color:var(--apagado); }
+.quien-sonido svg { width:18px; height:18px; }
+
+/* Placa: «Pokémon misterioso» o su número, nombre y tipos. Alto fijo: no salta al revelar. */
+.quien-placa { display:flex; flex-direction:column; align-items:center; gap:5px; min-height:86px; margin-top:-4px; text-align:center; }
+.quien-placa small { color:var(--violeta); font-size:10px; font-weight:800; letter-spacing:2px; text-transform:uppercase; }
+.quien-placa strong { font-family:var(--serif); font-size:26px; font-weight:400; line-height:1.15; letter-spacing:2px; text-transform:uppercase; overflow-wrap:anywhere; animation:entrada .4s ease both; }
+.quien-placa .quien-placa-misterio { color:var(--apagado); font-size:20px; font-style:italic; letter-spacing:.5px; text-transform:none; animation:none; }
+.quien-tipos { display:flex; flex-wrap:wrap; justify-content:center; gap:5px; }
+.quien-tipo { display:inline-flex; align-items:center; gap:4px; padding:3px 10px 3px 6px; border:1px solid color-mix(in srgb,var(--color-tipo) 80%,#fff); border-radius:99px; background:color-mix(in srgb,var(--color-tipo) 40%,transparent); color:#fff; font-size:10.5px; font-weight:bold; letter-spacing:.3px; }
+.quien-tipo svg { width:12px; height:12px; }
+
+/* Rastro: tus últimas diez respuestas. */
+.quien-rastro-bloque { display:flex; flex-direction:column; align-items:center; gap:8px; }
+.quien-rastro-titulo { color:var(--apagado); font-size:9px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase; }
+.quien-rastro { display:flex; flex-wrap:wrap; justify-content:center; gap:7px; margin:0; padding:0; list-style:none; }
+.quien-rastro li { display:grid; place-items:center; width:42px; height:42px; border:1px dashed #a98bff40; border-radius:50%; }
+.quien-rastro li.acierto { border:1.5px solid var(--bien); background:radial-gradient(circle,#c9ed9626,transparent 70%); }
+.quien-rastro li.fallo { border:1.5px solid var(--mal); background:radial-gradient(circle,#ff7a7a26,transparent 70%); }
+.quien-rastro li.nuevo { animation:quien-pop .5s cubic-bezier(.2,.8,.3,1.5); }
+.quien-rastro button { display:grid; place-items:center; width:100%; height:100%; padding:0; overflow:hidden; border:0; border-radius:50%; background:none; }
+.quien-rastro img { width:64px; height:64px; max-width:none; object-fit:contain; image-rendering:pixelated; transition:transform .2s; pointer-events:none; }
+.quien-rastro button:hover img { transform:scale(1.15); }
+
+/* =============================================================================
+   EL PANEL DE LA PREGUNTA
+   ============================================================================= */
+.quien-panel { display:flex; flex-direction:column; gap:16px; min-height:440px; padding:24px 26px 26px; border:1px solid #a98bff38; border-radius:20px; background:var(--vidrio); box-shadow:inset 0 1px 0 #ffffff12,0 24px 60px #00000059; }
+.quien-espera { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; flex:1; margin:0; color:var(--apagado); font-family:var(--serif); font-size:16px; font-style:italic; }
+.quien-espera-anillo { width:34px; height:34px; border:2px solid #a98bff33; border-top-color:var(--violeta); border-radius:50%; animation:anillo 1s linear infinite; }
+.quien-error { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; flex:1; text-align:center; }
+.quien-error p { max-width:380px; margin:0; color:#ffc4c4; font-size:14px; line-height:1.6; }
+
+.quien-panel-cabecera { display:flex; flex-wrap:wrap; align-items:center; gap:8px 12px; }
+.quien-etiqueta { color:var(--violeta); font-size:10px; font-weight:800; letter-spacing:1.8px; text-transform:uppercase; }
+.quien-reloj { display:inline-flex; align-items:baseline; gap:2px; padding:2px 11px; border:1px solid #a98bff59; border-radius:99px; color:var(--lavanda); font-family:var(--serif); font-size:13px; }
+.quien-reloj b { min-width:1.2em; font-size:16px; font-weight:400; text-align:right; font-variant-numeric:tabular-nums; }
+.quien-reloj[data-urgente="true"] { border-color:var(--mal); color:var(--mal); animation:quien-late .5s ease-in-out infinite alternate; }
+.quien-cambiar { margin-left:auto; padding:4px 0; border:0; background:none; color:var(--apagado); font-size:12px; text-decoration:underline; text-decoration-color:#a98bff59; text-underline-offset:3px; transition:color .2s; }
+.quien-cambiar:hover { color:var(--lavanda); }
+
+.quien-pregunta { margin:0; font-family:var(--serif); font-size:clamp(26px,2.4vw,34px); font-weight:400; line-height:1.15; letter-spacing:-.3px; }
+.quien-pregunta em { color:var(--lavanda); font-style:italic; }
+.quien-pregunta[data-resultado] { animation:entrada .35s ease both; }
+.quien-pregunta[data-resultado="acierto"] em { color:var(--bien); }
+
+/* Respuestas: cuatro nombres (teclas 1–4) o el campo del modo Experto. */
+.quien-respuestas { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.quien-opcion { display:flex; align-items:center; gap:12px; min-width:0; min-height:56px; padding:10px 16px 10px 12px; border:1px solid #ffffff1c; border-radius:14px; background:#ffffff06; color:var(--crema); font-family:var(--serif); font-size:17px; text-align:left; animation:entrada .35s ease both; animation-delay:calc(var(--i, 0) * 45ms); transition:border-color .2s,background .2s,transform .2s,opacity .3s; }
+.quien-opcion span { min-width:0; overflow-wrap:anywhere; }
+.quien-opcion kbd { display:grid; flex:none; place-items:center; width:28px; height:28px; border:1px solid #a98bff59; border-radius:50%; color:var(--violeta); font:bold 12px var(--sans); }
+.quien-opcion:hover:not(:disabled) { border-color:#a98bff99; background:#a98bff14; transform:translateY(-2px); }
+.quien-opcion:disabled { cursor:default; }
+.quien-opcion:disabled:not([data-resultado]) { opacity:.38; }
+.quien-opcion[data-resultado="correcta"] { border-color:var(--bien); background:#c9ed9614; box-shadow:0 0 0 1px var(--bien); color:#ecf9d8; }
+.quien-opcion[data-resultado="correcta"] kbd { border-color:transparent; background:var(--bien); color:#17280b; }
+.quien-opcion[data-resultado="elegida"] { border-color:var(--mal); background:#ff7a7a14; color:#ffd6d6; animation:quien-no .4s ease; }
+.quien-opcion[data-resultado="elegida"] kbd { border-color:transparent; background:var(--mal); color:#2b0b0b; }
+
 .quien-formulario { display:flex; flex-wrap:wrap; grid-column:1/-1; gap:8px; }
-.quien-campo { flex:1 1 220px; padding:14px; border:1px solid #d6e6d2; border-radius:12px; color:var(--forest); font-size:16px; }
-.quien-campo:focus { border-color:#7fb27a; outline:0; box-shadow:0 0 0 4px #9bc97533; }
-.quien-responder { padding:14px 20px; border:0; border-radius:12px; background:var(--dark); color:white; font-weight:bold; }
-.quien-rendirse { padding:14px 16px; border:1px solid #d6e6d2; border-radius:12px; background:white; color:#6c8071; font-weight:bold; }
-.quien-formulario button:disabled { opacity:.5; cursor:default; }
+.quien-campo { flex:1 1 220px; min-width:0; padding:13px 18px; border:1px solid #a98bff4d; border-radius:99px; background:#00000033; color:var(--crema); font-family:var(--serif); font-size:18px; transition:border-color .2s,box-shadow .2s; }
+.quien-campo::placeholder { color:#8a83a0; font-style:italic; }
+.quien-campo:focus { border-color:var(--violeta); outline:0; box-shadow:0 0 0 4px #a98bff26; }
+.quien-campo[data-resultado="acierto"] { border-color:var(--bien); color:#ecf9d8; }
+.quien-campo[data-resultado="fallo"] { border-color:var(--mal); color:#ffd6d6; text-decoration:line-through; text-decoration-color:#ff7a7a99; }
+.quien-responder { padding:13px 22px; border:0; border-radius:99px; background:var(--pildora); color:var(--tinta); font-size:14px; font-weight:bold; }
+.quien-rendirse { padding:13px 18px; border:1px solid #ffffff1f; border-radius:99px; background:none; color:var(--apagado); font-size:14px; font-weight:bold; transition:color .2s,border-color .2s; }
+.quien-rendirse:hover:not(:disabled) { border-color:#ffffff40; color:var(--crema); }
+.quien-formulario button:disabled { opacity:.4; cursor:default; }
+.quien-ayuda { grid-column:1/-1; margin:2px 4px 0; color:var(--apagado); font-size:12.5px; line-height:1.6; }
 
-.quien-pistas { display:flex; flex-direction:column; gap:8px; }
-.quien-pista { align-self:flex-start; padding:8px 12px; border:1px dashed #c59c28; border-radius:10px; background:#fff9e6; color:#7a5d0e; font-size:12.5px; font-weight:bold; }
-.quien-pista:disabled { opacity:.5; cursor:default; }
-.quien-lista-pistas { display:grid; gap:6px; margin:0; padding:0; list-style:none; }
-.quien-lista-pistas li { padding:8px 12px; border-left:3px solid #c59c28; border-radius:0 9px 9px 0; background:#fffbef; color:#5e4a12; font-size:13px; animation:entrada .3s ease both; }
+/* Zona de abajo: las pistas o la revelación (mismo alto, para que el panel no salte). */
+.quien-zona { display:flex; flex-direction:column; flex:1; min-height:150px; }
+.quien-pistas { display:flex; flex-direction:column; gap:10px; margin-top:auto; }
+.quien-pistas-cabecera { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:4px 12px; }
+.quien-pistas-cabecera h4 { margin:0; font-family:var(--serif); font-size:16px; font-weight:400; }
+.quien-pistas-cabecera small { color:var(--apagado); font-size:12px; }
+.quien-sellos { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.quien-sello { display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; min-height:104px; padding:10px 6px 8px; border:1px dashed #a98bff4d; border-radius:14px; background:#ffffff04; color:var(--crema); transition:border-color .2s,background .2s,transform .2s,opacity .2s; }
+.quien-sello > small { color:var(--apagado); font-size:9px; font-weight:800; letter-spacing:1.3px; text-transform:uppercase; }
+.quien-sello > em { color:var(--violeta); font-family:var(--serif); font-size:12px; }
+.quien-sello-cara { display:flex; flex:1; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:0; max-width:100%; text-align:center; }
+.quien-sello-cara > svg { width:24px; height:24px; color:var(--violeta); }
+.quien-sello-cara b { font-family:var(--serif); font-size:15px; font-weight:400; line-height:1.15; overflow-wrap:anywhere; }
+.quien-sello-cara small { color:var(--apagado); font-size:10.5px; }
+.quien-sello-cara .quien-tipos { flex-direction:column; align-items:center; gap:3px; }
+.quien-sello-cara .quien-tipo { padding:2px 8px 2px 5px; font-size:10px; }
+.quien-sello:hover:not([aria-disabled="true"]) { border-style:solid; border-color:var(--violeta); background:#a98bff12; transform:translateY(-2px); }
+.quien-sello[aria-disabled="true"]:not([data-abierta]) { opacity:.38; cursor:default; }
+.quien-sello[data-abierta="true"] { border-style:solid; border-color:#a98bff66; background:linear-gradient(160deg,#a98bff26,#a98bff08); animation:quien-gira .5s ease; }
+.quien-sello[data-abierta="true"][aria-disabled="true"] { cursor:default; }
+.quien-sello[data-abierta="true"] > em { color:var(--apagado); }
+/* El grito: cinco barras que bailan cuando suena. */
+.quien-ondas { display:flex; align-items:center; gap:3px; height:24px; }
+.quien-ondas i { width:3px; height:30%; border-radius:3px; background:var(--violeta); }
+.quien-sello.sonando .quien-ondas i { animation:quien-onda .5s ease-in-out calc(var(--n, 0) * -.1s) 3 alternate; }
+.quien-ondas i:nth-child(2) { --n:1; } .quien-ondas i:nth-child(3) { --n:2; } .quien-ondas i:nth-child(4) { --n:3; } .quien-ondas i:nth-child(5) { --n:4; }
 
-.quien-resultado { display:flex; flex-direction:column; align-items:flex-start; gap:6px; padding:16px; border-radius:16px; background:#f0f9f1; animation:entrada .35s ease both; }
-.quien-resultado:empty { display:none; }
-.quien-resultado[data-acierto="false"] { background:#fff3ee; }
-.quien-veredicto { color:#2d7a45; font-size:14px; }
-.quien-resultado[data-acierto="false"] .quien-veredicto { color:#b4462a; }
-.quien-nombre { color:var(--forest); font-size:30px; font-weight:900; letter-spacing:-1px; text-transform:capitalize; }
-.quien-resultado > small { color:var(--muted); font-size:12px; }
-.quien-tipos { display:flex; flex-wrap:wrap; gap:5px; }
-.quien-tipos span { display:inline-flex; align-items:center; gap:4px; padding:4px 10px 4px 6px; border-radius:99px; background:var(--color-tipo); color:white; font-size:11.5px; font-weight:bold; }
-.quien-tipos svg { width:13px; height:13px; }
-.quien-botones { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
-.quien-ver-ficha { padding:11px 14px; border:1px solid #d6e6d2; border-radius:10px; background:white; color:#2d6a43; font-weight:bold; }
-.quien-siguiente { padding:11px 20px; border:0; border-radius:10px; background:var(--dark); color:white; font-weight:bold; }
-.quien-siguiente span { display:inline-block; transition:transform .2s; }
+/* La revelación. */
+.quien-revelacion { display:flex; flex-direction:column; gap:10px; margin-top:auto; animation:entrada .35s ease both; }
+.quien-veredicto { display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; margin:0; color:var(--mal); font-size:15px; font-weight:bold; }
+.quien-veredicto[data-acierto="true"] { color:var(--bien); }
+.quien-veredicto-marca { display:grid; flex:none; place-items:center; width:24px; height:24px; border-radius:50%; background:var(--mal); color:#2b0b0b; font-size:12px; }
+.quien-veredicto[data-acierto="true"] .quien-veredicto-marca { background:var(--bien); color:#17280b; }
+.quien-record { padding:3px 11px; border:1px solid var(--bien); border-radius:99px; color:var(--bien); font-family:var(--serif); font-size:12.5px; font-style:italic; font-weight:400; box-shadow:0 0 16px #c9ed9633; }
+.quien-desglose { display:flex; flex-wrap:wrap; gap:5px; margin:0; padding:0; list-style:none; }
+.quien-desglose li { padding:2px 9px; border:1px solid #ffffff1f; border-radius:99px; color:var(--apagado); font-size:11px; }
+.quien-desglose li.resta { border-color:#ff7a7a4d; color:#ffb3b3; }
+.quien-registro { display:-webkit-box; margin:0; overflow:hidden; color:#cfc8e0; font-size:13.5px; line-height:1.6; -webkit-box-orient:vertical; -webkit-line-clamp:3; }
+.quien-registro b { color:var(--lavanda); font-family:var(--serif); font-style:italic; font-weight:400; }
+.quien-botones { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-top:4px; }
+.quien-siguiente { display:inline-flex; align-items:center; gap:8px; padding:13px 26px; border:0; border-radius:99px; background:var(--pildora); box-shadow:0 8px 26px #a98bff33; color:var(--tinta); font-size:14px; font-weight:bold; transition:transform .2s,box-shadow .2s; }
+.quien-siguiente:hover { transform:translateY(-2px); box-shadow:0 12px 32px #a98bff55; }
+.quien-siguiente span { transition:transform .2s; }
 .quien-siguiente:hover span { transform:translateX(3px); }
-.quien-resultado .quien-atajo { color:#9aac9b; font-size:11px; }
+.quien-ver-ficha { padding:12px 18px; border:1px solid #a98bff59; border-radius:99px; background:#ffffff06; color:var(--crema); font-size:13px; font-weight:bold; transition:border-color .2s,background .2s; }
+.quien-ver-ficha:hover { border-color:var(--violeta); background:#a98bff14; }
+.quien-atajo { margin-left:auto; color:#8a83a0; font-size:11px; }
 
+/* =============================================================================
+   CIFRAS Y AJUSTES
+   ============================================================================= */
+.quien-cifras { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)) minmax(0,1.5fr); margin-top:0; margin-bottom:0; border-top:1px solid #a98bff29; border-bottom:1px solid #a98bff29; }
+.quien-cifras > div { display:flex; flex-direction:column-reverse; align-items:center; justify-content:center; gap:4px; padding:18px 10px; border-left:1px solid #a98bff1f; }
+.quien-cifras > div:first-child { border-left:0; }
+.quien-cifras dd { margin:0; color:var(--lavanda); font-family:var(--serif); font-size:32px; }
+.quien-cifras dd small { color:var(--apagado); font-size:16px; }
+.quien-cifras dt { color:var(--apagado); font-size:9px; font-weight:800; letter-spacing:1.8px; text-align:center; text-transform:uppercase; }
+/* Tu colección: cifra, barra hacia las 1025 y etiqueta. */
+.quien-cifras .quien-coleccion { flex-direction:column; gap:7px; }
+.quien-coleccion dd { order:1; color:#f1ebff; }
+.quien-coleccion-barra { order:2; position:relative; display:block; width:min(200px,80%); height:3px; overflow:hidden; border-radius:3px; background:#a98bff26; }
+.quien-coleccion-barra::after { content:''; position:absolute; inset:0 auto 0 0; width:calc(var(--progreso, 0) * 100%); border-radius:inherit; background:linear-gradient(90deg,#7a5cf0,#ddd1ff); box-shadow:0 0 8px #a98bff; transition:width .6s ease; }
+.quien-coleccion dt { order:3; }
+
+.quien-ajustes { margin-top:52px; padding:30px; border:1px solid #a98bff38; border-radius:20px; background:var(--vidrio); box-shadow:inset 0 1px 0 #ffffff12,0 24px 60px #00000059; scroll-margin-top:16px; }
+.quien-ajustes-cabecera h3 { margin:8px 0 6px; font-family:var(--serif); font-size:clamp(26px,3vw,36px); font-weight:400; letter-spacing:-.3px; }
+.quien-ajustes-cabecera p { max-width:640px; margin:0; color:var(--apagado); font-size:14px; line-height:1.65; }
+.quien-grupo { margin-top:26px; padding-top:26px; border-top:1px solid #ffffff12; }
+.quien-grupo-cabecera { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; margin-bottom:16px; }
+.quien-grupo-cabecera b { color:var(--violeta); font-family:var(--serif); font-size:15px; font-weight:400; letter-spacing:1px; }
+.quien-grupo-cabecera h4 { margin:0; font-family:var(--serif); font-size:22px; font-weight:400; }
+.quien-grupo-cabecera p { margin:0; color:var(--apagado); font-size:13px; }
+
+.quien-modos { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.quien-modo { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:7px; padding:18px; border:1px solid #ffffff1a; border-radius:16px; background:#ffffff05; color:var(--crema); text-align:left; transition:border-color .2s,background .2s,transform .2s,box-shadow .2s; }
+.quien-modo:hover { border-color:#a98bff80; transform:translateY(-2px); }
+.quien-modo[aria-pressed="true"] { border-color:var(--violeta); background:linear-gradient(150deg,#a98bff24,#a98bff06); box-shadow:0 0 0 1px var(--violeta),0 14px 34px #a98bff1a; }
+.quien-modo[aria-pressed="true"]::after { content:'✓'; position:absolute; top:14px; right:14px; display:grid; place-items:center; width:22px; height:22px; border-radius:50%; background:radial-gradient(circle at 35% 30%,#f1ebff,var(--violeta) 70%); color:var(--tinta); font-size:11px; font-weight:bold; }
+.quien-modo-marcador { background:linear-gradient(90deg,#f1ebff,var(--violeta)); -webkit-background-clip:text; background-clip:text; color:transparent; font-family:var(--serif); font-size:34px; font-style:italic; line-height:1.1; }
+.quien-modo strong { font-family:var(--serif); font-size:20px; font-weight:400; }
+.quien-modo small { color:var(--apagado); font-size:12.5px; line-height:1.5; }
+.quien-modo em { margin-top:auto; padding-top:6px; color:var(--lavanda); font-family:var(--serif); font-size:12.5px; }
+
+.quien-regiones { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:10px; }
+.quien-region { position:relative; display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:baseline; gap:4px 10px; padding:12px 14px 18px; overflow:hidden; border:1px solid #ffffff1a; border-radius:14px; background:#ffffff05; color:var(--crema); text-align:left; transition:border-color .2s,background .2s,box-shadow .2s; }
+.quien-region b { color:var(--violeta); font-family:var(--serif); font-size:13px; font-weight:400; }
+.quien-region strong { overflow:hidden; font-family:var(--serif); font-size:16px; font-weight:400; text-overflow:ellipsis; white-space:nowrap; }
+.quien-region small { color:var(--apagado); font-size:11px; font-variant-numeric:tabular-nums; }
+.quien-region i { position:absolute; right:14px; bottom:9px; left:14px; height:3px; overflow:hidden; border-radius:3px; background:#ffffff12; }
+.quien-region i::after { content:''; position:absolute; inset:0 auto 0 0; width:calc(var(--progreso, 0) * 100%); border-radius:inherit; background:linear-gradient(90deg,#7a5cf0,#ddd1ff); transition:width .6s ease; }
+.quien-region:hover { border-color:#a98bff80; }
+.quien-region[aria-pressed="true"] { border-color:var(--violeta); background:linear-gradient(150deg,#a98bff24,#a98bff08); box-shadow:0 0 0 1px var(--violeta); }
+
+.quien-ajustes-pie { display:flex; flex-wrap:wrap; align-items:center; gap:12px 16px; margin-top:26px; padding-top:22px; border-top:1px solid #ffffff12; }
+.quien-ajustes-pie small { flex:1 1 260px; color:var(--apagado); font-size:12px; line-height:1.5; }
+.quien-reiniciar { padding:11px 18px; border:1px solid #ff7a7a59; border-radius:99px; background:none; color:#ffc4c4; font-size:13px; font-weight:bold; transition:background .2s,border-color .2s; }
+.quien-reiniciar:hover { border-color:var(--mal); background:#ff7a7a14; }
+.quien-volver { padding:13px 24px; border:0; border-radius:99px; background:var(--pildora); box-shadow:0 8px 26px #a98bff33; color:var(--tinta); font-size:14px; font-weight:bold; transition:transform .2s; }
+.quien-volver:hover { transform:translateY(-2px); }
+
+@keyframes quien-polvo { to { transform:translateY(-320px); } }
+@keyframes quien-polvo-lejos { to { transform:translateY(-420px); } }
+@keyframes quien-aura { 0%,100% { opacity:.7; transform:scale(.96); } 50% { opacity:1; transform:scale(1.03); } }
 @keyframes quien-aparece { from { opacity:0; transform:scale(.6); } }
 @keyframes quien-destello { from { opacity:1; } to { opacity:0; } }
+@keyframes quien-chispa { 0% { opacity:1; transform:rotate(var(--a)) translateY(0) scale(.3); } 70% { opacity:1; } 100% { opacity:0; transform:rotate(var(--a)) translateY(calc(var(--d) * -100cqw)) scale(1); } }
 @keyframes quien-no { 25% { translate:-6px 0; } 75% { translate:6px 0; } }
+@keyframes quien-late { from { opacity:1; } to { opacity:.55; } }
+@keyframes quien-pop { from { opacity:0; transform:scale(.4); } }
+@keyframes quien-gira { from { transform:perspective(500px) rotateY(90deg); } }
+@keyframes quien-onda { from { height:25%; } to { height:100%; } }
 
-@media (max-width:900px) {
-  .quien-tablero { grid-template-columns:minmax(0,1fr); }
-  .quien-escenario { min-height:320px; }
+/* --- Pantallas medianas y móviles ---------------------------------------------------------- */
+@media (max-width:1100px) {
+  .quien-portada { column-gap:32px; }
+  .quien-regiones { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .quien-sello { min-height:98px; }
 }
-
+/* Una columna: texto, escenario, panel y rastro. */
+@media (max-width:900px) {
+  .quien-portada { grid-template-columns:minmax(0,1fr); grid-template-rows:none; grid-template-areas:"texto" "escenario" "panel" "rastro"; }
+  .quien-escenario { width:min(440px,100%); }
+  .quien-panel { min-height:0; }
+  .quien-cifras { grid-template-columns:repeat(4,minmax(0,1fr)); }
+  .quien-cifras .quien-coleccion { grid-column:1/-1; border-top:1px solid #a98bff1f; border-left:0; }
+  .quien-modos { grid-template-columns:minmax(0,1fr); }
+  .quien-regiones { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
 @media (max-width:700px) {
-  .quien-cabecera { flex-direction:column; align-items:stretch; }
-  .quien-cifras div { flex:1; min-width:0; padding:10px; }
-  .quien-cifras dd { font-size:21px; }
-  .quien-escenario { min-height:260px; }
-  .quien-panel { padding:20px; }
+  .quien-texto h2 { font-size:clamp(32px,9vw,40px); }
+  .quien-texto > p { font-size:14px; }
+  .quien-escenario { width:min(340px,92%); }
+  .quien-placa strong { font-size:21px; }
+  .quien-panel { gap:14px; padding:18px 16px 20px; }
+  .quien-cambiar { margin-left:0; }
+  .quien-cifras { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .quien-cifras > div:nth-child(3) { border-left:0; }
+  .quien-cifras > div:nth-child(n+3) { border-top:1px solid #a98bff1f; }
+  .quien-cifras dd { font-size:26px; }
+  .quien-ajustes { padding:20px 16px; }
+  .quien-regiones { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .quien-atajo { display:none; } /* sin teclado no hacen falta atajos */
+  .quien-ambiente i { font-size:90px; }
+}
+/* Teléfono: sin el párrafo de entrada y con el escenario algo menor, las respuestas quedan cerca de la sombra. */
+@media (max-width:560px) {
+  .quien-portada { row-gap:18px; padding-top:18px; }
+  .quien-texto > p { display:none; }
+  .quien-escenario { width:min(300px,84%); }
+  .quien-placa { min-height:78px; }
+  .quien-sellos { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .quien-sello { min-height:92px; }
+  .quien-opcion { gap:8px; min-height:50px; padding:8px 10px 8px 8px; font-size:16px; }
+  .quien-opcion kbd { width:24px; height:24px; font-size:11px; }
+  .quien-rastro li { width:30px; height:30px; }
+  .quien-rastro img { width:46px; height:46px; }
+  .quien-botones > button { flex:1; }
+}
+@media (max-width:360px) {
   .quien-respuestas { grid-template-columns:minmax(0,1fr); }
-  .quien-reiniciar { margin-left:0; }
-  .quien-interrogantes i { font-size:56px; }
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .quien-tablero, .quien-rayos, .quien-silueta, .quien-interrogantes i, .quien-lista-pistas li,
-  .quien-resultado, .quien-opcion[data-resultado="elegida"] { animation:none; }
-  .quien-escenario.revelado::after { display:none; } /* sin animación, el destello se quedaría tapando la imagen */
+  .quien *, .quien *::before, .quien *::after { animation:none !important; }
+  .quien { transition:none; }
 }

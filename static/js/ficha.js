@@ -11,11 +11,13 @@
 //   4. /api/evolution-chain/<id>          → árbol evolutivo
 
 import { obtenerPokemon, obtenerRecurso } from './api.js';
-import { COLOR_POR_DEFECTO, GENERACIONES, NOMBRES_ESTADISTICAS, rarezaDe, TIPOS } from './datos.js';
+import { COLOR_POR_DEFECTO, GENERACIONES, LEGENDARIOS, NOMBRES_ESTADISTICAS, rarezaDe, TIPOS } from './datos.js';
 import { calcularMultiplicadores } from './efectividad.js';
 import { crearHabitat } from './habitats.js';
 import { agregarAlEquipo, equipoLleno, estaEnEquipo } from './mi-equipo.js';
-import { crear, crearIcono, crearImagen, idDesdeUrl, nombreLegible, numeroPokedex, urlIlustracion } from './utilidades.js';
+import {
+  crear, crearIcono, crearImagen, formaConNombre, idDesdeUrl, nombreForma, nombreLegible, nombreTitulo, numeroPokedex, urlIlustracion, urlSprite,
+} from './utilidades.js';
 
 const ficha = document.querySelector('#ficha');
 const resultado = document.querySelector('#resultado');
@@ -34,11 +36,15 @@ let elementoAnterior = null;
 const MARGEN_VENTANA = 32;  // El mismo hueco que deja «max-height: calc(100% - 32px)» en ficha.css.
 const ESCALA_MINIMA = 0.7;  // Por debajo, el texto sería demasiado pequeño: ahí sí se desplaza.
 const pantallaMovil = matchMedia('(max-width:700px)');
+// En cada ficha la escala solo puede BAJAR. Con zoom el texto puede repartirse distinto (una línea más o menos):
+// a 0,971 Necrozma medía 881 px y pedía 0,980; a 0,980 medía 889 y pedía 0,971… y la ficha parpadeaba sin parar.
+// Se vuelve a permitir subir al abrir otra ficha o al cambiar el tamaño de la ventana.
+let escalaTope = 1;
 
 export function iniciarFicha() {
   // Se reencaja cuando cambia el contenido (llegan la evolución o la efectividad) o la ventana.
   new ResizeObserver(encajarFicha).observe(resultado);
-  window.addEventListener('resize', encajarFicha);
+  window.addEventListener('resize', () => { escalaTope = 1; encajarFicha(); });
   botonCerrar.addEventListener('click', () => ficha.close());
   ficha.addEventListener('close', () => {
     // El aviso de cierre llega en una tarea aparte: si mientras tanto se abrió otra ficha,
@@ -58,6 +64,7 @@ export async function buscarPokemon(consulta) {
   const vigente = () => version === versionBusqueda;
 
   aplicarTema([], null); // Colores neutros mientras busca.
+  escalaTope = 1;
   mostrarAviso('Buscando en PokéAPI...');
   resultado.setAttribute('aria-busy', 'true'); // Avisa a los lectores de pantalla de que está cargando.
   abrirVentana();
@@ -120,9 +127,13 @@ function encajarFicha() {
   const actual = Number(ficha.style.getPropertyValue('--escala')) || 1;
   let escala = 1;
   if (!pantallaMovil.matches && resultado.offsetHeight) {
-    const disponible = window.innerHeight - MARGEN_VENTANA - 2; // 2 px de holgura por redondeos
-    escala = Math.max(ESCALA_MINIMA, Math.min(1, disponible / resultado.offsetHeight));
+    const disponible = window.innerHeight - MARGEN_VENTANA - 4; // 4 px de holgura por redondeos del zoom
+    // Hacia abajo: redondear hacia arriba dejaba la ficha 2 px más alta que la ventana (se desplazaba).
+    escala = Math.max(ESCALA_MINIMA, Math.min(escalaTope, Math.floor(disponible / resultado.offsetHeight * 1000) / 1000));
   }
+  escalaTope = escala;
+  // Si cabe, la ventana no se desplaza ni por medio píxel de redondeo; solo en móvil o con la escala mínima.
+  ficha.classList.toggle('cabe', !pantallaMovil.matches && escala * resultado.offsetHeight <= window.innerHeight - MARGEN_VENTANA);
   if (Math.abs(escala - actual) < 0.005) return; // Sin cambios apreciables: evita reajustes en bucle.
   if (escala === 1) ficha.style.removeProperty('--escala');
   else ficha.style.setProperty('--escala', escala.toFixed(3));
@@ -182,26 +193,36 @@ function crearEscenario(pokemon, tipoPrincipal, rareza) {
       semilla: pokemon.id % 97,
       fondo: [crear('span', { clase: 'stage-number', texto: numeroPokedex(pokemon.id), atributos: { 'aria-hidden': 'true' } })],
       primerPlano: [
-        ...(url ? [crear('img', { clase: 'habitat-pokemon', src: url, alt: 'Ilustración oficial de ' + nombreLegible(pokemon.name) })] : []),
+        ...(url ? [crear('img', { clase: 'habitat-pokemon', src: url, alt: 'Ilustración oficial de ' + nombreTitulo(pokemon.name) })] : []),
         crear('span', { clase: 'stage-caption', texto: 'ILUSTRACIÓN OFICIAL  /  POKÉAPI' }),
       ],
     }),
   );
 }
 
-/** Nombre, sello, especie (llega después), tipos, región y descripción (llega después). */
+/**
+ * Nombre, sello, especie (llega después), tipos, región, forma y descripción (llega después).
+ * El título es el de la ESPECIE en español: la forma por defecto de algunas lleva apellido en PokéAPI
+ * ('giratina-altered'); la forma va aparte, en su etiqueta («Forma Modificada», «Mega-Charizard X»).
+ */
 function crearIdentidad(pokemon, tipos, idEspecie, rareza) {
   const gen = GENERACIONES.find(g => idEspecie >= g.desde && idEspecie <= g.hasta);
+  const forma = nombreForma(pokemon.name);
   const etiquetasTipo = tipos.map(tipo => crear('span', { clase: 'badge', estilos: { '--color-etiqueta': colorDe(tipo) } },
     ...(TIPOS[tipo] ? [crearIcono(TIPOS[tipo].icono)] : []), TIPOS[tipo]?.nombre || tipo));
   const sello = { legendario: '✦ Pokémon legendario', singular: '✧ Pokémon singular' }[rareza];
   return crear('div', { clase: 'pokemon-identity' },
-    crear('span', { clase: 'eyebrow', texto: 'REGISTRO DE POKÉMON  /  #' + numeroPokedex(pokemon.id) }),
-    ...(sello ? [crear('span', { clase: 'ficha-sello', texto: sello })] : []),
-    crear('h3', { texto: nombreLegible(pokemon.name) }),
+    // El sello de legendario o singular va en la misma línea que el registro: debajo sumaba ~25 px y esas fichas
+    // ya no cabían en una pantalla de 900 px.
+    crear('div', { clase: 'identity-cabecera' },
+      crear('span', { clase: 'eyebrow', texto: 'REGISTRO DE POKÉMON  /  #' + numeroPokedex(pokemon.id) }),
+      ...(sello ? [crear('span', { clase: 'ficha-sello', texto: sello })] : [])),
+    crear('h3', { texto: nombreTitulo(pokemon.species.name) }),
     crear('p', { clase: 'identity-caption', texto: 'Consultando su especie…' }),
     crear('div', { clase: 'identity-tipos' }, ...etiquetasTipo),
-    ...(gen ? [crear('span', { clase: 'identity-region', texto: `Generación ${gen.numero} · ${gen.region}` })] : []),
+    crear('div', { clase: 'identity-etiquetas' },
+      ...(gen ? [crear('span', { clase: 'identity-region', texto: `Generación ${gen.numero} · ${gen.region}` })] : []),
+      ...(forma ? [crear('span', { clase: 'identity-region identity-forma', texto: forma })] : [])),
     crear('p', { clase: 'identity-descripcion' }),
   );
 }
@@ -313,15 +334,18 @@ async function completarDatosExtra(pokemon, columnas, vigente) {
   if (especieRes.status === 'fulfilled') {
     const especie = especieRes.value;
     const enIdioma = (lista, idioma) => lista.find(x => x.language.name === idioma);
-    // Algunas especies recientes solo tienen la categoría en inglés en PokéAPI.
-    especieTexto.textContent = enIdioma(especie.genera, 'es')?.genus || enIdioma(especie.genera, 'en')?.genus || 'Pokémon';
+    // Las especies de la 899 a la 1025 no tienen la categoría en español en PokéAPI: la de las leyendas está
+    // traducida a mano en LEGENDARIOS; las demás no la muestran (antes salía en inglés, «Paradox Pokémon»).
+    const categoria = enIdioma(especie.genera, 'es')?.genus || LEGENDARIOS.find(l => l.id === especie.id)?.especie;
+    especieTexto.textContent = categoria || '';
+    especieTexto.hidden = !categoria;
     descripcion.textContent = enIdioma(especie.flavor_text_entries, 'es')?.flavor_text.replace(/\s+/g, ' ') || 'Aún no hay descripción en español para esta especie.';
 
     if (especie.evolution_chain) {
       try {
         const cadena = await obtenerRecurso('evolution-chain', idDesdeUrl(especie.evolution_chain.url));
         if (!vigente()) return;
-        columnas.append(crearPanelEvolucion(cadena.chain, pokemon.species.name));
+        columnas.append(crearPanelEvolucion(cadena.chain, pokemon, especie.varieties || []));
       } catch {
         if (vigente()) agregarTexto('Cadena evolutiva', 'No se pudo cargar la cadena evolutiva.', 'evolution-panel');
       }
@@ -345,8 +369,28 @@ async function completarDatosExtra(pokemon, columnas, vigente) {
   } else agregarTexto('Efectividad en combate', 'No se pudieron cargar los datos de tipos.', 'panel-efectividad');
 }
 
-/** Árbol evolutivo: cada especie es un botón; la que estás viendo queda marcada. */
-function crearPanelEvolucion(raiz, especieActual) {
+// Otras formas que caben en UNA fila junto al árbol (con «+N más»), según sus fases (1, 2 o 3): más partían la
+// fila y la ficha crecía.
+const FORMAS_QUE_CABEN = [4, 3, 2];
+
+/** Imagen de una forma: su ilustración; si no tiene, el sprite; si tampoco, nada. */
+function imagenDeForma(id) {
+  const imagen = crear('img', { src: urlIlustracion(id), alt: '', loading: 'lazy' });
+  imagen.addEventListener('error', () => {
+    if (imagen.src === urlSprite(id)) imagen.hidden = true;
+    else imagen.src = urlSprite(id);
+  });
+  return imagen;
+}
+
+/**
+ * Árbol evolutivo: cada especie es un botón; la que estás viendo queda marcada. A su lado, sus OTRAS FORMAS
+ * (species.varieties: megaevoluciones, Gigamax, formas regionales, Giratina Origen…) si el árbol deja sitio.
+ * Si no evoluciona, el panel lo dice (antes quedaba una carta sola en un panel vacío).
+ */
+function crearPanelEvolucion(raiz, pokemon, variedades) {
+  const especieActual = pokemon.species.name;
+  const idEspecie = idDesdeUrl(pokemon.species.url);
   const crearRama = nodo => {
     const id = idDesdeUrl(nodo.species.url);
     const esActual = nodo.species.name === especieActual;
@@ -359,28 +403,58 @@ function crearPanelEvolucion(raiz, especieActual) {
       },
         crearImagen(urlIlustracion(id)),
         crear('small', { texto: '#' + numeroPokedex(id) }),
-        crear('strong', { texto: nombreLegible(nodo.species.name) }),
+        crear('strong', { texto: nombreTitulo(nodo.species.name) }),
       ),
     );
     if (nodo.evolves_to.length) rama.append(crearHijos(nodo.evolves_to));
     return rama;
   };
-  // Varias evoluciones finales (Eevee, Gloom, Kirlia…) van juntas en un grupo, en filas de hasta 4:
-  // así el árbol crece a lo ancho y la ficha cabe en la pantalla. Si alguna sigue evolucionando
-  // (Wurmple), van una debajo de otra para que se vea cada rama.
+  // Varias evoluciones posibles van juntas en un grupo («una de estas»), TODAS EN UNA FILA: así el árbol crece
+  // a lo ancho y la ficha cabe en la pantalla sin encogerse. Si alguna sigue evolucionando (Wurmple, Applin),
+  // va su rama entera; con más de cuatro (Eevee y sus ocho), las cartas son más pequeñas (.compacto).
+  // Antes Eevee iba en dos filas y Wurmple y Applin en ramas apiladas: esas fichas no cabían y se encogían.
   const crearHijos = hijos => {
-    const enGrupo = hijos.length > 1 && hijos.every(h => !h.evolves_to.length);
+    const enGrupo = hijos.length > 1;
     return crear('div', {
-      clase: 'evolution-children' + (enGrupo ? ' en-grupo' : ''),
-      estilos: enGrupo ? { '--columnas': hijos.length <= 4 ? hijos.length : Math.ceil(hijos.length / 2) } : {},
+      clase: 'evolution-children' + (enGrupo ? ' en-grupo' : '') + (hijos.length > 4 ? ' compacto' : ''),
+      estilos: enGrupo ? { '--columnas': hijos.length } : {},
     }, ...hijos.map(crearRama));
   };
+
+  // Las formas «Dominante» (totem) son iguales que la normal, solo más grandes: no se cuentan. Y una por
+  // nombre: Minior tiene siete «Forma Meteorito» (una por color) y Tatsugiri, tres «Mega-Tatsugiri».
+  const etiqueta = v => nombreForma(v.pokemon.name) || nombreTitulo(v.pokemon.name);
+  // Solo las que tienen nombre oficial en español (formaConNombre): las otras (las formas de Koraidon y Miraidon,
+  // los disfraces de Pikachu) salían en inglés y, varias, sin imagen en PokéAPI.
+  const otras = [...new Map(variedades
+    .filter(v => v.pokemon.name !== pokemon.name && !v.pokemon.name.includes('-totem') && formaConNombre(v.pokemon.name)
+      && etiqueta(v) !== nombreForma(pokemon.name))
+    .map(v => [etiqueta(v), v])).values()];
+  const fases = nodo => 1 + Math.max(0, ...nodo.evolves_to.map(fases));
+  const ramifica = nodo => nodo.evolves_to.length > 1 || nodo.evolves_to.some(ramifica);
+  const visibles = otras.slice(0, ramifica(raiz) ? 0 : FORMAS_QUE_CABEN[fases(raiz) - 1] ?? 0);
+  const sinEvolucion = !raiz.evolves_to.length;
+  const formas = visibles.length ? crear('div', { clase: 'evolution-formas' },
+    crear('small', { texto: otras.length === 1 ? 'Otra forma' : 'Otras formas' }),
+    crear('div', { clase: 'evolution-formas-lista' },
+      ...visibles.map(v => crear('button', { type: 'button', clase: 'evolution-card forma', alPulsar: () => buscarPokemon(v.pokemon.name) },
+        imagenDeForma(idDesdeUrl(v.pokemon.url)),
+        crear('small', { texto: '#' + numeroPokedex(idEspecie) }),
+        crear('strong', { texto: etiqueta(v) }))),
+      ...(otras.length > visibles.length ? [crear('span', { clase: 'evolution-mas', texto: `+${otras.length - visibles.length} más` })] : []))) : null;
+  const ayuda = sinEvolucion
+    ? (visibles.length ? 'No evoluciona, pero tiene otras formas: pulsa una para ver su ficha.' : 'No evoluciona: esta es su única forma.')
+    : (visibles.length ? 'Pulsa una especie o una forma para ver su ficha.' : 'Pulsa una especie para ver su ficha; las ramas son evoluciones posibles.');
+
   return crear('section', { clase: 'data-panel evolution-panel' },
     crear('div', { clase: 'panel-cabecera' },
       crear('h4', { texto: 'Cadena evolutiva' }),
-      crear('p', { texto: 'Pulsa una especie para ver su ficha; las ramas son evoluciones posibles.' }),
+      crear('p', { texto: ayuda }),
     ),
-    crear('div', { clase: 'evolution-tree' }, crearRama(raiz)),
+    crear('div', { clase: 'evolution-cuerpo' },
+      crear('div', { clase: 'evolution-tree' }, crearRama(raiz)),
+      ...(sinEvolucion && !formas ? [crear('p', { clase: 'evolution-nota', texto: 'No evoluciona: es una especie de una sola fase.' })] : []),
+      ...(formas ? [formas] : [])),
   );
 }
 

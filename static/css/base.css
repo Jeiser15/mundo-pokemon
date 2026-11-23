@@ -4,7 +4,22 @@
    portada · habitats · categorias · legendarios · pokedex · ficha · duelo · equipo · simulacro · quien · novedades
    ============================================================================= */
 
+/* --- Tipografía ---------------------------------------------------------------
+   Dos familias libres (licencia OFL, en static/fonts con su licencia), servidas desde la propia web para que
+   funcionen sin conexión a Google y dentro de la app de Android. Solo el juego latino (cubre todo el español).
+     Playfair  títulos, nombres y cifras (--serif). Variable con tamaño óptico: fina y con mucho contraste en
+               los títulos grandes, más robusta en la letra pequeña. Cursiva propia para la palabra destacada.
+     Manrope   texto corrido, botones y etiquetas en versalitas (--sans). Variable de 300 a 800. */
+@font-face { font-family:'Playfair'; font-style:normal; font-weight:300 900; font-display:swap;
+  src:url('../fonts/playfair.woff2') format('woff2'); }
+@font-face { font-family:'Playfair'; font-style:italic; font-weight:300 900; font-display:swap;
+  src:url('../fonts/playfair-cursiva.woff2') format('woff2'); }
+@font-face { font-family:'Manrope'; font-style:normal; font-weight:300 800; font-display:swap;
+  src:url('../fonts/manrope.woff2') format('woff2'); }
+
 :root {
+  --serif: 'Playfair', Georgia, 'Times New Roman', serif;
+  --sans: 'Manrope', system-ui, 'Segoe UI', Arial, sans-serif;
   --dark: #143e2d;    /* botones oscuros y bordes del logo */
   --forest: #153f2d;  /* texto general */
   --green: #287a4b;   /* acentos: titulillos y enlaces */
@@ -13,8 +28,11 @@
 }
 
 * { box-sizing:border-box; }
-html { scroll-behavior:smooth; }
-body { display:flex; flex-direction:column; min-height:100vh; margin:0; background:#f1f5ea; color:var(--forest); font-family:Arial,sans-serif; }
+/* Sin barra de desplazamiento visible en toda la web: se sigue bajando con la rueda, el teclado o el dedo. */
+html { scroll-behavior:smooth; scrollbar-width:none; }
+html::-webkit-scrollbar { display:none; } /* Safari antiguo: no entiende scrollbar-width */
+/* lining-nums: cifras a la misma altura (Playfair las trae «de texto», con descendentes) porque aquí son datos. */
+body { display:flex; flex-direction:column; min-height:100vh; margin:0; background:#f1f5ea; color:var(--forest); font-family:var(--sans); font-variant-numeric:lining-nums; }
 main { flex:1; }
 a { color:inherit; }
 button, input { font:inherit; }
@@ -83,7 +101,7 @@ footer a { color:#e2f4ce; }
 @property --luz-b { syntax:'<color>'; inherits:true; initial-value:#8fbf5e; }
 
 body[data-mundo] { --noche:#06110c; --crema:#eef0e2; --apagado:#9fb09c; --lima:#c9ed96; --lima-oscura:#8fbf5e;
-  --serif:Georgia,'Times New Roman',serif; background:var(--noche); }
+  background:var(--noche); }
 
 .mundo-fondo { position:fixed; inset:0; z-index:-1; display:none; overflow:hidden; pointer-events:none;
   background:

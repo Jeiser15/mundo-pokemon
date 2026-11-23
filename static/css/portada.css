@@ -18,7 +18,8 @@
 /* --- 2. Héroe ------------------------------------------------------------------------------------ */
 /* El cielo del momento del día (--cielo, js/portada.js) tiñe la palabra en cursiva, un brillo tras el título y la luz
    de abajo del fondo. Sin data-momento (antes de que cargue el JS) el título y el relato no se ven: así no cambian de golpe. */
-.hero { --intervalo-hero:5s; position:relative; isolation:isolate; transition:--tipo-hero .9s ease,--cielo 1.4s ease; }
+/* overflow-x:clip: el anillo de runas gira y su caja se salía por la derecha (la página se movía de lado). */
+.hero { --intervalo-hero:5s; position:relative; isolation:isolate; overflow-x:clip; transition:--tipo-hero .9s ease,--cielo 1.4s ease; }
 .hero::before { content:''; position:absolute; top:-90px; left:-12%; z-index:-1; width:62%; aspect-ratio:1.4; background:radial-gradient(closest-side,color-mix(in srgb,var(--cielo) 15%,transparent),transparent); pointer-events:none; }
 .hero-inner { display:grid; grid-template-columns:minmax(0,1.02fr) minmax(0,.98fr); align-items:center; gap:56px; min-height:640px; padding:36px 0 40px; }
 

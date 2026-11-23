@@ -9,7 +9,7 @@
                        tanda). .visto = ya escaneada; aria-pressed="true" = la que está en el escáner.
    ============================================================================= */
 
-.pokedex { --azul:#3d8bff; --cian:#5ce1ff; --azul-claro:#a9c9ff; --crema:#e6eefc; --apagado:#8ea2c3; --serif:Georgia,'Times New Roman',serif;
+.pokedex { --azul:#3d8bff; --cian:#5ce1ff; --azul-claro:#a9c9ff; --crema:#e6eefc; --apagado:#8ea2c3;
   position:relative; isolation:isolate; overflow-x:clip; padding:8px 0 90px; color:var(--crema);
   background:radial-gradient(ellipse at 82% -4%,#1f5bff3d,transparent 55%),radial-gradient(ellipse at 0% 45%,#00b4ff1c,transparent 50%),radial-gradient(ellipse at 100% 100%,#3d2bff1a,transparent 50%),linear-gradient(#050b18,#071229 45%,#050a16); }
 /* Rejilla técnica muy tenue arriba, que se desvanece al bajar. (overflow-x:clip, no hidden: con hidden el

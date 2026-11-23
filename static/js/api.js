@@ -38,7 +38,17 @@ export function usaServidor() {
 const conEstado = (mensaje, estado) => Object.assign(new Error(mensaje), { estado });
 
 async function pedirAlServidor(ruta, mensajePorDefecto) {
-  const respuesta = await fetch(ruta);
+  // Un reintento: el servidor solo encola 5 conexiones y, con muchas peticiones seguidas (abrir fichas muy
+  // deprisa), puede rechazar alguna. Si vuelve a fallar, un mensaje en español (no el «Failed to fetch» del navegador).
+  let respuesta;
+  for (let intento = 0; !respuesta; intento++) {
+    try {
+      respuesta = await fetch(ruta);
+    } catch {
+      if (intento >= 1) throw conEstado('No se pudo conectar con el servidor local. Comprueba que sigue abierto.', 502);
+      await new Promise(listo => setTimeout(listo, 300));
+    }
+  }
   const datos = await respuesta.json();
   if (!respuesta.ok) throw conEstado(datos.error || mensajePorDefecto, respuesta.status); // 404, 502...
   return datos;

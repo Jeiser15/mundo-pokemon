@@ -75,9 +75,9 @@
 .equipo-detalles { border:1px solid #ffffff17; border-radius:16px; background:#ffffff04; }
 .equipo-detalles summary { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 10px; padding:15px 18px; list-style:none; color:var(--crema); font-family:var(--serif); font-size:17px; cursor:pointer; }
 .equipo-detalles summary::-webkit-details-marker { display:none; }
-.equipo-detalles summary::after { content:'+'; display:grid; place-items:center; width:26px; height:26px; margin-left:auto; border:1px solid #ff8f4d66; border-radius:50%; color:var(--brasa); font-family:Arial,sans-serif; font-size:16px; }
+.equipo-detalles summary::after { content:'+'; display:grid; place-items:center; width:26px; height:26px; margin-left:auto; border:1px solid #ff8f4d66; border-radius:50%; color:var(--brasa); font-family:var(--sans); font-size:16px; }
 .equipo-detalles[open] summary::after { content:'−'; }
-.equipo-detalles summary small { color:var(--apagado); font-family:Arial,sans-serif; font-size:12px; }
+.equipo-detalles summary small { color:var(--apagado); font-family:var(--sans); font-size:12px; }
 .equipo-detalles[open] summary { border-bottom:1px solid #ffffff14; }
 .equipo-detalles .equipo-analisis { padding:16px; }
 .equipo-analisis { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); grid-template-areas:"defensa ataque" "consejos estadisticas"; gap:16px; }

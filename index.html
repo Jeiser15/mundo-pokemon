@@ -6,6 +6,10 @@
   <meta name="theme-color" content="#06110c">
   <title>Mundo Pokémon | Explora, combate y descubre</title>
   <link rel="icon" type="image/svg+xml" href="/static/img/icono.svg">
+  <!-- Tipografía (static/fonts, declarada en base.css): se precarga para que la letra no cambie al abrir. -->
+  <link rel="preload" href="/static/fonts/playfair.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/playfair-cursiva.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/static/fonts/manrope.woff2" as="font" type="font/woff2" crossorigin>
   <!-- Estilos: primero la base común y después uno por cada parte de la página. -->
   <link rel="stylesheet" href="/static/css/base.css">
   <link rel="stylesheet" href="/static/css/portada.css">
@@ -499,26 +503,80 @@
       </div>
     </section>
 
-    <!-- VISTA: ¿Quién es ese Pokémon? El tablero y los controles los crea static/js/quien.js -->
-    <section id="quien" class="wrap section quien">
-      <div class="quien-cabecera">
-        <div>
-          <span class="eyebrow">Pon a prueba tu memoria</span>
-          <h2>¿Quién es ese Pokémon?</h2>
-          <p>Adivina el Pokémon por su silueta. Elige el modo y la región, pide pistas si te atascas y mantén la racha.</p>
+    <!-- VISTA: ¿Quién es ese Pokémon? («el teatro de las sombras»). Mismo lenguaje que Legendarios y el Duelo con su
+         propia paleta: violeta noche y lavanda (static/css/quien.css). Arriba, el escenario (una pantalla a contraluz
+         con la silueta, el anillo del contrarreloj y la placa con su nombre), el panel de la pregunta (respuestas,
+         pistas y revelación) y tus últimas respuestas; debajo, el marcador y los ajustes (modo y región, con lo que
+         llevas adivinado en cada una). Lo rellena static/js/quien.js -->
+    <section id="quien" class="quien" aria-labelledby="quien-titulo">
+      <div class="quien-ambiente" aria-hidden="true"><i>?</i><i>?</i><i>?</i><i>?</i><i>?</i></div>
+
+      <div class="wrap quien-portada">
+        <div class="quien-texto">
+          <span class="quien-kicker">✦ El teatro de las sombras</span>
+          <h2 id="quien-titulo">¿Quién es <em>ese Pokémon?</em></h2>
+          <p>Una sombra a contraluz y un nombre por adivinar. Encadena aciertos, pide pistas si te atascas y llena tu colección: cada especie que reconoces se queda contigo.</p>
         </div>
-        <dl class="quien-cifras">
-          <div><dt>Puntos</dt><dd id="quien-puntos">0</dd></div>
-          <div><dt>Racha</dt><dd id="quien-racha">0</dd></div>
-          <div><dt>Mejor racha</dt><dd id="quien-mejor">0</dd></div>
-          <div><dt>Aciertos</dt><dd id="quien-aciertos">0/0</dd></div>
-        </dl>
+
+        <figure class="quien-escenario" id="quien-escenario">
+          <div class="quien-teatro">
+            <span class="quien-runas" aria-hidden="true"></span>
+            <span class="quien-cuenta" id="quien-cuenta" aria-hidden="true"></span>
+            <div class="quien-pantalla">
+              <span class="quien-luz" aria-hidden="true"></span>
+              <span class="quien-habitat" id="quien-habitat" aria-hidden="true"></span>
+              <img class="quien-silueta" id="quien-silueta" alt="" draggable="false">
+              <span class="quien-destello" aria-hidden="true"></span>
+            </div>
+            <span class="quien-chispas" id="quien-chispas" aria-hidden="true"></span>
+            <span class="quien-sello-racha" id="quien-sello-racha" hidden></span>
+            <button type="button" class="quien-sonido" id="quien-sonido"></button>
+          </div>
+          <figcaption class="quien-placa" id="quien-placa"><small>N.º ???</small><strong class="quien-placa-misterio">Pokémon misterioso</strong></figcaption>
+        </figure>
+
+        <div class="quien-panel" id="quien-panel" aria-busy="true">
+          <p class="quien-espera"><span class="quien-espera-anillo" aria-hidden="true"></span>Preparando la primera sombra…</p>
+        </div>
+
+        <div class="quien-rastro-bloque">
+          <span class="quien-rastro-titulo">Tus últimas respuestas</span>
+          <ol class="quien-rastro" id="quien-rastro" aria-label="Tus últimas respuestas (pulsa una para ver su ficha)"></ol>
+        </div>
       </div>
-      <div class="quien-controles">
-        <div class="quien-modos" id="quien-modos" role="group" aria-label="Modo de juego"></div>
-        <div class="quien-regiones" id="quien-regiones" role="group" aria-label="Región"></div>
+
+      <dl class="wrap quien-cifras">
+        <div><dt>Puntos</dt><dd id="quien-puntos">0</dd></div>
+        <div><dt>Racha</dt><dd id="quien-racha">0</dd></div>
+        <div><dt>Mejor racha</dt><dd id="quien-mejor">0</dd></div>
+        <div><dt>Aciertos</dt><dd id="quien-aciertos">0/0</dd></div>
+        <div class="quien-coleccion">
+          <dt>Tu colección</dt>
+          <dd><span id="quien-adivinados">0</span><small>/<span data-total-especies>1025</span></small></dd>
+          <span class="quien-coleccion-barra" id="quien-coleccion-barra" aria-hidden="true"></span>
+        </div>
+      </dl>
+
+      <div class="wrap quien-ajustes" id="quien-ajustes">
+        <div class="quien-ajustes-cabecera">
+          <span class="quien-kicker">✦ Ajustes de la partida</span>
+          <h3>Tú eliges la <em>función.</em></h3>
+          <p>El modo cambia las reglas y la región decide qué sombras pueden salir. Al cambiar cualquiera de los dos empieza otra pregunta; tu marcador sigue.</p>
+        </div>
+        <div class="quien-grupo">
+          <div class="quien-grupo-cabecera"><b>I</b><h4>Modo de juego</h4><p>Pedir pistas resta 3 puntos cada una; encadenar aciertos suma hasta 5 más.</p></div>
+          <div class="quien-modos" id="quien-modos" role="group" aria-label="Modo de juego"></div>
+        </div>
+        <div class="quien-grupo">
+          <div class="quien-grupo-cabecera"><b>II</b><h4>Región</h4><p>La barra de cada una muestra cuántas de sus especies has adivinado ya.</p></div>
+          <div class="quien-regiones" id="quien-regiones" role="group" aria-label="Región"></div>
+        </div>
+        <div class="quien-ajustes-pie">
+          <button type="button" class="quien-reiniciar" id="quien-reiniciar">Reiniciar marcador</button>
+          <small>Pone a cero los puntos, la racha y los aciertos de esta partida. Tu mejor racha y tu colección se conservan.</small>
+          <button type="button" class="quien-volver" id="quien-volver">Volver al escenario <span aria-hidden="true">↑</span></button>
+        </div>
       </div>
-      <div class="quien-juego" id="quien-juego"></div>
     </section>
 
   </main>

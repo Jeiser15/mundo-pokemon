@@ -32,6 +32,7 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
   position:fixed; inset:0; width:calc(min(1160px,100% - 32px) * var(--escala)); max-width:none; max-height:calc(100% - 32px); padding:0; overflow:auto; overscroll-behavior:contain; scrollbar-width:none; border:0; border-radius:calc(22px * var(--escala)); background:transparent;
 }
 .ficha-modal::-webkit-scrollbar { display:none; } /* Safari antiguo: no entiende scrollbar-width */
+.ficha-modal.cabe { overflow:hidden; } /* encajarFicha (ficha.js): cabe entera, nada que desplazar */
 .ficha-modal::backdrop { background:#091c15bf; backdrop-filter:blur(5px); }
 .cerrar-ficha { zoom:var(--escala); position:sticky; top:12px; z-index:10; float:right; width:38px; height:38px; margin:12px 14px -56px 0; border:1px solid #ffffff70; border-radius:50%; background:color-mix(in srgb,var(--tipo-a) 45%,#0b1712); color:white; font-size:17px; line-height:1; transition:background .2s; }
 .cerrar-ficha:hover { background:var(--acento); }
@@ -66,13 +67,17 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
 /* Aro decorativo del color del tipo en la esquina. */
 .pokemon-identity::after { content:''; position:absolute; right:-70px; bottom:-70px; z-index:-1; width:240px; height:240px; border:30px solid color-mix(in srgb,var(--tipo-a) 14%,transparent); border-radius:50%; }
 .pokemon-identity .eyebrow { color:var(--acento-texto); }
-.ficha-sello { margin-top:10px; padding:4px 12px; border-radius:99px; font-size:10px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
+/* Registro y, si lo tiene, el sello de legendario o singular, en una sola línea. */
+.identity-cabecera { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; }
+.ficha-sello { padding:4px 12px; border-radius:99px; font-size:10px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
 .pokemon-identity h3 { margin:10px 0 2px; font-size:clamp(32px,3.6vw,48px); line-height:1; letter-spacing:-2px; text-transform:capitalize; overflow-wrap:anywhere; }
-.detail .identity-caption { margin:3px 0 12px; color:var(--acento-texto); font-family:Georgia,'Times New Roman',serif; font-size:15px; font-style:italic; }
+.detail .identity-caption { margin:3px 0 12px; color:var(--acento-texto); font-family:var(--serif); font-size:15px; font-style:italic; }
 .identity-tipos { display:flex; flex-wrap:wrap; gap:6px; }
 .badge { display:inline-flex; align-items:center; gap:6px; padding:6px 13px 6px 8px; border-radius:99px; background:var(--color-etiqueta,#5f9b60); box-shadow:0 4px 12px color-mix(in srgb,var(--color-etiqueta,#5f9b60) 40%,transparent); color:#fff; font-size:12px; font-weight:bold; text-shadow:0 1px 2px #0009; }
 .badge svg { width:15px; height:15px; }
-.identity-region { margin-top:11px; padding:4px 11px; border:1px solid color-mix(in srgb,var(--acento) 40%,transparent); border-radius:99px; color:var(--acento-texto); font-size:11px; font-weight:bold; }
+/* Región y, si la tiene, su forma («Forma Modificada», «Mega-Charizard X»), en una fila. */
+.identity-etiquetas { display:flex; flex-wrap:wrap; gap:6px; margin-top:11px; }
+.identity-region { padding:4px 11px; border:1px solid color-mix(in srgb,var(--acento) 40%,transparent); border-radius:99px; color:var(--acento-texto); font-size:11px; font-weight:bold; }
 .detail .identity-descripcion { max-width:480px; margin:10px 0 0; color:#4f6555; font-size:13.5px; line-height:1.6; }
 .detail .identity-descripcion:empty { display:none; }
 
@@ -123,11 +128,28 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
 .panel-cabecera { display:flex; flex-wrap:wrap; align-items:baseline; justify-content:space-between; gap:2px 14px; }
 .panel-cabecera h4 { margin-bottom:0; }
 .detail .panel-cabecera p { margin:0; color:#829482; font-size:11.5px; }
-.evolution-tree { padding:14px 0 4px; overflow-x:auto; }
+/* Cuerpo: el árbol y, a su lado, sus otras formas (o «No evoluciona»). */
+/* El hueco de arriba va DENTRO del árbol: como se desplaza a lo ancho, recorta lo que sobresale (la pastilla
+   «Estás aquí» salía cortada). El del cuerpo deja sitio a la etiqueta de «Otras formas». */
+.evolution-cuerpo { display:flex; flex-wrap:wrap; align-items:center; gap:10px 30px; padding-top:6px; }
+.evolution-tree { min-width:0; max-width:100%; padding:10px 0 4px; overflow-x:auto; }
+.detail .evolution-nota { max-width:260px; margin:0; color:var(--acento-texto); font-family:var(--serif); font-size:15px; font-style:italic; line-height:1.45; }
+/* Otras formas: recuadro discontinuo con su etiqueta sobre el borde (no suma alto al panel). */
+.evolution-formas { position:relative; padding:7px; border:1.5px dashed color-mix(in srgb,var(--acento) 45%,transparent); border-radius:16px; }
+.evolution-formas > small { position:absolute; top:-8px; left:12px; padding:0 6px; background:#fbfdf9; color:#829482; font-size:9.5px; font-weight:800; letter-spacing:1.2px; line-height:14px; text-transform:uppercase; }
+.evolution-formas-lista { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.evolution-card.forma { border-style:dashed; }
+.evolution-mas { padding:0 4px; color:#829482; font-size:11.5px; font-weight:bold; }
 .evolution-branch { display:flex; align-items:center; width:max-content; }
 .evolution-children { position:relative; display:flex; flex-direction:column; gap:10px; padding-left:40px; }
 .evolution-children::before { content:'→'; position:absolute; top:50%; left:11px; color:var(--acento); font-size:19px; transform:translateY(-50%); }
-.evolution-children.en-grupo { display:grid; grid-template-columns:repeat(var(--columnas),auto); gap:8px; padding:7px 7px 7px 47px; }
+.evolution-children.en-grupo { display:grid; grid-template-columns:repeat(var(--columnas),auto); align-items:center; gap:8px; padding:7px 7px 7px 47px; }
+/* Más de cuatro evoluciones (Eevee): todas en una fila, con cartas más pequeñas. */
+.evolution-children.compacto { gap:6px; }
+.compacto .evolution-card { width:66px; min-height:94px; padding:6px 3px; }
+.compacto .evolution-card img { width:44px; height:44px; }
+.compacto .evolution-card strong { font-size:10.5px; }
+.compacto .evolution-card small { margin:1px 0 2px; font-size:9px; }
 /* Contorno discontinuo: «una de estas». */
 .evolution-children.en-grupo::after { content:''; position:absolute; inset:0 0 0 38px; border:1.5px dashed color-mix(in srgb,var(--acento) 45%,transparent); border-radius:16px; pointer-events:none; }
 .evolution-card { position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; width:100px; min-height:112px; padding:8px; border:1px solid #dcecd8; border-radius:13px; background:white; box-shadow:0 5px 14px #3b6d3910; color:#23543a; text-align:center; transition:transform .25s,box-shadow .25s,border-color .25s; }
@@ -201,7 +223,7 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
 }
 .ficha-modal[data-rareza] .pokemon-identity::after { border-color:#d9ad4a24; }
 .ficha-modal[data-rareza] .pokemon-identity h3 {
-  font-family:Georgia,'Times New Roman',serif; font-weight:400; letter-spacing:2px; text-transform:uppercase;
+  font-family:var(--serif); font-weight:400; letter-spacing:2px; text-transform:uppercase;
   background:linear-gradient(180deg,#fff6d6,#f0cf7a 50%,#b8913f); -webkit-background-clip:text; background-clip:text; color:transparent;
 }
 .ficha-modal[data-rareza] .identity-region { border-color:currentColor; }
@@ -236,6 +258,10 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
 .ficha-modal[data-rareza] .evolution-card small { color:var(--texto-suave); }
 .ficha-modal[data-rareza] .evolution-card.actual { background:#d9ad4a17; }
 .ficha-modal[data-rareza] .evolution-card.actual::after { color:var(--negro); }
+.ficha-modal[data-rareza] .evolution-formas { border-color:#d9ad4a59; }
+.ficha-modal[data-rareza] .evolution-formas > small { background:#16120c; }
+.ficha-modal[data-rareza] .evolution-formas > small, .ficha-modal[data-rareza] .evolution-mas { color:var(--texto-suave); }
+.ficha-modal[data-rareza] .detail .evolution-nota { color:var(--oro-claro); }
 .ficha-modal[data-rareza] .type-chip { border-color:color-mix(in srgb,var(--color-tipo) 45%,transparent); background:color-mix(in srgb,var(--color-tipo) 16%,var(--caja)); color:color-mix(in srgb,var(--color-tipo) 35%,#fff); }
 .ficha-modal[data-rareza] .weakness .type-chip b { background:#d9542b38; color:#ffad8c; }
 .ficha-modal[data-rareza] .resistance .type-chip b { background:#2f7b4547; color:#98deaa; }
@@ -278,6 +304,7 @@ body.ficha-abierta { position:fixed; right:0; left:0; width:100%; overflow:hidde
   .evolution-children { padding-left:36px; }
   .evolution-children::before { left:8px; }
   .evolution-children.en-grupo { grid-template-columns:auto; padding-left:43px; } /* una columna: a lo ancho no cabe */
+  .evolution-children.en-grupo.compacto { grid-template-columns:repeat(2,auto); }
   .evolution-children.en-grupo::after { left:34px; }
 }
 

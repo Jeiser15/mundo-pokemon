@@ -46,8 +46,13 @@ function crearEstante() {
 function pintarQuien() {
   document.querySelector('#novedades-silueta').src = urlIlustracion(alAzar(SILUETAS));
   let racha = 0;
-  try { racha = Number(localStorage.getItem('pokedex.quien.mejor-racha')) || 0; } catch { /* sin almacenamiento */ }
-  if (racha) document.querySelector('#novedades-racha').textContent = `Tu mejor racha: ${racha} seguidas`;
+  let adivinados = 0;
+  try {
+    racha = Number(localStorage.getItem('pokedex.quien.mejor-racha')) || 0;
+    adivinados = (JSON.parse(localStorage.getItem('pokedex.quien.adivinados')) || []).length || 0;
+  } catch { /* sin almacenamiento o dato roto */ }
+  const partes = [adivinados && `${adivinados} en tu colección`, racha && `mejor racha: ${racha}`].filter(Boolean);
+  if (partes.length) document.querySelector('#novedades-racha').textContent = partes.join(' · ').replace(/^./, letra => letra.toUpperCase());
 }
 
 // --- Pokémon del día ----------------------------------------------------------

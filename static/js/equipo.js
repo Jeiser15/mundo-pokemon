@@ -9,7 +9,7 @@ import { cargarEspecies } from './especies.js';
 import { buscarPokemon } from './ficha.js';
 import { crearHabitat } from './habitats.js';
 import { agregarAlEquipo, detallesDe, miLista, quitarDelEquipo, reemplazarEquipo, tamanoLista } from './mi-equipo.js';
-import { barajar, crear, crearIcono, crearImagen, nombreLegible, nombreTitulo, normalizar, numeroPokedex, urlSprite } from './utilidades.js';
+import { barajar, crear, crearIcono, crearImagen, nombreTitulo, normalizar, numeroPokedex, urlSprite } from './utilidades.js';
 
 const cinturon = document.querySelector('#equipo-cinturon');
 const buscador = document.querySelector('#equipo-buscar');
@@ -92,7 +92,7 @@ function crearResultado(especie) {
     crearImagen(urlSprite(especie.id)),
     crear('span', { clase: 'equipo-resultado-texto' },
       crear('small', { texto: 'N.º ' + numeroPokedex(especie.id) }),
-      crear('strong', { texto: nombreLegible(especie.nombre) })),
+      crear('strong', { texto: nombreTitulo(especie.nombre) })),
     crear('span', { clase: 'equipo-resultado-tipos' }, ...especie.tipos.map(tipo =>
       crear('i', { title: nombreTipo(tipo), estilos: { '--color-tipo': colorDe(tipo) } }, crearIcono(TIPOS[tipo]?.icono || '')))),
     crear('span', { clase: 'equipo-resultado-mas', texto: '＋', atributos: { 'aria-hidden': 'true' } }),
@@ -262,7 +262,7 @@ function panelDefensa(defensa, equipo) {
       crear('strong', { texto: nombreTipo(tipo) }),
       crear('span', { clase: 'defensa-puntos' }, ...mults.map((m, i) => crear('i', {
         clase: claseMult(m),
-        title: `${nombreLegible(equipo[i].nombre)}: ${SIMBOLO[m] ?? '×' + m}`,
+        title: `${nombreTitulo(equipo[i].nombre)}: ${SIMBOLO[m] ?? '×' + m}`,
       }))),
       crear('small', { texto: `${debiles} débil${debiles === 1 ? '' : 'es'} · ${resisten} resiste${resisten === 1 ? '' : 'n'}` }),
     );
@@ -279,7 +279,7 @@ function panelDefensa(defensa, equipo) {
 /** 18 tipos defensores: encendidos los que tu equipo golpea ×2 con alguno de sus tipos. */
 function panelAtaque(cubiertos, equipo) {
   const casillas = CLAVES_TIPO.map(tipo => {
-    const quienes = equipo.filter(p => p.tipos.some(t => multiplicadorContra(t, [tipo]) >= 2)).map(p => nombreLegible(p.nombre));
+    const quienes = equipo.filter(p => p.tipos.some(t => multiplicadorContra(t, [tipo]) >= 2)).map(p => nombreTitulo(p.nombre));
     return crear('span', {
       clase: 'ataque-tipo' + (quienes.length ? ' cubierto' : ''),
       estilos: { '--color-tipo': colorDe(tipo) },

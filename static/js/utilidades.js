@@ -1,5 +1,8 @@
 // Pequeñas funciones que usan varios módulos.
 
+import { FORMAS } from './datos-formas.js';
+import { NOMBRES_ESPANOL } from './datos.js';
+
 /**
  * Crea un elemento HTML en una sola llamada.
  *   crear('button', { clase: 'pokemon-card', type: 'button', alPulsar: abrir }, hijo1, hijo2)
@@ -50,6 +53,10 @@ export const urlSprite = id =>
 export const urlAnimado = id =>
   `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/${id}.gif`;
 
+/** Grito de la especie (.ogg de PokéAPI). Las 1025 lo tienen en esta dirección (pokemon → cries.latest). */
+export const urlGrito = id =>
+  `https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/${id}.ogg`;
+
 /** 25 → "025" */
 export const numeroPokedex = id => String(id).padStart(3, '0');
 
@@ -59,8 +66,33 @@ export const idDesdeUrl = url => url.split('/').filter(Boolean).pop();
 /** "mr-mime" → "mr mime" */
 export const nombreLegible = nombre => nombre.replaceAll('-', ' ');
 
-/** "mr-mime" → "Mr Mime": para nombres dentro de frases, donde el CSS no puede poner las mayúsculas. */
-export const nombreTitulo = nombre => nombreLegible(nombre).replace(/(^|\s)(\p{L})/gu, (_, espacio, letra) => espacio + letra.toUpperCase());
+/** "rock-star" → "Rock Star": solo mayúsculas, sin consultar ninguna tabla. */
+const mayusculas = clave => nombreLegible(clave).replace(/(^|\s)(\p{L})/gu, (_, espacio, letra) => espacio + letra.toUpperCase());
+
+/**
+ * Nombre oficial en español de una clave de PokéAPI, de especie o de forma:
+ *   'pikachu' → «Pikachu» · 'mr-mime' → «Mr. Mime» · 'type-null' → «Código Cero» (NOMBRES_ESPANOL)
+ *   'giratina-altered' → «Giratina» (forma por defecto) · 'giratina-origin' → «Giratina (Forma Origen)»
+ *   'charizard-mega-x' → «Mega-Charizard X» (el nombre de la forma ya lleva el de la especie)  (FORMAS)
+ */
+export function nombreTitulo(clave) {
+  const forma = FORMAS[clave];
+  if (!forma) return NOMBRES_ESPANOL[clave] || mayusculas(clave);
+  const [nombre, especie, porDefecto] = forma;
+  const base = nombreTitulo(especie);
+  if (porDefecto) return base;
+  if (!nombre) return mayusculas(clave);
+  return nombre.includes(base) ? nombre : `${base} (${nombre})`;
+}
+
+/** Si la clave tiene nombre oficial en español: las especies y casi todas las formas (no las 18 sin él en PokéAPI). */
+export const formaConNombre = clave => !FORMAS[clave] || Boolean(FORMAS[clave][0]);
+
+/** Solo el nombre de la forma («Forma Origen», «Mega-Charizard X»), o null si la clave es la de su especie. */
+export function nombreForma(clave) {
+  const forma = FORMAS[clave];
+  return forma ? forma[0] || mayusculas(clave.slice(forma[1].length + 1)) : null;
+}
 
 /** "Mr-Mímé" → "mr mime": sin mayúsculas, tildes ni guiones, para comparar al buscar. */
 export const normalizar = texto => texto.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replaceAll('-', ' ').trim();

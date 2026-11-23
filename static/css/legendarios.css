@@ -13,7 +13,7 @@
 @property --tipo-a { syntax:'<color>'; inherits:true; initial-value:#626faf; }
 @property --tipo-b { syntax:'<color>'; inherits:true; initial-value:#626faf; }
 
-.leyendas { --oro:#e8c873; --oro-claro:#f8e8b4; --crema:#efe7d2; --apagado:#a9a48f; --serif:Georgia,'Times New Roman',serif;
+.leyendas { --oro:#e8c873; --oro-claro:#f8e8b4; --crema:#efe7d2; --apagado:#a9a48f;
   position:relative; isolation:isolate; overflow:hidden; margin-top:24px; padding:16px 0 90px; color:var(--crema);
   background:radial-gradient(ellipse at 76% 16%,color-mix(in srgb,var(--tipo-a) 32%,transparent),transparent 55%),radial-gradient(ellipse at 8% 62%,#7a5a1c2e,transparent 50%),linear-gradient(#070b16,#0b1222 45%,#080d18);
   transition:--tipo-a 1s ease,--tipo-b 1s ease; }

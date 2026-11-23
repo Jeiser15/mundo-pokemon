@@ -292,11 +292,53 @@ export const NIVELES_SIMULACRO = {
     descripcion: 'Más fuerte, armado para contrarrestar tu equipo y sin ayudas: tendrás que saberte la tabla de tipos.' },
 };
 
-/** Modos de «¿Quién es ese Pokémon?». tiempo: segundos por pregunta (0 = sin límite); opciones: 0 = escribir el nombre. */
+/**
+ * Modos de «¿Quién es ese Pokémon?» (quien.js).
+ * - tiempo:   segundos por pregunta (0 = sin límite).
+ * - opciones: nombres entre los que elegir (0 = escribirlo).
+ * - titulo:   la pregunta del panel [texto, palabra en cursiva].
+ * - marcador y premio: lo que enseña su tarjeta en los ajustes.
+ */
 export const MODOS_QUIEN = {
-  clasico: { nombre: 'Clásico', descripcion: 'Cuatro opciones, sin prisa', tiempo: 0, opciones: 4 },
-  contrarreloj: { nombre: 'Contrarreloj', descripcion: '10 segundos: cuanto antes, más puntos', tiempo: 10, opciones: 4 },
-  experto: { nombre: 'Experto', descripcion: 'Escribe su nombre (en inglés)', tiempo: 0, opciones: 0 },
+  clasico: { nombre: 'Clásico', descripcion: 'Cuatro nombres y todo el tiempo del mundo para pensarlo.', tiempo: 0, opciones: 4,
+    titulo: ['¿Quién se esconde ', 'tras la sombra?'], marcador: '4', premio: '10 puntos por acierto' },
+  contrarreloj: { nombre: 'Contrarreloj', descripcion: 'Diez segundos por sombra: cuanto antes respondas, más puntos.', tiempo: 10, opciones: 4,
+    titulo: ['¡Rápido! ', '¿Quién es?'], marcador: '10 s', premio: '+1 por cada segundo que te sobre' },
+  experto: { nombre: 'Experto', descripcion: 'Sin opciones: escribe su nombre, en español o en inglés.', tiempo: 0, opciones: 0,
+    titulo: ['Escribe ', 'su nombre.'], marcador: 'Aa', premio: '+5 por acierto' },
+};
+
+/** Pistas de «¿Quién es?»: cada una resta puntos (quien.js). icono: trazo SVG (viewBox 24×24). */
+export const PISTAS_QUIEN = [
+  { clave: 'tipo', nombre: 'Tipo', icono: 'M12 3l8 4.5v9L12 21l-8-4.5v-9z M12 3v18 M4 7.5l16 9 M20 7.5l-16 9' },
+  { clave: 'region', nombre: 'Región', icono: 'M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z M12 8a2 2 0 1 0 0 4a2 2 0 1 0 0-4' },
+  { clave: 'categoria', nombre: 'Categoría', icono: 'M4 4h7l9 9-7 7-9-9z M8 8h.01' },
+  { clave: 'grito', nombre: 'Grito', icono: 'M11 5 6 9H2v6h4l5 4z M15.5 8.5a5 5 0 0 1 0 7 M19 5a10 10 0 0 1 0 14' },
+];
+
+/** El color de cada especie en PokéAPI (pokemon-species → color). En «¿Quién es?» es la pista de las
+ *  127 especies (de la 899 a la 1025) cuya categoría aún no está en español. */
+export const COLORES_ESPECIE = {
+  black: 'Negro', blue: 'Azul', brown: 'Marrón', gray: 'Gris', green: 'Verde',
+  pink: 'Rosa', purple: 'Morado', red: 'Rojo', white: 'Blanco', yellow: 'Amarillo',
+};
+
+/**
+ * Nombres en español que no se escriben como su clave de PokéAPI con mayúsculas (signos, puntos, guiones) o que
+ * cambian en español (Código Cero y los Pokémon Paradoja). Sacados de PokéAPI (pokemon-species → names, 'es'):
+ * son los 38 de las 1025 especies. Por clave de especie. Los usa nombreTitulo() (utilidades.js); los nombres de
+ * las FORMAS (Giratina Origen, megaevoluciones…) están en datos-formas.js.
+ */
+export const NOMBRES_ESPANOL = {
+  'nidoran-f': 'Nidoran♀', 'nidoran-m': 'Nidoran♂', farfetchd: 'Farfetch’d', 'mr-mime': 'Mr. Mime', 'ho-oh': 'Ho-Oh',
+  'mime-jr': 'Mime Jr.', 'porygon-z': 'Porygon-Z', flabebe: 'Flabébé', 'type-null': 'Código Cero', 'jangmo-o': 'Jangmo-o',
+  'hakamo-o': 'Hakamo-o', 'kommo-o': 'Kommo-o', sirfetchd: 'Sirfetch’d', 'mr-rime': 'Mr. Rime',
+  'great-tusk': 'Colmilargo', 'scream-tail': 'Colagrito', 'brute-bonnet': 'Furioseta', 'flutter-mane': 'Melenaleteo',
+  'slither-wing': 'Reptalada', 'sandy-shocks': 'Pelarena', 'iron-treads': 'Ferrodada', 'iron-bundle': 'Ferrosaco',
+  'iron-hands': 'Ferropalmas', 'iron-jugulis': 'Ferrocuello', 'iron-moth': 'Ferropolilla', 'iron-thorns': 'Ferropúas',
+  'wo-chien': 'Wo-Chien', 'chien-pao': 'Chien-Pao', 'ting-lu': 'Ting-Lu', 'chi-yu': 'Chi-Yu', 'roaring-moon': 'Bramaluna',
+  'iron-valiant': 'Ferropaladín', 'walking-wake': 'Ondulagua', 'iron-leaves': 'Ferroverdor', 'gouging-fire': 'Flamariete',
+  'raging-bolt': 'Electrofuria', 'iron-boulder': 'Ferromole', 'iron-crown': 'Ferrotesta',
 };
 
 /**

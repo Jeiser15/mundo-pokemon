@@ -11,7 +11,7 @@
    ============================================================================= */
 
 .duelo { --brasa:#ff8f4d; --brasa-clara:#ffc27a; --brasa-oscura:#d9652c; --crema:#f2ebdd; --apagado:#a9b2a5;
-  --linea:#ff8f4d33; --vidrio:linear-gradient(150deg,#ffffff0e,#ffffff03); --serif:Georgia,'Times New Roman',serif;
+  --linea:#ff8f4d33; --vidrio:linear-gradient(150deg,#ffffff0e,#ffffff03);
   --pildora:linear-gradient(90deg,#d9652c,#ffb470);
   position:relative; isolation:isolate; overflow:hidden; margin-top:24px; padding:16px 0 90px; color:var(--crema);
   background:radial-gradient(ellipse at 80% 14%,#ff8f4d24,transparent 55%),radial-gradient(ellipse at 6% 64%,#2f7a4b2e,transparent 50%),linear-gradient(#07110d,#0b1712 45%,#08120e); }
@@ -54,7 +54,7 @@ body[data-vista="duelo"] footer a { color:#ff8f4d; }
 .duelo-pasos [data-estado="actual"] button { border-color:#ff8f4d40; background:var(--vidrio); color:var(--crema); box-shadow:inset 0 1px 0 #ffffff12; }
 .duelo-pasos [data-estado="actual"] b { border:0; background:radial-gradient(circle at 35% 30%,#ffe2c4,var(--brasa) 70%); box-shadow:0 0 16px #ff8f4d66; color:#2a1206; font-weight:bold; }
 .duelo-pasos [data-estado="hecho"] b { position:relative; }
-.duelo-pasos [data-estado="hecho"] b::after { content:'✓'; position:absolute; right:-4px; bottom:-4px; display:grid; place-items:center; width:16px; height:16px; border-radius:50%; background:var(--brasa); color:#2a1206; font-family:Arial,sans-serif; font-size:9px; font-weight:bold; }
+.duelo-pasos [data-estado="hecho"] b::after { content:'✓'; position:absolute; right:-4px; bottom:-4px; display:grid; place-items:center; width:16px; height:16px; border-radius:50%; background:var(--brasa); color:#2a1206; font-family:var(--sans); font-size:9px; font-weight:bold; }
 
 /* Maqueta: el campo del escenario, inclinado como visto desde la grada, con los Pokémon de pie encima. */
 /* Las medidas de dentro van en cqw (ancho de la maqueta): --alto y --sombra son px cuando la maqueta mide 640 px. */
@@ -139,7 +139,7 @@ body[data-vista="duelo"] footer a { color:#ff8f4d; }
 .resumen-dato { display:grid; grid-template-columns:96px minmax(0,1fr); align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid #ffffff14; }
 .resumen-dato dt { color:var(--apagado); font-size:9.5px; font-weight:800; letter-spacing:1.6px; text-transform:uppercase; }
 .resumen-dato dd { display:flex; align-items:center; justify-content:space-between; gap:10px; min-width:0; margin:0; font-family:var(--serif); font-size:16px; }
-.resumen-cambiar { flex:none; padding:4px 11px; border:1px solid #ff8f4d4d; border-radius:99px; background:none; color:var(--brasa-clara); font-family:Arial,sans-serif; font-size:11px; font-weight:bold; }
+.resumen-cambiar { flex:none; padding:4px 11px; border:1px solid #ff8f4d4d; border-radius:99px; background:none; color:var(--brasa-clara); font-family:var(--sans); font-size:11px; font-weight:bold; }
 .resumen-cambiar:hover { border-color:var(--brasa); background:#ff8f4d14; }
 .resumen-equipo { display:flex; flex-wrap:wrap; align-items:flex-end; gap:2px; min-width:0; }
 .resumen-sprite { width:auto; height:40px; image-rendering:pixelated; scale:-1 1; }

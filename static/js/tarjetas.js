@@ -5,14 +5,14 @@
 
 import { COLOR_POR_DEFECTO, rarezaDe, TIPOS } from './datos.js';
 import { buscarPokemon } from './ficha.js';
-import { crear, crearIcono, crearImagen, nombreLegible, numeroPokedex, urlIlustracion } from './utilidades.js';
+import { crear, crearIcono, crearImagen, nombreTitulo, numeroPokedex, urlIlustracion } from './utilidades.js';
 
 const colorDe = tipo => TIPOS[tipo]?.color || COLOR_POR_DEFECTO;
 
 /**
  * @param {object} p
  * @param {number|string} p.id      Número de la Pokédex (para la imagen y el N.º).
- * @param {string} p.nombre         Nombre en inglés (los guiones se muestran como espacios).
+ * @param {string} p.nombre         Clave de PokéAPI ('mr-mime'): se muestra su nombre oficial en español.
  * @param {string[]} [p.tipos]      Claves de tipo (['grass', 'poison']). Sin tipos, la tarjeta sale verde.
  * @param {string} [p.consulta]     Qué buscar al pulsar; por defecto, el número.
  * @param {number} [p.orden]        Posición dentro de la tanda: escalona la animación de entrada.
@@ -22,7 +22,7 @@ const colorDe = tipo => TIPOS[tipo]?.color || COLOR_POR_DEFECTO;
  */
 export function crearTarjetaPokemon({ id, nombre, tipos = [], consulta = String(id), orden = 0, alPulsar = null, visto = false, enPantalla = false }) {
   const [principal, secundario] = tipos;
-  const nombreVisible = nombreLegible(nombre);
+  const nombreVisible = nombreTitulo(nombre); // «Mr. Mime», «Código Cero»…
   const nombresTipos = tipos.map(tipo => TIPOS[tipo]?.nombre || tipo);
   const rareza = rarezaDe(id);
   const sello = { legendario: '✦ Legendario', singular: '✧ Singular' }[rareza];

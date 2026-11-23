@@ -41,11 +41,13 @@ servidor/
   rutas.py              Manejador HTTP: /, /static/*, /api/pokedex, /api/<recurso>/<nombre>
 herramientas/
   generar_movimientos.py  Genera static/js/datos-movimientos.js desde PokéAPI (solo si salen movimientos nuevos)
+  generar_formas.py       Genera static/js/datos-formas.js desde PokéAPI (solo si salen especies o formas nuevas)
 index.html              Toda la página: 6 vistas (el Inicio es un <div id="inicio"> con 5 partes; las demás, <section>)
                         + 2 ventanas (<dialog>): la ficha y la batalla. <body data-vista="inicio"> de entrada
 static/
   css/                  Una hoja por parte de la página (orden de carga en index.html)
-    base.css            Variables, reinicio, botones, cabecera, pie, keyframes compartidos y «MUNDO»: el fondo
+    base.css            Tipografía (@font-face, --serif y --sans), variables, reinicio, botones, cabecera, pie,
+                        keyframes compartidos y «MUNDO»: el fondo
                         continuo (.mundo-fondo), cabecera y pie transparentes y piezas comunes (.mundo, .mundo-sello,
                         .mundo-cabecera) de las vistas con <body data-mundo> (Inicio y Categorías)
     portada.css         Vista Inicio («Mundo Pokémon»): héroe con reloj y altar, cinta de tipos, caminos,
@@ -68,7 +70,9 @@ static/
                         [data-lista="luchador"]), buscador y análisis (plegado en <details>). Usa los colores de .duelo
     simulacro.css       Ventana del combate en estilo pixel: marcadores, lienzo, mando (movimientos del color de
                         su tipo) y registro; .en-pantalla-completa (solo la arena, con marcadores y mando encima)
-    quien.css           Vista ¿Quién es ese Pokémon?: silueta, respuestas, pistas y revelación
+    quien.css           Vista ¿Quién es ese Pokémon? («el teatro de las sombras», violeta noche y lavanda, con cabecera
+                        y pie a juego): escenario a contraluz con la silueta, anillo del contrarreloj, revelación sobre el
+                        hábitat, panel de vidrio (respuestas, pistas selladas, revelación), rastro, cifras y ajustes
     novedades.css       Inicio, «Ahora también puedes combatir» (acentos brasa, sin fondo propio): muestra en vivo,
                         lo nuevo, tu equipo con tu récord y las 6 arenas
   js/                   Módulos ES (<script type="module">), uno por responsabilidad
@@ -78,9 +82,13 @@ static/
                         tipos, poder, especie y grupo; datos sacados de PokéAPI), NIVELES_SIMULACRO, MODOS_BATALLA,
                         MOVIMIENTOS_RESERVA (para quien casi no aprende ataques), PALETAS_ATAQUE, ESCENARIOS (con sus
                         climas), CLIMAS, ESTADOS, ENTRENADORES, FRASES_RIVAL, EVOLUCIONES_REGIONALES
-                        y MODOS_QUIEN
+                        y, para ¿Quién es?, MODOS_QUIEN, PISTAS_QUIEN, COLORES_ESPECIE y NOMBRES_ESPANOL (los 38
+                        nombres que no son su clave de PokéAPI con mayúsculas: Nidoran♀, Mr. Mime, Código Cero, los Paradoja…)
     datos-movimientos.js GENERADO (no editar): MOVIMIENTOS_DATOS, los 479 movimientos de daño de PokéAPI con
                         nombre en español, tipo, potencia, precisión, clase, prioridad y efectos
+    datos-formas.js     GENERADO (no editar): FORMAS, las 363 claves de PokéAPI que no son la de su especie
+                        (formas por defecto con apellido como 'giratina-altered' y formas alternativas) →
+                        [nombre de la forma en español, clave de la especie, 1 si es la forma por defecto]
     mundo.js            Inicio: la luz del fondo continuo. Cada parte lleva data-luz="#a #b"; la que cruza el centro
                         de la pantalla (IntersectionObserver) pasa sus colores a --luz-a/--luz-b. ponerLuz() los cambia
     portada.js          Héroe: sigue la hora local (momentos del día: título, relato con nombres pulsables, cielo y
@@ -103,13 +111,15 @@ static/
                         usaServidor() lo averigua una vez), directo a PokéAPI con los mismos mensajes de error;
                         en ese modo arma la Pokédex compacta como el servidor (19 consultas) y la guarda 7 días
     utilidades.js       crear() para construir DOM, crearIcono() (iconos de tipo), crearImagen(), urlIlustracion(),
-                        urlSprite(), urlAnimado() (GIF de Showdown)...
+                        urlSprite(), urlAnimado() (GIF de Showdown), urlGrito() (.ogg; las 1025 siguen ese patrón),
+                        nombreTitulo(clave): el nombre oficial en español de una especie o forma ('mr-mime' → «Mr. Mime»,
+                        'giratina-altered' → «Giratina», 'charizard-mega-x' → «Mega-Charizard X») y nombreForma()...
     vistas.js           Navegación por #hash (inicio, categorias, legendarios, catalogo, duelo, quien;
                         alias: #explorar → catalogo, #equipo y #batalla → duelo). Pone <body data-vista> y, en
                         las vistas de VISTAS_DEL_MUNDO (inicio, categorias), <body data-mundo>
     habitats.js         crearHabitat({ tipo, rareza, semilla }): la escena animada (12 partículas con reparto fijo)
     ficha.js            buscarPokemon(): abre y rellena la ficha (tema por tipo y rareza, especie, radar,
-                        evolución con «Estás aquí», efectividad con iconos)
+                        etiqueta de su forma, evolución con «Estás aquí» y otras formas, efectividad con iconos)
     efectividad.js      Lógica pura: calcularMultiplicadores() (ficha, datos de PokéAPI) y
                         multiplicador() / fuerteContra() / debilAnte() (TABLA_TIPOS)
     categorias.js       La rueda de los tipos (elegir(): vuelo al centro, radios, portal, perfil, luz) y la tabla 18×18
@@ -154,9 +164,12 @@ static/
                         estados, transición y confeti.
                         crearModelo() (sin caché, dice de qué archivo salió) lo usan también las pruebas
     fuente-pixel.js     Fuente de píxeles 5×7 para los números de daño y los letreros del lienzo
-    quien.js            ¿Quién es ese Pokémon?: modos, regiones, pistas, contrarreloj, racha (mejor racha guardada)
+    quien.js            ¿Quién es ese Pokémon?: modos, regiones, pistas a elegir, contrarreloj, revelación (hábitat,
+                        grito, registro de la especie), puntos con desglose, rastro, colección y ajustes guardados
   img/
     icono.svg
+  fonts/                Playfair (normal y cursiva) y Manrope: woff2 variables, solo el juego latino, con su
+                        licencia OFL. Descargadas de Google Fonts y servidas desde aquí (sin conexión a Google)
 archivo/                Versión original y paisajes que no se usan. No se sirve ni está en git; se puede borrar.
 android/                App de Android (WebView con la web dentro, servida con WebViewAssetLoader desde
                         https://appassets.androidplatform.net). Ver android/LEEME.md
@@ -188,14 +201,24 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   petición y descartan las que ya no son la última. Mantener ese patrón en cualquier carga asíncrona nueva.
 - **CSS**: cada componente vive en una sola hoja; las variantes móviles van al final de esa hoja
   (`@media (max-width:700px)`, a veces 800/900px) y cada hoja desactiva sus animaciones en
-  `prefers-reduced-motion`. Evitar `!important` (solo queda en `[hidden]` y en reduced-motion).
+  `prefers-reduced-motion`. La página no muestra barra de desplazamiento (base.css: `scrollbar-width:none` en
+  `html`), a petición del usuario; las ventanas y tiras con scroll propio tampoco. Evitar `!important` (solo queda en `[hidden]` y en reduced-motion).
   Valores por elemento calculados en JS se pasan como variables CSS (`--n`, `--y`, `--i`, `--color-tipo`...),
-  no como estilos sueltos.
+  no como estilos sueltos. Ninguna vista debe desbordar a lo ancho (comprobado en todas, de 390 a 1440 px): lo
+  que gire o sobresalga se recorta con `overflow-x:clip` (no `hidden`, que rompe `position:sticky`).
+- **Tipografía**: `var(--serif)` = Playfair (títulos con su palabra en cursiva, nombres, cifras) y `var(--sans)` =
+  Manrope (texto, botones, etiquetas en versalitas), definidas UNA vez en `:root` (base.css). No redefinirlas por
+  vista ni escribir nombres de fuentes sueltos. Playfair tiene tamaño óptico (se ajusta sola a cada tamaño) y el
+  body pide `lining-nums` (cifras alineadas). Se eligió frente a Cormorant y Bodoni (demasiado finas en letra
+  pequeña), Fraunces (su «g» cursiva parece una «q») e Instrument Serif (cifras estrechas). La ventana del
+  combate usa a propósito una monoespaciada (estilo pixel).
 - **Datos fijos** (tipos, colores, listas) solo en `datos.js`.
 - **localStorage** solo para cosas de este navegador, siempre con try/catch: `pokedex.equipo`,
   `pokedex.luchador` (el del uno contra uno), `pokedex.sonido` (efectos y música encendidos o no),
   `pokedex.simulacro` (récord `{ equipo: {nivel: {v, d}}, duelo: {…} }`), `pokedex.duelo` (última
-  configuración: modo, nivel, escenario, pantalla completa), `pokedex.quien.mejor-racha` y `pokedex.vistos`
+  configuración: modo, nivel, escenario, pantalla completa), `pokedex.quien.mejor-racha` (también la lee el
+  Inicio), `pokedex.quien.adivinados` (ids de las especies adivinadas alguna vez: «Tu colección»),
+  `pokedex.quien.ajustes` (último modo y región de ¿Quién es?), `pokedex.vistos`
   (los Pokémon escaneados en la Pokédex: el contador «Vistos por ti») y, solo sin servidor, `pokedex.especies`
   (la Pokédex compacta armada desde PokéAPI, `{ fecha, lista }`, vale 7 días).
 
@@ -258,8 +281,26 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
 - La ficha es **estática** en escritorio: está compactada para ~830 px de alto y `encajarFicha()` (ficha.js,
   con un `ResizeObserver`) baja `--escala` (`zoom` de `.detail`, mínimo 0,7) si la ventana es más baja.
   Usa `offsetHeight`, que no incluye el zoom ni la animación de entrada. El ancho del `<dialog>` también se
-  multiplica por `--escala`: así por dentro mide siempre lo mismo y la escala no oscila. En móvil (≤700 px) no
-  cabría legible: ahí se desplaza, sin barra visible. Varias evoluciones finales (Eevee) van en `.en-grupo`.
+  multiplica por `--escala`: así por dentro mide siempre lo mismo. Aun así, con zoom una línea de texto puede
+  partirse distinto: Necrozma medía 881 px a 0,971 y 889 a 0,980, y la escala oscilaba sin parar (la ficha
+  parpadeaba). Por eso en cada ficha la escala SOLO BAJA (`escalaTope`; se reinicia al abrir otra o al cambiar la
+  ventana), se redondea hacia abajo y, si cabe, `.cabe` quita el desplazamiento. En móvil (≤700 px) no
+  cabría legible: ahí se desplaza, sin barra visible.
+- **Ficha: nombres, formas y evolución.** El título es el nombre de la ESPECIE (`nombreTitulo(species.name)`): la
+  forma por defecto de 37 especies lleva apellido en PokéAPI ('giratina-altered', 'deoxys-normal'…) y antes salía
+  «Giratina Altered». La forma va en su etiqueta junto a la región («Forma Modificada», «Mega-Charizard X»). Los
+  nombres de especies y formas salen de `NOMBRES_ESPANOL` (datos.js) y `FORMAS` (datos-formas.js): úsese siempre
+  `nombreTitulo()` para mostrar un Pokémon. La categoría que PokéAPI no tiene en español (especies 899–1025) sale de
+  `LEGENDARIOS` o no se muestra (nunca en inglés). Evolución: varias posibles van en UN grupo en una sola fila
+  (`.en-grupo`; con más de cuatro, Eevee, cartas `.compacto`; si alguna sigue evolucionando, Wurmple o Applin, su rama
+  entera): en dos filas o apiladas, esas fichas no cabían. Al lado, sus otras formas (`species.varieties`, sin las
+  «Dominante», solo las que tienen nombre en español —`formaConNombre`— y una por nombre; 4, 3 o 2 según las fases
+  para no partir la fila, con «+N más»); si no evoluciona, lo dice. El sello de legendario o singular va en la línea
+  del registro (`.identity-cabecera`): debajo, esas fichas no cabían en 900 px. Revisadas las 1025 en Chrome sin
+  ventana (`auditar-fichas.mjs`, fuera del proyecto) a 1440×900 y 1366×768: ninguna parpadea, se desplaza, se
+  desborda ni pierde imágenes; a 900 px de alto solo Dragalge y Crabominable usan un zoom de 0,98.
+- `api.js` reintenta una vez si el servidor rechaza la conexión (abrir fichas muy deprisa supera sus 5 conexiones)
+  y, si vuelve a fallar, da un mensaje en español (antes salía «Failed to fetch»).
 - **Batalla (simulacro)**: reglas inspiradas en los juegos, simplificadas, descritas al principio de `combate.js`.
   PV = Salud×2,2+90; daño = `BASE_DANIO` (58) × Ataque÷Defensa (físico) o At.Esp÷Def.Esp (especial) × potencia÷90
   × tipo × clima × azar, y ×⅔ si el movimiento no es de su tipo. Acciones: uno de sus 4 movimientos,
@@ -427,8 +468,25 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
 - La ficha tiene «Añadir a mi equipo» en la barra superior (no le quita alto: la ficha sigue estática).
 - El servidor (ThreadingHTTPServer) solo encola 5 conexiones: el navegador abre 6 como mucho y va bien, pero un
   script que lance 30 peticiones a la vez recibe «connection refused». Limitar la concurrencia en pruebas.
-- «¿Quién es?» no descarga nada hasta que se abre su vista (MutationObserver sobre `hidden`), deja precargada la
-  imagen de la siguiente pregunta y pausa el contrarreloj si cambias de vista, de pestaña o abres una ficha.
+- «¿Quién es?» no descarga nada hasta que se abre su vista (MutationObserver sobre `hidden`), deja precargadas la
+  imagen y el registro (pokemon-species) de la siguiente pregunta y pausa el contrarreloj si cambias de vista, de
+  pestaña o abres una ficha.
+- **¿Quién es?, «el teatro de las sombras»** (#quien): vista con fondo propio como Legendarios, la Pokédex y el Duelo
+  (violeta noche y lavanda; cabecera y pie con `body[data-vista="quien"]`). A la izquierda, el texto y el panel de la
+  pregunta; a la derecha, el escenario: una pantalla redonda a contraluz (`.quien-luz`) con la ilustración en
+  `brightness(0)`, anillo de runas y anillo del contrarreloj (`--restante`); debajo, la placa y las últimas 10
+  respuestas (sprites que abren su ficha). `--quien-luz` (registrada con `@property`) es violeta y toma el color del
+  tipo al abrir la pista «Tipo» o al revelar: tiñe la pantalla y el fondo de la sección. Al responder
+  (`data-estado="revelado"`) aparece el hábitat del tipo o el santuario (habitats.js), destello, chispas lima si
+  aciertas, temblor y borde rojo si no, y suena su grito (`urlGrito`, respeta el interruptor de efectos de
+  sonido.js, el mismo del Duelo; el botón del escenario lo cambia). Pistas: cuatro cartas selladas que se eligen
+  (tipo, región —o la veintena de su número si ya elegiste región—, categoría —o su color en las 127 especies de la
+  899 a la 1025, que no la tienen en español— y grito), −3 cada una. La de la inicial se quitó a propósito: con
+  ella era demasiado fácil. Puntos: 10 + segundos que sobran
+  (contrarreloj) + 5 (experto) + racha (+1 por acierto seguido, hasta +5) − pistas, mínimo 2; el panel los desglosa.
+  En Experto vale el nombre en español o la clave de PokéAPI, sin tildes ni signos y con una letra de error si tiene
+  6 o más. La zona de abajo del panel (pistas o revelación) y la placa tienen alto fijo para que nada salte.
+  Los nombres que se muestran salen de `NOMBRES_ESPANOL` o de `nombreTitulo(clave)`.
 - La ficha marca `#resultado[aria-busy]`: `true` mientras carga y `false` al terminar (también lo usan las pruebas).
 - `vistas.js` pone `<body data-vista="…">` con la vista activa: así cada vista puede adaptar cabecera y pie
   (Legendarios los vuelve azul noche y dorado desde legendarios.css).
@@ -437,7 +495,7 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
 - Menú con 6 enlaces («Duelo Pokémon» es el más largo): `.brand-note` («Explora · combate · descubre») se oculta por
   debajo de 1180 px, los enlaces se compactan a 1000 px, el menú baja a su propia línea a 880 px («Mundo Pokémon»
   no se parte: `.logo-texto` con nowrap) y en teléfono (≤520 px) es una rejilla de 3 + 3.
-- Legendarios usa su propia paleta (azul medianoche + oro) y Georgia como letra con serifa: es intencionado,
+- Legendarios usa su propia paleta (azul medianoche + oro) y la letra con serifa (Playfair) en todo: es intencionado,
   para que la vista se sienta distinta. El Duelo usa el MISMO lenguaje con otra paleta (verde bosque casi
   negro + brasa): una versión anterior «de videojuego» (cielo, Poké Balls, colores chillones) se descartó por
   infantil y por no ir con la web. La maqueta 3D: el plano gira `rotateX(50deg)` y cada figura
