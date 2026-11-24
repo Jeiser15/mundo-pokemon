@@ -2,7 +2,9 @@
 //   · gritos de los Pokémon: los .ogg de PokéAPI (detallesDe → grito), guardados en caché;
 //   · efectos sintetizados al momento (golpes, un sonido por tipo de ataque, Poké Ball, evolución, estados…);
 //   · música de batalla ORIGINAL (no copia ninguna de los juegos) generada nota a nota: una progresión en
-//     La menor que se acelera cuando el combate se pone tenso; y una fanfarria al terminar.
+//     La menor que se acelera cuando el combate se pone tenso (y otra, en Re menor, para las finales del modo
+//     aventura); una fanfarria al terminar;
+//   · modo aventura: el himno de la copa (original, en Re mayor) y la ovación del público del estadio.
 // Los navegadores solo dejan sonar después de un clic: simulacro.js llama a prepararSonido() al pulsar
 // «Iniciar combate». Los dos interruptores (efectos y música) se recuerdan en este navegador.
 
@@ -160,6 +162,9 @@ const EFECTOS = {
   subeEtapa: () => arpegio([72, 79, 84], 0.05, { tipo: 'square', volumen: 0.08, duracion: 0.12 }),
   bajaEtapa: () => arpegio([84, 79, 72], 0.06, { tipo: 'square', volumen: 0.08, duracion: 0.14 }),
   curar: () => arpegio([76, 81, 85, 88], 0.06, { tipo: 'sine', volumen: 0.13, duracion: 0.2 }),
+  // El público del estadio (modo aventura): un rugido que crece, aplausos sueltos y algún silbido.
+  ovacion: () => ovacion(1.8, 0.28),
+  ovacionGrande: () => ovacion(3.6, 0.42),
   falla: () => ruido(0.28, { filtro: 'bandpass', frecuencia: 1400, hasta: 380, q: 1.5, volumen: 0.3 }),
   transicion: () => { ruido(0.8, { filtro: 'bandpass', frecuencia: 300, hasta: 4000, q: 0.7, volumen: 0.35 }); nota(220, 0.8, { tipo: 'sawtooth', hasta: 880, volumen: 0.07 }); },
 };
@@ -198,9 +203,45 @@ export async function grito(url, { tono = 1, volumen = 0.55, pedido = false } = 
   fuente.start();
 }
 
+/** Ovación: ruido de multitud que crece y se apaga, aplausos (golpes cortos de ruido) y silbidos. */
+function ovacion(duracion, fuerza) {
+  ruido(duracion, { filtro: 'bandpass', frecuencia: 700, hasta: 1300, q: 0.5, volumen: fuerza });
+  ruido(duracion * 0.8, { filtro: 'bandpass', frecuencia: 1900, q: 0.7, volumen: fuerza * 0.5, retraso: 0.1 });
+  for (let i = 0; i < duracion * 22; i++) ruido(0.04, { filtro: 'highpass', frecuencia: entre(1800, 4200), volumen: entre(0.05, 0.14), retraso: entre(0, duracion * 0.85) });
+  for (let i = 0; i < Math.round(duracion); i++) nota(entre(1900, 2400), 0.45, { tipo: 'sine', hasta: entre(2600, 3200), volumen: 0.05, retraso: entre(0.1, duracion * 0.7) });
+}
+
+/**
+ * El himno de la copa (ORIGINAL; no copia ningún himno real): ocho acordes lentos en Re mayor
+ * (Re – Sol – La – Si m – Sol – La – Re…), metales (diente de sierra y triángulo), una melodía solemne,
+ * timbales y platillo al final. Dura unos 7 s. Suena en el bus de la música.
+ */
+export function himno() {
+  if (!ctx) return;
+  detenerMusica();
+  const t0 = ctx.currentTime + 0.1;
+  const negra = 0.82;
+  const acordes = [[50, 62, 66, 69], [43, 59, 62, 67], [45, 61, 64, 69], [47, 59, 62, 66], [43, 59, 62, 67], [45, 61, 64, 69], [50, 62, 66, 69], [50, 62, 66, 74]];
+  const melodia = [78, 79, 81, 83, 79, 76, 78, 86];
+  acordes.forEach((acorde, i) => {
+    const en = t0 + i * negra;
+    const largo = i === acordes.length - 1 ? 2.4 : negra * 1.05;
+    for (const n of acorde.slice(1)) {
+      nota(midi(n), largo, { tipo: 'sawtooth', volumen: 0.035, en, bus: 'musica' });
+      nota(midi(n), largo, { tipo: 'triangle', volumen: 0.08, en, bus: 'musica' });
+    }
+    nota(midi(acorde[0]), largo, { tipo: 'triangle', volumen: 0.42, en, bus: 'musica' });
+    nota(midi(melodia[i]), largo * 0.95, { tipo: 'square', volumen: 0.07, en, bus: 'musica', vibrato: [3, 5] });
+    nota(70, 0.5, { tipo: 'sine', hasta: 45, volumen: 0.6, en, bus: 'musica' }); // timbal
+    if (i >= 6) for (let k = 0; k < 6; k++) nota(70, 0.12, { tipo: 'sine', hasta: 50, volumen: 0.3, en: en + k * negra / 6, bus: 'musica' }); // redoble
+  });
+  ruido(2.2, { filtro: 'highpass', frecuencia: 5000, volumen: 0.25, en: t0 + 7 * negra, bus: 'musica' }); // platillo
+}
+
 // --- Música de batalla (original) -------------------------------------------------------------------
 // 4 compases de 16 semicorcheas: Lam – Fa – Sol – Mi7. Bajo (triángulo), arpegio (cuadrada suave),
 // melodía, bombo, caja y charles (ruido). Con tensión va más deprisa y el charles dobla.
+const CANCIONES = {};
 const ACORDES = [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 56, 59]];
 const MELODIA = [
   76, null, 74, 72, null, 71, 72, null, 74, null, 76, null, 79, null, 77, 76,
@@ -208,18 +249,30 @@ const MELODIA = [
   71, null, 72, 74, null, 76, 74, null, 72, null, 71, null, 67, null, 71, 74,
   76, null, 75, 76, null, 80, 83, null, 80, null, 76, null, 74, null, 71, null,
 ];
-const semicorchea = () => 60 / (musica?.tension ? 170 : 150) / 4;
+CANCIONES.combate = { acordes: ACORDES, melodia: MELODIA, ritmo: [150, 170] };
+// La de las finales (modo aventura): Re menor – Si♭ – Do – La, más rápida y con la melodía más alta.
+CANCIONES.final = {
+  acordes: [[62, 65, 69], [58, 62, 65], [60, 64, 67], [57, 61, 64]],
+  melodia: [
+    74, null, 72, 74, null, 77, 76, null, 74, null, 72, null, 69, null, 72, 74,
+    77, null, 76, 74, null, 72, 74, null, 77, null, 81, null, 79, null, 77, 76,
+    76, null, 74, 72, null, 71, 72, null, 76, null, 79, null, 76, null, 72, 76,
+    73, null, 74, 76, null, 77, 76, null, 73, null, 69, null, 73, null, 76, null,
+  ],
+  ritmo: [160, 182],
+};
+const semicorchea = () => 60 / (musica?.cancion.ritmo[musica?.tension ? 1 : 0] || 150) / 4;
 
 function tocarPaso(paso, t) {
   const p = paso % 16;
-  const acorde = ACORDES[Math.floor(paso / 16)];
+  const acorde = musica.cancion.acordes[Math.floor(paso / 16)];
   const s = semicorchea();
   if (p === 0 || p === 8 || (musica.tension && p === 14)) nota(150, 0.16, { tipo: 'sine', hasta: 40, volumen: 0.9, en: t, bus: 'musica' });
   if (p === 4 || p === 12) ruido(0.12, { filtro: 'highpass', frecuencia: 1400, volumen: 0.35, en: t, bus: 'musica' });
   if (musica.tension || p % 2 === 0) ruido(0.035, { filtro: 'highpass', frecuencia: 7000, volumen: 0.14, en: t, bus: 'musica' });
   if (p % 2 === 0) nota(midi(acorde[0] - 12 + (p % 4 === 2 ? 12 : 0)), s * 1.8, { tipo: 'triangle', volumen: 0.55, en: t, bus: 'musica' });
   nota(midi(acorde[p % 3] + 12), s * 0.9, { tipo: 'square', volumen: 0.05, en: t, bus: 'musica' });
-  const m = MELODIA[paso];
+  const m = musica.cancion.melodia[paso];
   if (m) nota(midi(m + (musica.tension ? 12 : 0)), s * 1.7, { tipo: 'square', volumen: 0.08, en: t, bus: 'musica' });
 }
 
@@ -227,13 +280,15 @@ function programar() {
   while (musica && musica.siguiente < ctx.currentTime + 0.12) {
     tocarPaso(musica.paso, musica.siguiente);
     musica.siguiente += semicorchea();
-    musica.paso = (musica.paso + 1) % MELODIA.length;
+    musica.paso = (musica.paso + 1) % musica.cancion.melodia.length;
   }
 }
 
-export function empezarMusica() {
+/** Empieza la música del combate; con `final`, la de las finales del modo aventura. */
+export function empezarMusica({ final = false } = {}) {
   if (!ctx || musica) return;
-  musica = { siguiente: ctx.currentTime + 0.15, paso: 0, tension: false, reloj: setInterval(programar, 25) };
+  const cancion = CANCIONES[final ? 'final' : 'combate'];
+  musica = { cancion, siguiente: ctx.currentTime + 0.15, paso: 0, tension: false, reloj: setInterval(programar, 25) };
 }
 /** Más deprisa y una octava más aguda: último Pokémon o vida baja. */
 export function tensionMusica(activa) { if (musica) musica.tension = activa; }

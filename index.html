@@ -23,6 +23,7 @@
   <link rel="stylesheet" href="/static/css/simulacro.css">
   <link rel="stylesheet" href="/static/css/quien.css">
   <link rel="stylesheet" href="/static/css/novedades.css">
+  <link rel="stylesheet" href="/static/css/aventura.css">
   <!-- Módulo de entrada: importa y arranca cada sección (ver static/js/main.js). -->
   <script type="module" src="/static/js/main.js"></script>
 </head>
@@ -36,6 +37,7 @@
       <a class="logo" href="#inicio"><span class="logo-icon" aria-hidden="true"></span><span class="logo-texto">Mundo <b>Pokémon</b><span class="logo-punto">.</span></span><small class="brand-note">EXPLORA · COMBATE · DESCUBRE</small></a>
       <nav aria-label="Navegación principal">
         <a href="#inicio">Inicio</a>
+        <a href="#aventura" class="nav-aventura">Aventura</a>
         <a href="#categorias">Categorías</a>
         <a href="#legendarios">Legendarios</a>
         <a href="#catalogo">Pokédex</a>
@@ -55,7 +57,7 @@
          una dice con data-luz qué luz quiere (static/js/mundo.js la funde con la anterior al llegar a ella).
            1. Héroe: buscador y Pokémon destacado que rota (static/js/portada.js)
            2. Caminos: Legendarios, tipos, Pokédex y ¿Quién es? (static/js/guia.js)
-           3. Duelo en vivo: combate de muestra, novedades, tu equipo y las 6 arenas (static/js/novedades.js)
+           3. Duelo en vivo: combate de muestra, novedades, tu equipo y las 10 arenas (static/js/novedades.js)
            4. Pokémon del día y 5. regiones (static/js/guia.js) -->
     <div id="inicio" class="mundo">
       <section class="hero" data-luz="#5f9b60 #8fbf5e" aria-labelledby="hero-titulo">
@@ -109,10 +111,24 @@
         <div class="mundo-cabecera">
           <span class="mundo-sello">✦ Explora</span>
           <h2 id="caminos-titulo">Elige tu <em>camino.</em></h2>
-          <p>Cada rincón del mundo tiene su propia luz: el santuario de las leyendas, los dieciocho tipos, la Pokédex completa y un juego para poner a prueba tu memoria.</p>
+          <p>Cada rincón del mundo tiene su propia luz: nueve copas por ganar, el santuario de las leyendas, los dieciocho tipos, la Pokédex completa y un juego para poner a prueba tu memoria.</p>
         </div>
 
         <div class="caminos-rejilla">
+          <!-- Modo aventura: lo rellena static/js/aventura.js (tus copas, tu entrenador y las nueve estrellas) -->
+          <a class="camino camino-aventura" href="#aventura" id="inicio-aventura">
+            <span class="camino-sello">Nuevo · Modo aventura</span>
+            <strong>Nueve copas, <em>una leyenda.</em></strong>
+            <p>Recorre las nueve regiones en orden y gana su copa: sorteo, fase de grupos, eliminatorias y una final en el estadio. Al final del camino, una campeona con seis leyendas.</p>
+            <span class="camino-dato" id="inicio-aventura-dato">Crea tu entrenador y empieza en Kanto</span>
+            <span class="inicio-aventura-estrellas" id="inicio-aventura-estrellas" aria-hidden="true"></span>
+            <span class="inicio-aventura-escena" aria-hidden="true">
+              <span class="inicio-aventura-foco"></span>
+              <span class="inicio-aventura-entrenador" id="inicio-aventura-entrenador"></span>
+            </span>
+            <span class="camino-flecha" aria-hidden="true">↗</span>
+          </a>
+
           <a class="camino camino-leyendas" href="#legendarios">
             <span class="camino-estrellas" aria-hidden="true"></span>
             <span class="camino-sello">Santuario</span>
@@ -501,6 +517,41 @@
           <div class="duelo-resumen" id="duelo-resumen"></div>
         </div>
       </div>
+    </section>
+
+    <!-- VISTA: Modo aventura («Nueve copas, una leyenda»). Las nueve regiones en orden, cada una con su copa al estilo
+         de una liga de campeones (lógica en static/js/liga.js). Con aire de videojuego (static/css/aventura.css): arriba,
+         el mapa vivo del archipiélago en pixel art (static/js/mapa-aventura.js) con el título, tu tarjeta de
+         entrenador, un botón por isla y la ficha de la isla señalada; debajo, el panel de la copa en curso (una
+         pantalla cada vez) y el salón de la fama. Lo rellena static/js/aventura.js -->
+    <section id="aventura" class="aventura" aria-labelledby="aventura-titulo">
+      <div class="av-mapa">
+        <div class="av-mapa-desliza">
+          <div class="av-mapa-lienzo">
+            <canvas id="aventura-mapa" aria-hidden="true"></canvas>
+            <ol class="av-islas" id="aventura-islas" aria-label="Las nueve regiones"></ol>
+          </div>
+        </div>
+        <div class="av-hud">
+          <div class="av-portada">
+            <span class="av-etiqueta">✦ Modo aventura</span>
+            <h2 id="aventura-titulo" class="av-titulo-pixel">Nueve copas, <em>una leyenda</em></h2>
+            <p>De Kanto a Paldea: nueve islas, nueve copas y un equipo que decide el azar.</p>
+          </div>
+          <div class="av-tarjeta" id="aventura-tarjeta"></div>
+        </div>
+        <div class="av-info" id="aventura-info" role="status"></div>
+      </div>
+
+      <div class="wrap av-contenido">
+        <div class="av-panel" id="aventura-panel"></div>
+      </div>
+
+      <section class="wrap av-salon" aria-labelledby="salon-titulo">
+        <span class="av-etiqueta">✦ Salón de la fama</span>
+        <h3 id="salon-titulo" class="av-titulo-pixel">Tus <em>copas</em></h3>
+        <div class="av-vitrina" id="aventura-vitrina"></div>
+      </section>
     </section>
 
     <!-- VISTA: ¿Quién es ese Pokémon? («el teatro de las sombras»). Mismo lenguaje que Legendarios y el Duelo con su

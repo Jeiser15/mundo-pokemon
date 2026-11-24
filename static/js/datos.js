@@ -420,7 +420,22 @@ export const ESCENARIOS = {
     climas: { despejado: 2, granizo: 3, niebla: 1 } },
   ruinas: { nombre: 'Ruinas antiguas', descripcion: 'Un templo olvidado: antorchas, estatuas y un mosaico de runas.',
     climas: { despejado: 2, arena: 3, sol: 2 } },
+  jardin: { nombre: 'Jardín de los cerezos', descripcion: 'Un santuario en flor: pagoda, puente rojo, estanque de carpas y pétalos al viento.',
+    climas: { despejado: 3, lluvia: 2, niebla: 1 } },
+  desierto: { nombre: 'Cañón del desierto', descripcion: 'Mesetas rojas, dunas, cactus y un oasis bajo un sol que quema.',
+    climas: { sol: 3, arena: 3, despejado: 1 } },
+  ciudad: { nombre: 'Azotea de la ciudad', descripcion: 'De noche, sobre los rascacielos: neones, antenas y la ciudad encendida.',
+    climas: { despejado: 3, lluvia: 2, niebla: 1 } },
+  cielo: { nombre: 'Pilar celeste', descripcion: 'Una plataforma antigua por encima de las nubes, donde el viento no para.',
+    climas: { despejado: 3, sol: 1, niebla: 2 } },
 };
+
+/**
+ * El estadio de las copas del modo aventura (eliminatorias y final; lo dibuja escenarios.js → estadio). Va aparte
+ * de ESCENARIOS para que no salga en el Duelo ni en el Inicio: es la recompensa de llegar a los cuartos.
+ */
+export const ESTADIO_AVENTURA = { nombre: 'Estadio de la copa', descripcion: 'Gradas llenas, focos y el emblema de las nueve estrellas.',
+  climas: { despejado: 6, lluvia: 1, niebla: 1 } };
 
 /**
  * Clima del combate: se sortea al empezar según el escenario (pesos en ESCENARIOS[…].climas) y dura todo
@@ -492,4 +507,177 @@ export const FRASES_RIVAL = {
   ventaja: ['¡Justo donde más duele!', '¡Eso es! ¡Sigue así, {p}!', '¡Ja! ¿Viste ese golpe?'],
   gana: ['¡La victoria es mía! Buen combate.', '¡Gané! Entrena un poco más y vuelve.', 'Ha estado reñido… ¡pero gano yo!'],
   pierdeCombate: ['¡Increíble! Me has ganado limpiamente.', 'Perdí… Eres muy buen entrenador.', '¡Qué combate! La próxima será mía.'],
+};
+
+// =====================================================================================================
+// MODO AVENTURA (aventura.js, liga.js y entrenador.js)
+// =====================================================================================================
+
+/**
+ * Piezas para crear a tu entrenador (y a los rivales): gorras, chaquetas, pantalones, peinados y colores.
+ * entrenador.js los dibuja en pixel art. Un aspecto es { gorra, colorGorra, chaqueta, colorChaqueta, pantalon,
+ * colorPantalon, piel, pelo, peinado } (los colores, en hexadecimal: así un aspecto guardado sigue valiendo aunque
+ * cambie el orden; lo que falte, como el pantalón de los guardados antes de que existiera, sale del inicial).
+ * Las zapatillas y los lazos llevan el color de la gorra.
+ */
+export const ASPECTO_ENTRENADOR = {
+  gorras: { clasica: 'Gorra clásica', reves: 'Gorra al revés', lana: 'Gorro de lana', visera: 'Visera', explorador: 'Sombrero', ninguna: 'Sin gorra' },
+  chaquetas: { cazadora: 'Cazadora', sudadera: 'Sudadera', chaleco: 'Chaleco', deportiva: 'Deportiva', abrigo: 'Abrigo largo' },
+  pantalones: { vaquero: 'Vaquero', corto: 'Corto', falda: 'Falda', deportivo: 'Deportivo' },
+  peinados: { corto: 'Corto', pinchos: 'De punta', largo: 'Largo', coleta: 'Coleta' },
+  colores: [['Rojo', '#d8433a'], ['Azul', '#3a66d4'], ['Verde', '#3e9a5c'], ['Amarillo', '#e6bd3a'], ['Negro', '#2b2b36'],
+    ['Blanco', '#e9ecf1'], ['Morado', '#8a52cc'], ['Naranja', '#ec7b2c'], ['Rosa', '#e46aa6'], ['Turquesa', '#2aa9b4'],
+    ['Vaquero', '#3d5689'], ['Caqui', '#a88f5c']],
+  pieles: ['#f7d6b8', '#e9b88f', '#cf9466', '#a26a44', '#6e4429'],
+  pelos: [['Negro', '#2a1d16'], ['Castaño', '#5c3a22'], ['Cobrizo', '#a85a26'], ['Rojo', '#b8322a'], ['Rubio', '#e2c26e'], ['Plata', '#c9cfdc'],
+    ['Azul noche', '#34407e'], ['Morado', '#6a3f8c']],
+};
+
+/** El aspecto con el que empieza el creador de entrenador. */
+export const ASPECTO_INICIAL = { gorra: 'clasica', colorGorra: '#2aa9b4', chaqueta: 'cazadora', colorChaqueta: '#3e9a5c', pantalon: 'vaquero', colorPantalon: '#3d5689', piel: '#e9b88f', pelo: '#5c3a22', peinado: 'corto' };
+
+/**
+ * Las nueve regiones del modo aventura, en orden. Cada una celebra su copa (formato de la liga en liga.js):
+ *   copa, estadio y lema: lo que se cuenta de ella; colores: los de su par de juegos (la luz de la vista);
+ *   paisaje: cómo se pinta su isla en el mapa (mapa-aventura.js); nivel: el de tu equipo al llegar (la
+ *   diferencia entre regiones es grande a propósito: se nota el peso); arenas: dónde se juega la fase de grupos
+ *   (ESCENARIOS); las eliminatorias y la final, en el estadio;
+ *   campeon: el campeón vigente, que solo puede cruzarse contigo en la final. `as`: su Pokémon estrella
+ *   (el pseudolegendario de la región; en Kanto y Hoenn, su fase media, que puede evolucionar en plena
+ *   final). En Paldea, la campeona combate con seis legendarios.
+ * Los campeones y los participantes (NOMBRES_AVENTURA) son guiños a los campeones y entrenadores del anime y
+ * de los juegos de cada región; los aspectos son nuestros (entrenador.js), no copian a nadie.
+ */
+export const REGIONES_AVENTURA = [
+  { region: 'Kanto', copa: 'Copa Meseta Añil', estadio: 'Estadio de la Meseta Añil', colores: ['#f0604a', '#4f86e0'], nivel: 8,
+    paisaje: 'pradera', lema: 'Donde empezó todo. Dieciséis entrenadores suben a la Meseta Añil y solo uno baja con la copa.',
+    arenas: ['bosque', 'cueva', 'ciudad'],
+    campeon: { nombre: 'Lance', genero: 'm', apodo: 'el Maestro Dragón', as: 148,
+      aspecto: { gorra: 'ninguna', colorGorra: '#d8433a', chaqueta: 'abrigo', colorChaqueta: '#2b2b36', pantalon: 'vaquero', colorPantalon: '#2b2b36', piel: '#e9b88f', pelo: '#b8322a', peinado: 'pinchos' } } },
+  { region: 'Johto', copa: 'Copa Plata', estadio: 'Estadio Plata', colores: ['#e2b24c', '#b8c4d6'], nivel: 18,
+    paisaje: 'otono', lema: 'Bajo el eco de las campanas de las torres, la Copa Plata premia a quien combate con calma y corazón.',
+    arenas: ['jardin', 'ruinas', 'bosque'],
+    campeon: { nombre: 'Karen', genero: 'f', apodo: 'la Reina de la Noche', as: 248,
+      aspecto: { gorra: 'ninguna', colorGorra: '#8a52cc', chaqueta: 'chaleco', colorChaqueta: '#2b2b36', pantalon: 'vaquero', colorPantalon: '#3d5689', piel: '#cf9466', pelo: '#c9cfdc', peinado: 'largo' } } },
+  { region: 'Hoenn', copa: 'Copa Colosalia', estadio: 'Estadio Colosalia', colores: ['#3cc08c', '#3d7fe0'], nivel: 28,
+    paisaje: 'tropico', lema: 'Más allá de la Calle Victoria, entre el mar y el volcán, la Copa Colosalia separa a los buenos de los grandes.',
+    arenas: ['playa', 'volcan', 'desierto'],
+    campeon: { nombre: 'Steven', genero: 'm', apodo: 'el Coleccionista de Piedras', as: 375,
+      aspecto: { gorra: 'ninguna', colorGorra: '#3a66d4', chaqueta: 'cazadora', colorChaqueta: '#2b2b36', pantalon: 'vaquero', colorPantalon: '#2b2b36', piel: '#f7d6b8', pelo: '#c9cfdc', peinado: 'pinchos' } } },
+  { region: 'Sinnoh', copa: 'Copa Lirio del Valle', estadio: 'Estadio Lirio del Valle', colores: ['#8fb4ff', '#f0a8c8'], nivel: 38,
+    paisaje: 'nieve', lema: 'A orillas del lago, en el frío del norte, la Copa Lirio del Valle no perdona un solo error.',
+    arenas: ['nieve', 'cueva', 'cielo'],
+    campeon: { nombre: 'Cynthia', genero: 'f', apodo: 'la Campeona Invicta', as: 445,
+      aspecto: { gorra: 'ninguna', colorGorra: '#e6bd3a', chaqueta: 'abrigo', colorChaqueta: '#2b2b36', pantalon: 'deportivo', colorPantalon: '#2b2b36', piel: '#f7d6b8', pelo: '#e2c26e', peinado: 'largo' } } },
+  { region: 'Teselia', copa: 'Copa Vertress', estadio: 'Estadio Vertress', colores: ['#dfe8f2', '#5ad0e0'], nivel: 48,
+    paisaje: 'urbe', lema: 'En la región de los ideales, cada combate es un choque de verdades. La Copa Vertress no admite dudas.',
+    arenas: ['ciudad', 'desierto', 'ruinas'],
+    campeon: { nombre: 'Iris', genero: 'f', apodo: 'la Domadora de Dragones', as: 635,
+      aspecto: { gorra: 'ninguna', colorGorra: '#e46aa6', chaqueta: 'chaleco', colorChaqueta: '#e6bd3a', pantalon: 'falda', colorPantalon: '#e46aa6', piel: '#a26a44', pelo: '#6a3f8c', peinado: 'coleta' } } },
+  { region: 'Kalos', copa: 'Copa Luminalia', estadio: 'Gran Estadio de Luminalia', colores: ['#4f86ff', '#e2405a'], nivel: 58,
+    paisaje: 'jardines', lema: 'Bajo las luces de Luminalia se juega la copa más elegante del mundo: aquí se gana con estilo… o no se gana.',
+    arenas: ['ciudad', 'jardin', 'bosque'],
+    campeon: { nombre: 'Diantha', genero: 'f', apodo: 'la Estrella de Luminalia', as: 706,
+      aspecto: { gorra: 'ninguna', colorGorra: '#d8433a', chaqueta: 'abrigo', colorChaqueta: '#e9ecf1', pantalon: 'vaquero', colorPantalon: '#e9ecf1', piel: '#f7d6b8', pelo: '#2a1d16', peinado: 'corto' } } },
+  { region: 'Alola', copa: 'Copa Lanakila', estadio: 'Estadio del Monte Lanakila', colores: ['#ffa04a', '#9b7bff'], nivel: 68,
+    paisaje: 'islas', lema: 'En la cima del Monte Lanakila, entre la nieve y el sol del trópico, las islas eligen a su campeón.',
+    arenas: ['playa', 'volcan', 'cielo'],
+    campeon: { nombre: 'Kukui', genero: 'm', apodo: 'el Profesor Enmascarado', as: 784,
+      aspecto: { gorra: 'clasica', colorGorra: '#2b2b36', chaqueta: 'chaleco', colorChaqueta: '#e9ecf1', pantalon: 'corto', colorPantalon: '#3e9a5c', piel: '#cf9466', pelo: '#2a1d16', peinado: 'corto' } } },
+  { region: 'Galar', copa: 'Copa Coronación', estadio: 'Estadio de la Coronación', colores: ['#3fb8ff', '#e0408a'], nivel: 78,
+    paisaje: 'colinas', lema: 'Estadios llenos, cánticos y focos. La Copa Coronación es un espectáculo… y una trituradora de aspirantes.',
+    arenas: ['ciudad', 'nieve', 'bosque'],
+    campeon: { nombre: 'Leon', genero: 'm', apodo: 'el Campeón Invicto', as: 887,
+      aspecto: { gorra: 'reves', colorGorra: '#2b2b36', chaqueta: 'abrigo', colorChaqueta: '#d8433a', pantalon: 'deportivo', colorPantalon: '#2b2b36', piel: '#a26a44', pelo: '#6a3f8c', peinado: 'largo' } } },
+  { region: 'Paldea', copa: 'Copa de las Leyendas', estadio: 'Estadio del Área Cero', colores: ['#ff3b4e', '#9b4dff'], nivel: 88,
+    paisaje: 'crater', lema: 'Al borde del Área Cero se juega la última copa. Solo llegan quienes ya ganaron ocho… y la campeona combate con leyendas.',
+    arenas: ['desierto', 'cielo', 'cueva', 'volcan'],
+    campeon: { nombre: 'Geeta', genero: 'f', apodo: 'la Campeona Suprema', as: null, leyendas: true,
+      aspecto: { gorra: 'ninguna', colorGorra: '#d8433a', chaqueta: 'abrigo', colorChaqueta: '#2b2b36', pantalon: 'falda', colorPantalon: '#2b2b36', piel: '#e9b88f', pelo: '#2a1d16', peinado: 'coleta' } } },
+];
+
+/**
+ * Los otros trece entrenadores de cada copa: [nombre, género, tipo favorito]. Son los del anime y los líderes,
+ * alto mando y rivales de cada región (con el nombre del doblaje latino). Su tipo elige parte de su equipo.
+ */
+export const NOMBRES_AVENTURA = [
+  [['Misty', 'f', 'water'], ['Brock', 'm', 'rock'], ['Gary', 'm', 'normal'], ['Ritchie', 'm', 'flying'], ['Erika', 'f', 'grass'],
+    ['Sabrina', 'f', 'psychic'], ['Surge', 'm', 'electric'], ['Koga', 'm', 'poison'], ['Blaine', 'm', 'fire'], ['Giovanni', 'm', 'ground'],
+    ['Bruno', 'm', 'fighting'], ['Lorelei', 'f', 'ice'], ['Agatha', 'f', 'ghost']],
+  [['Falkner', 'm', 'flying'], ['Bugsy', 'm', 'bug'], ['Whitney', 'f', 'normal'], ['Morty', 'm', 'ghost'], ['Chuck', 'm', 'fighting'],
+    ['Jasmine', 'f', 'steel'], ['Pryce', 'm', 'ice'], ['Clair', 'f', 'dragon'], ['Will', 'm', 'psychic'], ['Casey', 'f', 'electric'],
+    ['Harrison', 'm', 'fire'], ['Jackson', 'm', 'grass'], ['Silver', 'm', 'dark']],
+  [['May', 'f', 'normal'], ['Drew', 'm', 'grass'], ['Harley', 'm', 'ghost'], ['Morrison', 'm', 'steel'], ['Roxanne', 'f', 'rock'],
+    ['Brawly', 'm', 'fighting'], ['Wattson', 'm', 'electric'], ['Flannery', 'f', 'fire'], ['Winona', 'f', 'flying'], ['Tate', 'm', 'psychic'],
+    ['Wallace', 'm', 'water'], ['Drake', 'm', 'dragon'], ['Glacia', 'f', 'ice']],
+  [['Paul', 'm', 'dark'], ['Barry', 'm', 'fire'], ['Tobias', 'm', 'dragon'], ['Conway', 'm', 'bug'], ['Kenny', 'm', 'water'],
+    ['Zoey', 'f', 'ice'], ['Dawn', 'f', 'fairy'], ['Roark', 'm', 'rock'], ['Gardenia', 'f', 'grass'], ['Maylene', 'f', 'fighting'],
+    ['Fantina', 'f', 'ghost'], ['Byron', 'm', 'steel'], ['Volkner', 'm', 'electric']],
+  [['Trip', 'm', 'grass'], ['Cameron', 'm', 'fighting'], ['Virgil', 'm', 'normal'], ['Bianca', 'f', 'fire'], ['Georgia', 'f', 'ice'],
+    ['Elesa', 'f', 'electric'], ['Skyla', 'f', 'flying'], ['Clay', 'm', 'ground'], ['Drayden', 'm', 'dragon'], ['Burgh', 'm', 'bug'],
+    ['Roxie', 'f', 'poison'], ['Marlon', 'm', 'water'], ['N', 'm', 'dark']],
+  [['Alain', 'm', 'dragon'], ['Sawyer', 'm', 'grass'], ['Serena', 'f', 'fire'], ['Clemont', 'm', 'electric'], ['Tierno', 'm', 'water'],
+    ['Trevor', 'm', 'normal'], ['Astrid', 'f', 'psychic'], ['Korrina', 'f', 'fighting'], ['Valerie', 'f', 'fairy'], ['Viola', 'f', 'bug'],
+    ['Wulfric', 'm', 'ice'], ['Grant', 'm', 'rock'], ['Wikstrom', 'm', 'steel']],
+  [['Gladion', 'm', 'normal'], ['Hau', 'm', 'grass'], ['Kiawe', 'm', 'fire'], ['Lana', 'f', 'water'], ['Sophocles', 'm', 'electric'],
+    ['Lillie', 'f', 'ice'], ['Guzma', 'm', 'bug'], ['Plumeria', 'f', 'poison'], ['Hala', 'm', 'fighting'], ['Olivia', 'f', 'rock'],
+    ['Nanu', 'm', 'dark'], ['Hapu', 'f', 'ground'], ['Acerola', 'f', 'ghost']],
+  [['Raihan', 'm', 'dragon'], ['Hop', 'm', 'normal'], ['Bede', 'm', 'fairy'], ['Marnie', 'f', 'dark'], ['Goh', 'm', 'fire'],
+    ['Bea', 'f', 'fighting'], ['Allister', 'm', 'ghost'], ['Milo', 'm', 'grass'], ['Nessa', 'f', 'water'], ['Gordie', 'm', 'rock'],
+    ['Melony', 'f', 'ice'], ['Piers', 'm', 'poison'], ['Sonia', 'f', 'electric']],
+  [['Nemona', 'f', 'normal'], ['Arven', 'm', 'dark'], ['Penny', 'f', 'fairy'], ['Liko', 'f', 'grass'], ['Roy', 'm', 'fire'],
+    ['Dot', 'f', 'water'], ['Iono', 'f', 'electric'], ['Grusha', 'm', 'ice'], ['Larry', 'm', 'flying'], ['Rika', 'f', 'ground'],
+    ['Poppy', 'f', 'steel'], ['Hassel', 'm', 'dragon'], ['Tulip', 'f', 'psychic']],
+];
+
+/** Kael, tu rival: aparece en las nueve copas, siempre en tu grupo, y crece contigo. */
+export const RIVAL_AVENTURA = {
+  nombre: 'Kael',
+  aspecto: { gorra: 'reves', colorGorra: '#d8433a', chaqueta: 'deportiva', colorChaqueta: '#2b2b36', pantalon: 'deportivo', colorPantalon: '#3a66d4', piel: '#e9b88f', pelo: '#c9cfdc', peinado: 'pinchos' },
+};
+
+/**
+ * Las leyendas de la campeona de Paldea (la final más dura): salen cinco de estas, de tipos distintos, más
+ * Koraidon o Miraidon (ASES_FINAL). Son las de 570–600 de poder (aves, bestias, gólems, el trío del lago,
+ * espadas, fuerzas de la naturaleza, tapus…): con las de 680 (Mewtwo, Rayquaza, Dialga…) la final era
+ * imposible en miles de combates simulados, incluso con ocho niveles a tu favor.
+ */
+export const LEYENDAS_FINAL = [144, 145, 146, 243, 244, 245, 377, 378, 379, 380, 381, 480, 481, 482, 485, 488, 638, 639, 640, 641, 642, 645, 785, 786, 787, 788];
+export const ASES_FINAL = [1007, 1008];
+
+/** Frases de Kael, de los campeones y de Geeta, la campeona de Paldea (los mismos momentos que FRASES_RIVAL). */
+export const FRASES_AVENTURA = {
+  kael: {
+    inicio: ['¿Tú otra vez? Esta vez no habrá suerte que te salve.', 'Llevo toda la temporada esperando este combate.',
+      'Te sigo desde la primera región. Hoy te adelanto.', 'Que no te tiemble el pulso: yo no pienso fallar.'],
+    sale: ['¡Enséñale quién manda, {p}!', '¡{p}, sin piedad!', '¡Vamos, {p}! Como lo entrenamos.'],
+    pierde: ['Tsk… Bien hecho, {p}. Descansa.', 'Eso ha sido suerte. Y lo sabes.', '¡Vuelve, {p}! Aún no he terminado.'],
+    ultimo: ['Mi último Pokémon… y mi mejor carta.', '¡{p}, esto es lo que estábamos esperando!'],
+    evoluciona: ['¿Lo ves? Esto es entrenar de verdad. ¡Evoluciona, {p}!'],
+    ventaja: ['¡Ja! ¿Eso es todo lo que tienes?', '¡Justo ahí, {p}!'],
+    gana: ['Te dije que te iba a adelantar. Apúntalo.', 'Gano yo. Y no será la última vez.'],
+    pierdeCombate: ['Otra vez tú… Muy bien. Pero esto no ha terminado.', 'Has ganado este. La próxima región será mía.'],
+  },
+  campeon: {
+    inicio: ['Nadie me ha quitado esta copa. Veamos si hoy cambia eso.', 'Has llegado a la final. Ahora demuestra que mereces estar aquí.',
+      'El estadio entero está mirando. Dame lo mejor que tengas.'],
+    sale: ['¡Adelante, {p}! Es nuestra final.', '{p}, que lo vea todo el estadio.'],
+    pierde: ['Un gran golpe… hacía tiempo que nadie llegaba tan lejos.', 'Descansa, {p}. Lo has dado todo.'],
+    ultimo: ['Mi último Pokémon. Nunca ha perdido una final.', 'Todo o nada, {p}.'],
+    evoluciona: ['¡Mira bien: este es el poder de un campeón!'],
+    ventaja: ['Así se gana una final.', '¡Eso es, {p}!'],
+    gana: ['La copa se queda conmigo. Vuelve más fuerte.', 'Buena final. Pero el título sigue siendo mío.'],
+    pierdeCombate: ['Increíble… La copa es tuya. Te la has ganado.', 'Hoy nace un nuevo campeón. Enhorabuena.'],
+  },
+  leyendas: {
+    inicio: ['Ocho copas… y aun así no sabes lo que te espera. Te presento a mis leyendas.',
+      'Los que llegan hasta aquí suelen marcharse en silencio. Sorpréndeme.'],
+    sale: ['Despierta, {p}.', '{p}… enséñale lo que es una leyenda.'],
+    pierde: ['¿Has derribado a {p}? Hacía años que nadie lo conseguía.', 'Interesante. Muy interesante.'],
+    ultimo: ['Mi última leyenda. Aquí termina tu camino.', '{p}, que tiemble el estadio.'],
+    evoluciona: ['¿Creías que habías visto todo su poder? Ni de lejos.'],
+    ventaja: ['Las leyendas no fallan.', 'Es inútil resistirse, ¿no crees?'],
+    gana: ['Ocho copas no bastan para vencer a las leyendas. Vuelve cuando estés a su altura.'],
+    pierdeCombate: ['Imposible… Has vencido a las leyendas. El mundo tiene un nuevo campeón.'],
+  },
 };

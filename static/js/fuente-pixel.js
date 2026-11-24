@@ -1,6 +1,6 @@
 // Fuente de píxeles 5×7 para escribir en el lienzo de la arena (arena-pixel.js): números de daño
 // y letreros. Cada letra son 7 filas de 5 píxeles ('#' = píxel encendido). Solo hay mayúsculas sin
-// tilde, cifras y unos pocos signos: el texto se normaliza antes de dibujarlo.
+// tilde (más la Ñ: «Copa Meseta Añil»), cifras y unos pocos signos: el texto se normaliza antes de dibujarlo.
 
 const GLIFOS = {
   A: '.###. #...# #...# ##### #...# #...# #...#', B: '####. #...# #...# ####. #...# #...# ####.',
@@ -16,6 +16,7 @@ const GLIFOS = {
   U: '#...# #...# #...# #...# #...# #...# .###.', V: '#...# #...# #...# #...# #...# .#.#. ..#..',
   W: '#...# #...# #...# #.#.# #.#.# #.#.# .#.#.', X: '#...# #...# .#.#. ..#.. .#.#. #...# #...#',
   Y: '#...# #...# .#.#. ..#.. ..#.. ..#.. ..#..', Z: '##### ....# ...#. ..#.. .#... #.... #####',
+  Ñ: '.##.# #.##. #...# ##..# #.#.# #..## #...#',
   0: '.###. #...# #..## #.#.# ##..# #...# .###.', 1: '..#.. .##.. ..#.. ..#.. ..#.. ..#.. .###.',
   2: '.###. #...# ....# ...#. ..#.. .#... #####', 3: '####. ....# ....# .###. ....# ....# ####.',
   4: '...#. ..##. .#.#. #..#. ##### ...#. ...#.', 5: '##### #.... ####. ....# ....# #...# .###.',
@@ -30,9 +31,9 @@ const GLIFOS = {
 const PIXELES = Object.fromEntries(Object.entries(GLIFOS).map(([letra, dibujo]) => [letra,
   dibujo.split(' ').flatMap((fila, y) => [...fila].flatMap((c, x) => (c === '#' ? [[x, y]] : [])))]));
 
-/** «¡Ventaja ×½!» → «¡VENTAJA ×1/2!»: mayúsculas, sin tildes y con las fracciones escritas. */
-export const normalizarTexto = texto => texto.replaceAll('½', '1/2').replaceAll('¼', '1/4')
-  .normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+/** «¡Ventaja ×½!» → «¡VENTAJA ×1/2!»: mayúsculas, sin tildes (la Ñ se conserva) y con las fracciones escritas. */
+export const normalizarTexto = texto => texto.replaceAll('½', '1/2').replaceAll('¼', '1/4').replace(/[ñÑ]/g, '')
+  .normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replaceAll('', 'Ñ');
 
 /** Ancho en píxeles de un texto a cierta escala (cada letra ocupa 5 + 1 de separación). */
 export const anchoTexto = (texto, escala = 1) => Math.max(0, normalizarTexto(texto).length * 6 - 1) * escala;

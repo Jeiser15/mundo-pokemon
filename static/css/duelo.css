@@ -104,7 +104,7 @@ body[data-vista="duelo"] footer a { color:#ff8f4d; }
 .duelo-opciones { display:grid; gap:14px; }
 .duelo-opciones-modo { grid-template-columns:repeat(2,minmax(0,1fr)); }
 .duelo-opciones-nivel { grid-template-columns:repeat(3,minmax(0,1fr)); }
-.duelo-opciones-escenario { grid-template-columns:repeat(3,minmax(0,1fr)); } /* 6 escenarios: 3 + 3 */
+.duelo-opciones-escenario { grid-template-columns:repeat(5,minmax(0,1fr)); } /* 10 escenarios: 5 + 5 */
 .duelo-opcion { position:relative; display:flex; flex-direction:column; align-items:flex-start; gap:7px; padding:18px; border:1px solid #ffffff1a; border-radius:16px; background:#ffffff05; color:var(--crema); text-align:left; transition:border-color .2s,background .2s,transform .2s,box-shadow .2s; }
 .duelo-opcion:hover { border-color:#ff8f4d80; transform:translateY(-2px); }
 .duelo-opcion[aria-pressed="true"] { border-color:var(--brasa); background:linear-gradient(150deg,#ff8f4d1f,#ff8f4d06); box-shadow:0 0 0 1px var(--brasa),0 14px 34px #ff8f4d1a; }

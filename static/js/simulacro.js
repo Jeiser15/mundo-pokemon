@@ -17,17 +17,25 @@
 //
 // Modos (MODOS_BATALLA en datos.js): 'equipo' (tu equipo contra otro igual de grande, con cambios) y
 // 'duelo' (tu luchador contra un rival a su altura; empieza solo, sin elegir quién sale).
+// Modo aventura (aventura.js → empezarCombate({ …, aventura })): los dos equipos ya vienen dados (ids), con su
+// nivel; el rival es un entrenador de la copa (Kael y los campeones con sus propias frases), las eliminatorias
+// se juegan en el estadio con el público y la final empieza con el himno. Al terminar se avisa a
+// aventura.alTerminar(resultado) en vez de apuntar el récord del Duelo.
+// Los entrenadores (entrenador.js) salen a los lados de la arena: el tuyo (o uno por defecto si aún no lo has
+// creado) y el rival, que lanzan la Poké Ball.
 // Fases: 'cargando' → 'intro' → 'preparacion' (eliges quién sale) → 'accion' (eliges qué hacer)
 //        → 'animando' (se resuelve el turno) → 'cambio' o 'relevo' (eliges a otro) → … → 'final'.
 
-import { CLIMAS, COLOR_POR_DEFECTO, ENTRENADORES, ESCENARIOS, ESTADOS, FRASES_RIVAL, MODOS_BATALLA, NIVELES_SIMULACRO, rarezaDe, TIPOS } from './datos.js';
+import { ASPECTO_INICIAL, CLIMAS, COLOR_POR_DEFECTO, ENTRENADORES, ESCENARIOS, ESTADIO_AVENTURA, ESTADOS, FRASES_AVENTURA, FRASES_RIVAL, MODOS_BATALLA, NIVELES_SIMULACRO, rarezaDe, TIPOS } from './datos.js';
 import {
   accionObligada, activo, ataquesDe, crearCombate, decidirRival, disponibles, elegirEquipoRival, elegirInicialRival,
   elegirRelevo, ENERGIA_LLENA, enPie, esPropio, evolucionar, ganador, mejorEvolucion, multiplicadorContra, otroLado,
   preseleccionarCandidatos, puedeEvolucionar, resolverTurno,
 } from './combate.js';
 import { ALTO, ANCHO, crearArenaPixel } from './arena-pixel.js';
+import { leerEntrenador } from './entrenador.js';
 import { cargarEspecies } from './especies.js';
+import { aspectoAlAzar, nombreCompleto } from './liga.js';
 import { prepararEvoluciones } from './evoluciones.js';
 import { detallesDe, miLista } from './mi-equipo.js';
 import * as sonido from './sonido.js';
@@ -44,7 +52,8 @@ let modoCombate = 'equipo';
 let escenarioCombate = 'bosque';
 let quierePantallaCompleta = false;
 let climaCombate = null;    // clave de CLIMAS o null (despejado): se sortea en cada combate
-let entrenador = null;      // { nombre, titulo, articulo }: el rival (se mantiene en la revancha)
+let entrenador = null;      // { nombre, titulo, articulo, aspecto }: el rival (se mantiene en la revancha)
+let aventura = null;        // la configuración del combate del modo aventura (o null en el Duelo)
 let version = 0;            // Cada combate nuevo (o abandonado) cambia el número: lo que llegue tarde se descarta.
 let fase = 'inactivo';
 let estado = null;          // combate.js → crearCombate()
@@ -61,14 +70,24 @@ const simbolo = mult => SIMBOLO[mult] ?? '×' + mult;
 const efecto = mult => (mult === 0 ? 'nulo' : mult >= 2 ? 'fuerte' : mult < 1 ? 'debil' : 'neutro');
 const esperar = ms => new Promise(listo => setTimeout(listo, movimientoReducido.matches ? Math.min(ms, 120) : ms));
 const mayuscula = texto => texto.charAt(0).toUpperCase() + texto.slice(1);
-/** Opciones del combate según el modo: en el duelo todos tienen más vida (MODOS_BATALLA.duelo.vida). */
-const opcionesCombate = () => ({ vida: MODOS_BATALLA[modoCombate].vida || 1, clima: climaCombate });
+/** Opciones del combate según el modo: en el duelo todos tienen más vida (MODOS_BATALLA.duelo.vida); en la aventura, niveles. */
+const opcionesCombate = () => ({
+  vida: MODOS_BATALLA[modoCombate].vida || 1,
+  clima: climaCombate,
+  niveles: aventura ? { jugador: aventura.jugador.nivel, rival: aventura.rival.nivel } : null,
+});
+/** Si los botones dicen la eficacia (×2, ×½…): según la dificultad del Duelo o la región de la aventura. */
+const hayAyudas = () => (aventura ? aventura.ayudas : NIVELES_SIMULACRO[estado.nivel].ayudas);
+/** «la Montañera Lucía», «Kael»… (con mayúscula, para empezar una frase). */
+const elRival = () => nombreCompleto(entrenador);
+const ElRival = () => mayuscula(elRival());
 /** Lo que necesita la arena para dibujar a un luchador. */
 const modelo = luchador => (luchador
   ? { clave: luchador.id, animados: luchador.animados, sprite: luchador.sprite, imagen: luchador.imagen, altura: luchador.altura, rareza: rarezaDe(luchador.especie) }
   : null);
 /** Una frase del rival para ese momento, con el nombre de su Pokémon. */
-const frase = (momento, luchador) => alAzar(FRASES_RIVAL[momento]).replaceAll('{p}', luchador ? nombre(luchador) : '');
+const frase = (momento, luchador) => alAzar(FRASES_AVENTURA[aventura?.rival.frases]?.[momento] || FRASES_RIVAL[momento])
+  .replaceAll('{p}', luchador ? nombre(luchador) : '');
 /** «A, B y C». */
 const enumerar = lista => (lista.length > 1 ? `${lista.slice(0, -1).join(', ')} y ${lista.at(-1)}` : lista[0] || '');
 /** Etapas en el marcador y en el registro. */
@@ -130,11 +149,14 @@ function guardarRecord(modoClave, nivelClave, victoria) {
 // --- Ventana emergente ---------------------------------------------------------------------------
 
 /**
- * Empieza un combate con la configuración de duelo.js. Se llama desde un clic: así el navegador
- * permite poner la pantalla completa y que suene el combate.
- * @param {{ modo: string, nivel: string, escenario: string, pantallaCompleta: boolean }} ajustes
+ * Empieza un combate con la configuración de duelo.js (o de aventura.js). Se llama desde un clic: así el
+ * navegador permite poner la pantalla completa y que suene el combate.
+ * @param {{ modo: string, nivel: string, escenario: string, pantallaCompleta: boolean, aventura?: object }} ajustes
+ *   aventura: { copa, ronda (texto), final, estadio, colores, ayudas, alTerminar(resultado),
+ *               jugador: { ids, nivel }, rival: { ids, nivel, nombre, titulo, articulo, aspecto, frases } }
  */
-export function empezarCombate({ modo, nivel, escenario, pantallaCompleta }) {
+export function empezarCombate({ modo, nivel, escenario, pantallaCompleta, aventura: config = null }) {
+  aventura = config;
   modoCombate = modo;
   nivelCombate = nivel;
   escenarioCombate = escenario;
@@ -200,7 +222,7 @@ function abandonar() {
 
 /** Un clima al azar según los pesos del escenario (o null: despejado). */
 function sortearClima() {
-  const pesos = Object.entries(ESCENARIOS[escenarioCombate].climas || { despejado: 1 });
+  const pesos = Object.entries((ESCENARIOS[escenarioCombate] || ESTADIO_AVENTURA).climas || { despejado: 1 });
   let resto = Math.random() * pesos.reduce((suma, [, peso]) => suma + peso, 0);
   for (const [clave, peso] of pesos) { resto -= peso; if (resto <= 0) return CLIMAS[clave] ? clave : null; }
   return null;
@@ -215,7 +237,7 @@ function crearEntrenador(equipo, nivel) {
   const g = genero === 'f' ? 1 : 0;
   const oficio = (ENTRENADORES.oficios[tipo] || ENTRENADORES.oficios.normal)[g];
   const rango = ENTRENADORES.rango[nivel][g];
-  return { nombre: nombrePropio, titulo: `${rango} ${oficio} ${nombrePropio}`.trim(), articulo: g ? 'la' : 'el' };
+  return { nombre: nombrePropio, titulo: `${rango} ${oficio} ${nombrePropio}`.trim(), articulo: g ? 'la' : 'el', aspecto: aspectoAlAzar(Math.random, genero) };
 }
 
 async function empezar(revancha) {
@@ -225,14 +247,21 @@ async function empezar(revancha) {
   fase = 'cargando';
   nodos.arena?.detener();
   abrirVentana();
-  const aviso = crear('p', { clase: 'arena-aviso', texto: revancha ? 'Preparando la revancha…' : 'Buscando un rival a tu altura…' });
+  const aviso = crear('p', { clase: 'arena-aviso', texto: revancha ? 'Preparando la revancha…' : aventura ? 'Los entrenadores saltan al campo…' : 'Buscando un rival a tu altura…' });
   arena.replaceChildren(
     crear('div', { clase: 'arena-barra' },
       crear('span', { clase: 'arena-titulo' }, crear('b', { texto: 'Arena de batalla' })),
       crear('button', { type: 'button', clase: 'arena-salir', texto: '✕ Cerrar', alPulsar: abandonar })),
     aviso);
   try {
-    if (!revancha) {
+    if (aventura) { // los dos equipos ya están decididos (liga.js)
+      const [tuyos, suyos] = await Promise.all([aventura.jugador.ids, aventura.rival.ids].map(ids => Promise.all(ids.map(id => detallesDe(id)))));
+      if (vigente !== version) return;
+      aviso.textContent = 'Preparando las evoluciones…';
+      [equipoJugador, equipoRival] = await Promise.all([tuyos, suyos].map(lista => Promise.all(lista.map(d => prepararEvoluciones(d)))));
+      const { nombre: nombrePropio, titulo, articulo, aspecto } = aventura.rival;
+      entrenador = { nombre: nombrePropio, titulo, articulo, aspecto };
+    } else if (!revancha) {
       const duelo = modoCombate === 'duelo';
       const tuyos = miLista(MODOS_BATALLA[modoCombate].lista);
       if (!tuyos.length) throw new Error(duelo ? 'aún no has elegido a tu luchador.' : 'tu equipo está vacío.');
@@ -282,8 +311,17 @@ async function empezar(revancha) {
 async function presentar(vigente) {
   await nodos.arena.transicion();
   if (vigente !== version) return;
-  sonido.empezarMusica();
-  const desafio = `¡${mayuscula(entrenador.articulo)} ${entrenador.titulo} te desafía!`;
+  if (aventura?.final) { // la final: himno, ovación y el nombre de la copa antes de empezar
+    sonido.himno();
+    sonido.efecto('ovacionGrande');
+    for (const [texto, tono] of [['La final', 'victoria'], [aventura.copa, 'inicio'], [aventura.estadio, 'normal']]) {
+      anunciar(texto, tono);
+      await esperar(1700);
+      if (vigente !== version) return;
+    }
+  } else if (aventura?.enEstadio) sonido.efecto('ovacion');
+  sonido.empezarMusica({ final: Boolean(aventura?.final) });
+  const desafio = `¡${ElRival()} te desafía!`;
   anotar(desafio, 'sistema');
   hablar('rival', `${desafio} ${frase('inicio')}`, 3200);
   await esperar(1400);
@@ -306,6 +344,7 @@ function textoClima(clima) {
 function montarArena() {
   const datosNivel = NIVELES_SIMULACRO[nivelCombate];
   const lienzo = crear('canvas', { clase: 'arena-lienzo', width: ANCHO, height: ALTO, atributos: { role: 'img', 'aria-label': 'Arena de batalla vista desde arriba' } });
+  const tuEntrenador = leerEntrenador();
   const clima = CLIMAS[climaCombate];
   nodos = {
     turno: crear('span', { clase: 'arena-turno', texto: 'Preparación' }),
@@ -314,7 +353,10 @@ function montarArena() {
     mando: crear('div', { clase: 'arena-mando', atributos: { 'aria-live': 'polite' } }),
     registro: crear('ol', { clase: 'arena-registro', atributos: { role: 'log', 'aria-label': 'Registro del combate' } }),
     bocadillo: crear('p', { clase: 'arena-bocadillo', atributos: { 'aria-live': 'polite' } }),
-    arena: crearArenaPixel(lienzo, { escenario: escenarioCombate, clima: climaCombate, sonar: sonido.efecto }),
+    arena: crearArenaPixel(lienzo, {
+      escenario: escenarioCombate, clima: climaCombate, sonar: sonido.efecto, colores: aventura?.colores,
+      entrenadores: { jugador: tuEntrenador?.aspecto || ASPECTO_INICIAL, rival: entrenador.aspecto },
+    }),
     botonPantalla: crear('button', { type: 'button', clase: 'arena-completa', alPulsar: () => ponerPantallaCompleta(!enPantallaCompleta()) }),
     botonEfectos: crear('button', { type: 'button', clase: 'arena-sonido', atributos: { 'aria-label': 'Efectos y gritos' }, alPulsar: () => { sonido.alternar('efectos'); pintarBotonesSonido(); } }),
     botonMusica: crear('button', { type: 'button', clase: 'arena-sonido', texto: '♪', atributos: { 'aria-label': 'Música' }, alPulsar: () => { sonido.alternar('musica'); pintarBotonesSonido(); } }),
@@ -322,29 +364,35 @@ function montarArena() {
   arena.dataset.nivel = nivelCombate;
   arena.dataset.modo = modoCombate;
   arena.dataset.escenario = escenarioCombate;
+  if (aventura) arena.dataset.aventura = aventura.final ? 'final' : 'copa';
+  else delete arena.dataset.aventura;
   delete arena.dataset.resultado;
   arena.replaceChildren(
     crear('div', { clase: 'arena-barra' },
-      crear('span', { clase: 'arena-titulo' },
-        crear('b', { texto: modoCombate === 'duelo' ? 'Uno contra uno' : 'Equipo contra equipo' }),
-        ` · nivel ${datosNivel.nombre} `,
-        crear('span', { clase: 'nivel-estrellas', texto: '✦'.repeat(datosNivel.estrellas) })),
+      aventura
+        ? crear('span', { clase: 'arena-titulo' }, crear('b', { texto: aventura.copa }), ` · ${aventura.ronda}`)
+        : crear('span', { clase: 'arena-titulo' },
+          crear('b', { texto: modoCombate === 'duelo' ? 'Uno contra uno' : 'Equipo contra equipo' }),
+          ` · nivel ${datosNivel.nombre} `,
+          crear('span', { clase: 'nivel-estrellas', texto: '✦'.repeat(datosNivel.estrellas) })),
       ...(clima ? [crear('span', { clase: 'arena-clima', title: textoClima(clima), atributos: { 'data-clima': climaCombate } }, crear('b', { texto: clima.icono }), crear('span', { texto: clima.nombre }))] : []),
       nodos.turno,
       nodos.botonMusica,
       nodos.botonEfectos,
       nodos.botonPantalla,
       crear('button', { type: 'button', clase: 'arena-salir', texto: '✕ Abandonar', alPulsar: abandonar })),
+    // Como en los juegos: los marcadores encima del campo y, debajo, el cuadro de diálogo (el registro: lo último,
+    // grande) y el mando con los movimientos.
     crear('div', { clase: 'arena-cuerpo' },
-      crear('div', { clase: 'arena-principal' },
+      crear('div', { clase: 'arena-lienzo-marco' },
+        lienzo,
         crear('div', { clase: 'arena-marcadores' },
           nodos.jugador.hud,
           crear('span', { clase: 'arena-vs', texto: 'VS', atributos: { 'aria-hidden': 'true' } }),
           nodos.rival.hud),
-        crear('div', { clase: 'arena-lienzo-marco' }, lienzo, nodos.bocadillo)),
-      crear('div', { clase: 'arena-lateral' },
-        nodos.mando,
-        crear('div', { clase: 'arena-registro-marco' }, crear('h4', { texto: 'Registro del combate' }), nodos.registro))),
+        nodos.bocadillo),
+      crear('div', { clase: 'arena-registro-marco' }, crear('h4', { texto: 'Registro del combate' }), nodos.registro),
+      nodos.mando),
   );
 }
 
@@ -352,6 +400,7 @@ function montarArena() {
 function crearLado(lado) {
   const partes = {
     nombre: crear('strong', { clase: 'hud-nombre' }),
+    nivel: crear('span', { clase: 'hud-nivel', hidden: true }),
     estado: crear('span', { clase: 'hud-estado', hidden: true }),
     etapas: crear('span', { clase: 'hud-etapas' }),
     tipos: crear('span', { clase: 'hud-tipos' }),
@@ -361,9 +410,9 @@ function crearLado(lado) {
   };
   partes.hud = crear('div', { clase: 'hud', atributos: { 'data-lado': lado } },
     crear('div', { clase: 'hud-cabecera' },
-      crear('span', { clase: 'hud-etiqueta', texto: lado === 'jugador' ? 'Tú' : entrenador?.titulo || 'Rival' }),
+      crear('span', { clase: 'hud-etiqueta', texto: lado === 'jugador' ? (aventura && leerEntrenador()?.nombre) || 'Tú' : entrenador?.titulo || 'Rival' }),
       partes.fichas),
-    crear('div', { clase: 'hud-identidad' }, crear('span', { clase: 'hud-nombre-linea' }, partes.nombre, partes.estado, partes.etapas), partes.tipos),
+    crear('div', { clase: 'hud-identidad' }, crear('span', { clase: 'hud-nombre-linea' }, partes.nombre, partes.nivel, partes.estado, partes.etapas), partes.tipos),
     crear('span', { clase: 'hud-pv', atributos: { 'aria-hidden': 'true' } }, crear('i', { clase: 'hud-pv-rastro' }), crear('i', { clase: 'hud-pv-actual' })),
     crear('span', { clase: 'hud-pie' }, partes.pvTexto, partes.energia));
   return partes;
@@ -375,6 +424,8 @@ function pintarMarcador(lado) {
   const luchador = activo(estado, lado);
   partes.nombre.classList.toggle('vacio', !luchador);
   partes.nombre.textContent = luchador ? nombre(luchador) : lado === 'jugador' ? '¿Quién sale?' : 'Esperando…';
+  partes.nivel.hidden = !luchador?.nivel;
+  partes.nivel.textContent = luchador?.nivel ? `Nv. ${luchador.nivel}` : '';
   partes.hud.classList.toggle('es-mega', Boolean(luchador?.mega));
   partes.tipos.replaceChildren(...(luchador ? luchador.tipos : []).map(tipo =>
     crear('span', { clase: 'hud-tipo', estilos: { '--color-tipo': colorDe(tipo) } }, crearIcono(TIPOS[tipo]?.icono || ''), TIPOS[tipo]?.nombre || tipo)));
@@ -495,7 +546,7 @@ function pintarMando(espera = 'Resolviendo el turno') {
   if (fase === 'accion') {
     const yo = activo(estado, 'jugador');
     const el = activo(estado, 'rival');
-    const ayudas = NIVELES_SIMULACRO[estado.nivel].ayudas;
+    const ayudas = hayAyudas();
     const libres = disponibles(estado, 'jugador').length;
     const obligada = accionObligada(yo);
     if (obligada) { // tras Hiperrayo (recarga) o con un movimiento de carga a medias: no hay nada que elegir
@@ -521,7 +572,7 @@ function pintarMando(espera = 'Resolviendo el turno') {
           alPulsar: () => { fase = 'cambio'; pintarMando(); },
         }, crear('strong', { texto: 'Cambiar' }), crear('small', { texto: libres ? `${libres} en el banquillo` : 'No queda nadie' }))]),
       ),
-      ...(ayudas ? [] : [crear('p', { clase: 'mando-pista', texto: 'Nivel Maestro: sin ayudas. ¿Recuerdas qué tipos le hacen ×2?' })]),
+      ...(ayudas ? [] : [crear('p', { clase: 'mando-pista', texto: aventura ? 'En esta región no hay ayudas. ¿Recuerdas qué tipos le hacen ×2?' : 'Nivel Maestro: sin ayudas. ¿Recuerdas qué tipos le hacen ×2?' })]),
     );
     return;
   }
@@ -545,7 +596,7 @@ function crearBotonEvolucion(yo, rival) {
 function crearOpcionLuchador(luchador, indice) {
   const fraccion = luchador.pv / luchador.pvMax;
   const rival = activo(estado, 'rival');
-  const pista = rival && NIVELES_SIMULACRO[estado.nivel].ayudas ? ' · ' + resumenContra(luchador, rival) : '';
+  const pista = rival && hayAyudas() ? ' · ' + resumenContra(luchador, rival) : '';
   return crear('button', {
     type: 'button', clase: 'opcion-luchador',
     estilos: { '--pv': fraccion.toFixed(3), '--color-tipo': colorDe(luchador.tipos[0]) },
@@ -637,7 +688,7 @@ async function elegirLuchador(indice) {
     pintarMando('Los Pokémon salen al campo');
     pintarFichas();
     nodos.turno.textContent = 'Turno 1';
-    anotar(`¡Empieza la batalla! Sales con ${nombre(activo(estado, 'jugador'))}; ${entrenador.articulo} ${entrenador.titulo}, con ${nombre(activo(estado, 'rival'))}.`, 'sistema');
+    anotar(`¡Empieza la batalla! Sales con ${nombre(activo(estado, 'jugador'))}; ${elRival()}, con ${nombre(activo(estado, 'rival'))}.`, 'sistema');
     await mostrarLuchador('rival', true);
     if (vigente !== version) return;
     await esperar(250);
@@ -706,7 +757,7 @@ async function jugarTurno(accionJugador) {
 
 async function relevoRival() {
   estado.rival.activo = elegirRelevo(estado, 'rival');
-  anotar(`${mayuscula(entrenador.articulo)} ${entrenador.titulo} saca a ${nombre(activo(estado, 'rival'))}.`, 'rival');
+  anotar(`${ElRival()} saca a ${nombre(activo(estado, 'rival'))}.`, 'rival');
   pintarFichas();
   await mostrarLuchador('rival', true);
   await esperar(250);
@@ -719,7 +770,7 @@ async function reproducir(suceso) {
     case 'cambio':
       anotar(lado === 'jugador'
         ? `Retiras a ${nombre(suceso.sale)} y sale ${nombre(suceso.entra)}.`
-        : `${mayuscula(entrenador.articulo)} ${entrenador.titulo} retira a ${nombre(suceso.sale)} y saca a ${nombre(suceso.entra)}.`, lado);
+        : `${ElRival()} retira a ${nombre(suceso.sale)} y saca a ${nombre(suceso.entra)}.`, lado);
       if (lado === 'jugador') hablar('jugador', `¡Vuelve, ${nombre(suceso.sale)}!`, 1200);
       await nodos.arena.retirar(lado);
       pintarFichas();
@@ -814,6 +865,7 @@ async function reproducir(suceso) {
       pintarFichas();
       nodos.arena.listo(lado, false);
       if (lado === 'rival' && enPie(estado, 'rival') > 0) hablar('rival', frase('pierde', luchador));
+      if (lado === 'rival' && aventura?.enEstadio) sonido.efecto('ovacion');
       await nodos.arena.ko(lado);
       return esperar(300);
     }
@@ -929,13 +981,14 @@ function anotar(texto, lado, extra = '') {
 function terminar(ganadorLado) {
   fase = 'final';
   const victoria = ganadorLado === 'jugador';
-  guardarRecord(modoCombate, estado.nivel, victoria);
+  if (!aventura) guardarRecord(modoCombate, estado.nivel, victoria);
   const turnos = estado.turno - 1;
   const quedan = enPie(estado, ganadorLado);
   const total = estado[ganadorLado].equipo.length;
   const mvp = [...estado.jugador.equipo].sort((a, b) => b.danioHecho - a.danioHecho)[0];
   const evoluciones = estado.jugador.equipo.reduce((suma, l) => suma + l.evoluciono, 0);
   sonido.fanfarria(victoria);
+  if (victoria && aventura?.enEstadio) sonido.efecto('ovacionGrande');
   nodos.arena.celebrar(ganadorLado);
   anunciar(victoria ? '¡Victoria!' : 'Derrota', victoria ? 'victoria' : 'ko');
   hablar('rival', frase(victoria ? 'pierdeCombate' : 'gana'), 4000);
@@ -948,11 +1001,21 @@ function terminar(ganadorLado) {
     modoCombate === 'duelo' ? 'uno contra uno' : `${victoria ? 'te quedaron' : 'al rival le quedaron'} ${quedan} de ${total} en pie`,
     ...(evoluciones ? [`${evoluciones} ${evoluciones === 1 ? 'evolución' : 'evoluciones'}`] : []),
     ...(climaCombate ? [`${CLIMAS[climaCombate].icono} ${CLIMAS[climaCombate].nombre.toLowerCase()}`] : []),
-    `nivel ${NIVELES_SIMULACRO[estado.nivel].nombre}`,
+    aventura ? `Nv. ${aventura.jugador.nivel} contra Nv. ${aventura.rival.nivel}` : `nivel ${NIVELES_SIMULACRO[estado.nivel].nombre}`,
   ].join(' · ');
+  if (aventura) { // la liga apunta el resultado ya (aunque luego cierres con ✕)
+    aventura.alTerminar?.({
+      victoria,
+      kosHechos: estado.rival.equipo.length - enPie(estado, 'rival'),
+      kosRecibidos: estado.jugador.equipo.length - enPie(estado, 'jugador'),
+      turnos,
+      mvp: { id: mvp.id, nombre: mvp.nombre, danio: mvp.danioHecho, kos: mvp.kos },
+      evoluciones,
+    });
+  }
   nodos.mando.replaceChildren(crear('div', { clase: 'arena-final', atributos: { 'data-resultado': victoria ? 'victoria' : 'derrota' } },
     crear('span', { clase: 'final-sello', texto: victoria ? '✦ Victoria ✦' : 'Derrota' }),
-    crear('h3', { texto: victoria ? `¡Venciste a ${entrenador.articulo} ${entrenador.titulo}!` : `${mayuscula(entrenador.articulo)} ${entrenador.titulo} se impuso esta vez` }),
+    crear('h3', { texto: victoria ? `¡Venciste a ${elRival()}!` : `${ElRival()} se impuso esta vez` }),
     crear('p', { texto: resumen }),
     crear('div', { clase: 'final-mvp' },
       crear('img', { src: mvp.sprite || mvp.imagen, alt: '' }),
@@ -961,12 +1024,15 @@ function terminar(ganadorLado) {
         crear('strong', { texto: nombre(mvp) }),
         crear('span', { texto: `${mvp.danioHecho} de daño · ${mvp.kos} K.O.` }))),
     ...(victoria ? [] : [crear('p', { clase: 'final-consejo', texto: consejoFinal() })]),
-    crear('div', { clase: 'final-botones' },
-      crear('button', { type: 'button', clase: 'final-principal', texto: 'Revancha', alPulsar: () => empezar(true) }),
-      crear('button', { type: 'button', texto: 'Nuevo rival', alPulsar: () => empezar(false) }),
-      crear('button', { type: 'button', texto: 'Cerrar', alPulsar: abandonar })),
+    crear('div', { clase: 'final-botones' }, ...(aventura
+      ? [crear('button', { type: 'button', clase: 'final-principal', texto: 'Continuar ▸', alPulsar: abandonar })]
+      : [
+        crear('button', { type: 'button', clase: 'final-principal', texto: 'Revancha', alPulsar: () => empezar(true) }),
+        crear('button', { type: 'button', texto: 'Nuevo rival', alPulsar: () => empezar(false) }),
+        crear('button', { type: 'button', texto: 'Cerrar', alPulsar: abandonar }),
+      ])),
   ));
-  document.dispatchEvent(new CustomEvent('batalla-terminada')); // duelo.js actualiza el récord
+  document.dispatchEvent(new CustomEvent('batalla-terminada', { detail: { aventura: Boolean(aventura) } })); // duelo.js actualiza el récord
 }
 
 /** Tras una derrota: con qué te hizo más daño el rival. */

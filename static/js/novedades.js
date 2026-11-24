@@ -1,5 +1,5 @@
 // Inicio, «Ahora también puedes combatir»: presenta el Duelo Pokémon (lo nuevo, tu equipo, tu récord y las
-// seis arenas) con un combate de muestra EN VIVO: dos Pokémon se atacan con sus movimientos reales
+// diez arenas) con un combate de muestra EN VIVO: dos Pokémon se atacan con sus movimientos reales
 // (combate.js) en la arena pixelada (arena-pixel.js), y en cada ronda cambian la pareja y el escenario.
 //
 // La muestra no descarga nada hasta que la sección aparece en pantalla, y solo se mueve mientras se ve
@@ -29,7 +29,7 @@ const ICONOS = {
   rivales: 'M8 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6 M2 20c0-3 3-5 6-5s6 2 6 5 M17 11a2.5 2.5 0 1 0 0-5 M16 15c3 0 6 2 6 5',
   modos: 'M4 4h7v7H4z M13 13h7v7h-7z M13 4h7v7h-7z M4 13h7v7H4z',
 };
-// Las seis arenas no van en la lista: se ven debajo, y pulsar una abre el Duelo con ella.
+// Las arenas no van en la lista: se ven debajo, y pulsar una abre el Duelo con ella.
 const NOVEDADES = [
   ['movimientos', '4 movimientos reales', 'Los que aprende en los juegos: 479 distintos, cada uno con su animación.'],
   ['evolucion', 'Evoluciona en plena batalla', 'Llena la barra de energía y evoluciona sin perder el turno… o megaevoluciona.'],
@@ -125,7 +125,7 @@ function pintarNovedades() {
     crear('li', {}, crear('span', { clase: 'novedad-icono' }, crearIcono(ICONOS[icono])), crear('div', {}, crear('strong', { texto: titulo }), crear('p', { texto })))));
 }
 
-/** Las seis arenas: al pulsar una, abre el Duelo con ella elegida. */
+/** Las arenas (ESCENARIOS): al pulsar una, abre el Duelo con ella elegida. */
 function pintarArenas() {
   seccion.querySelector('#novedades-arenas').replaceChildren(...Object.entries(ESCENARIOS).map(([clave, datos]) => {
     const vista = dibujarVistaPrevia(clave);

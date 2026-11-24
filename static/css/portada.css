@@ -120,6 +120,25 @@ a.camino:hover { transform:translateY(-5px); border-color:color-mix(in srgb,var(
 .camino-flecha { position:absolute; top:22px; right:22px; display:grid; place-items:center; width:36px; height:36px; border:1px solid #ffffff26; border-radius:50%; color:var(--camino); transition:background .25s,color .25s,border-color .25s; }
 a.camino:hover .camino-flecha { border-color:var(--camino); background:var(--camino); color:#0b1510; }
 
+/* Modo aventura: a lo ancho, una noche de estadio con los colores de las nueve regiones, las nueve estrellas
+   (las copas; aventura.js las enciende) y tu entrenador en pixel art bajo un foco. */
+.camino-aventura { --camino:#e3e9f3; grid-column:1 / -1; min-height:300px; padding-right:min(42%,520px); border-color:#c8d2e630;
+  background:radial-gradient(40% 70% at 82% 100%,#f0604a2e,transparent 70%),radial-gradient(40% 70% at 96% 20%,#4f86e030,transparent 70%),radial-gradient(50% 60% at 62% 0,#9b4dff26,transparent 70%),linear-gradient(160deg,#0b1022e6,#070a14e6 70%); }
+.camino-aventura strong { max-width:none; font-size:clamp(34px,3.6vw,52px); }
+.camino-aventura strong em { background-image:linear-gradient(90deg,#f6f8fc,#c8d2e6 45%,#f0a8c8); }
+.camino-aventura p { max-width:52ch; }
+.inicio-aventura-estrellas { display:flex; gap:7px; margin-top:6px; }
+.inicio-aventura-estrellas i { width:12px; height:12px; border:1px solid color-mix(in srgb,var(--color) 70%,transparent); border-radius:50%; background:#0b1022; }
+.inicio-aventura-estrellas i.ganada { background:var(--color); box-shadow:0 0 10px var(--color); }
+.inicio-aventura-estrellas i.actual { animation:latido-estrella 2s ease-in-out infinite; }
+.inicio-aventura-escena { position:absolute; right:0; bottom:0; z-index:-1; width:min(42%,520px); height:100%; }
+.inicio-aventura-foco { position:absolute; left:50%; top:-10%; width:70%; height:110%; translate:-50% 0; background:linear-gradient(#f6f8fc33,transparent 85%); clip-path:polygon(42% 0,58% 0,100% 100%,0 100%); filter:blur(5px); }
+.inicio-aventura-escena::after { content:''; position:absolute; left:50%; bottom:22px; width:46%; height:26px; translate:-50% 0; border-radius:50%; background:radial-gradient(ellipse,#3a4466,#141a2e 70%); box-shadow:0 0 30px #c8d2e633; }
+.inicio-aventura-entrenador { position:absolute; left:50%; bottom:32px; z-index:1; translate:-50% 0; }
+.inicio-aventura-retrato { display:block; width:auto; height:216px; image-rendering:pixelated; filter:drop-shadow(0 10px 10px #000b); transition:transform .4s ease; }
+a.camino-aventura:hover .inicio-aventura-retrato { transform:translateY(-6px); }
+@keyframes latido-estrella { 0%,100% { box-shadow:0 0 0 0 color-mix(in srgb,var(--color) 60%,transparent); } 50% { box-shadow:0 0 0 5px transparent; } }
+
 /* Legendarios: un trozo de su cielo nocturno, con el anillo dorado del altar y tres leyendas */
 .camino-leyendas { --camino:#e8c873; grid-column:span 2; grid-row:span 2; min-height:560px; border-color:#e8c87330;
   background:radial-gradient(60% 55% at 70% 78%,#e8c87326,transparent 70%),radial-gradient(80% 70% at 85% 100%,#3d3f8655,transparent 70%),linear-gradient(160deg,#0d1424d9,#090e1ad9 60%,#0a0e18e6); }
@@ -225,6 +244,8 @@ a.camino-quien:hover .camino-silueta { filter:drop-shadow(0 12px 18px #000a); tr
 /* --- Tableta ------------------------------------------------------------------------------------- */
 @media (max-width:1100px) {
   .caminos-rejilla { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .camino-aventura { padding-right:min(40%,320px); }
+  .inicio-aventura-retrato { height:144px; }
   .camino-leyendas { grid-row:auto; min-height:440px; }
   .camino-tipos-lista { grid-template-columns:repeat(6,minmax(0,1fr)); }
   /* Las regiones pasan a tres filas: la ruta continua ya no tiene sentido. */
@@ -259,6 +280,9 @@ a.camino-quien:hover .camino-silueta { filter:drop-shadow(0 12px 18px #000a); tr
   .camino-leyendas, .camino-tipos { grid-column:auto; }
   .camino-leyendas { min-height:430px; }
   .camino { padding:24px 22px; }
+  /* Aventura: el entrenador baja bajo el texto, con su foco. */
+  .inicio-aventura-escena { position:relative; right:auto; bottom:auto; z-index:0; width:100%; height:210px; margin:4px 0 -24px; }
+  .inicio-aventura-retrato { height:144px; }
   .camino-tipos-cabecera { flex-wrap:wrap; }
   .camino-tipos-lista { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
   .camino-tipo { flex-direction:row; justify-content:flex-start; gap:7px; padding:7px 6px; border-radius:99px; }
@@ -277,6 +301,7 @@ a.camino-quien:hover .camino-silueta { filter:drop-shadow(0 12px 18px #000a); tr
 
 @media (prefers-reduced-motion:reduce) {
   .hero, .del-dia, .hero-cambia { transition:none; }
+  .inicio-aventura-estrellas i.actual { animation:none; }
   .hero-halo, .hero-runas, .hero-orbita, .hero-orbita::before, .hero-suelo,
   .hero-altar img, .hero-tarjeta, .hero-cinta-pista, .camino-estrellas, .leyendas-altar-runas, .del-dia-halo::before,
   .del-dia-arte img, .esqueleto, .linea-esqueleto { animation:none !important; }

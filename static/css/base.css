@@ -16,10 +16,14 @@
   src:url('../fonts/playfair-cursiva.woff2') format('woff2'); }
 @font-face { font-family:'Manrope'; font-style:normal; font-weight:300 800; font-display:swap;
   src:url('../fonts/manrope.woff2') format('woff2'); }
+/* Pixelify Sans (OFL): solo el modo aventura la usa, para que se sienta como un videojuego. */
+@font-face { font-family:'Pixelify Sans'; font-style:normal; font-weight:400 700; font-display:swap;
+  src:url('../fonts/pixelify.woff2') format('woff2'); }
 
 :root {
   --serif: 'Playfair', Georgia, 'Times New Roman', serif;
   --sans: 'Manrope', system-ui, 'Segoe UI', Arial, sans-serif;
+  --pixel: 'Pixelify Sans', 'Manrope', system-ui, monospace;
   --dark: #143e2d;    /* botones oscuros y bordes del logo */
   --forest: #153f2d;  /* texto general */
   --green: #287a4b;   /* acentos: titulillos y enlaces */
@@ -155,16 +159,19 @@ body[data-mundo] .volver-inicio span { color:#8fa58c; }
 @keyframes anillo { to { transform:rotate(360deg); } }
 @keyframes esporas { to { transform:translateY(-520px); } }
 
-/* --- Tableta: con seis enlaces, el lema del logo no cabe junto al menú ----- */
-@media (max-width:1180px) {
+/* El enlace de la Aventura lleva una estrella delante: es la sección estrella. */
+nav a.nav-aventura::before { content:'✦'; margin-right:5px; font-size:.78em; opacity:.85; }
+
+/* --- Tableta: con siete enlaces, el lema del logo no cabe junto al menú ---- */
+@media (max-width:1320px) {
   .brand-note { display:none; }
 }
-@media (max-width:1000px) {
+@media (max-width:1080px) {
   nav { gap:2px; font-size:13.5px; }
-  nav a { padding:10px 9px; }
+  nav a { padding:10px 8px; }
 }
 /* El menú pasa a su propia línea debajo del logo («Mundo Pokémon» ya no cabe a su lado). */
-@media (max-width:880px) {
+@media (max-width:960px) {
   .nav { flex-wrap:wrap; min-height:68px; padding:12px 0; }
   nav { flex-wrap:wrap; gap:0; font-size:12px; }
   nav a { padding:8px 7px; }
@@ -177,9 +184,9 @@ body[data-mundo] .volver-inicio span { color:#8fa58c; }
   .volver-inicio { padding-top:18px; }
   .volver-inicio span { font-size:8px; }
 }
-/* Teléfono: los seis enlaces no caben en una fila; en dos filas de tres quedan ordenados. */
+/* Teléfono: los siete enlaces no caben en una fila; en dos filas (4 + 3) quedan ordenados. */
 @media (max-width:520px) {
-  nav { display:grid; grid-template-columns:repeat(3,auto); justify-content:space-between; width:100%; }
+  nav { display:grid; grid-template-columns:repeat(4,auto); justify-content:space-between; width:100%; }
   nav a { text-align:center; }
 }
 

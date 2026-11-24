@@ -43,7 +43,7 @@
 /* --- Las seis arenas ------------------------------------------------------------------------- */
 .novedades-arenas-cabecera { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 16px; margin:60px 0 16px; }
 .novedades-arenas-cabecera p { margin:0; color:var(--apagado); font-size:13px; }
-.novedades-arenas { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:12px; }
+.novedades-arenas { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:12px; } /* 10 arenas: 5 + 5 */
 .novedades-arena { display:flex; flex-direction:column; gap:9px; padding:7px 7px 12px; border:1px solid #ffffff14; border-radius:16px; background:linear-gradient(150deg,#ffffff0e,#ffffff02); color:var(--crema); font-family:var(--serif); font-size:14px; text-align:left; transition:transform .25s,border-color .25s,box-shadow .25s; }
 .novedades-arena-vista { display:block; width:100%; height:auto; aspect-ratio:16 / 9; border-radius:10px; image-rendering:pixelated; }
 .novedades-arena span { padding:0 5px; }

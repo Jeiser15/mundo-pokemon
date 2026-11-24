@@ -44,11 +44,11 @@ herramientas/
   generar_formas.py       Genera static/js/datos-formas.js desde PokéAPI (solo si salen especies o formas nuevas)
   generar_evoluciones.py  Genera static/js/datos-evoluciones.js desde PokéAPI (solo si salen especies o cambian
                           sus evoluciones)
-index.html              Toda la página: 6 vistas (el Inicio es un <div id="inicio"> con 5 partes; las demás, <section>)
+index.html              Toda la página: 7 vistas (el Inicio es un <div id="inicio"> con 5 partes; las demás, <section>)
                         + 2 ventanas (<dialog>): la ficha y la batalla. <body data-vista="inicio"> de entrada
 static/
   css/                  Una hoja por parte de la página (orden de carga en index.html)
-    base.css            Tipografía (@font-face, --serif y --sans), variables, reinicio, botones, cabecera, pie,
+    base.css            Tipografía (@font-face, --serif, --sans y --pixel), variables, reinicio, botones, cabecera, pie,
                         keyframes compartidos y «MUNDO»: el fondo
                         continuo (.mundo-fondo), cabecera y pie transparentes y piezas comunes (.mundo, .mundo-sello,
                         .mundo-cabecera) de las vistas con <body data-mundo> (Inicio y Categorías)
@@ -72,13 +72,26 @@ static/
                         escenario inclinado con tus Pokémon de pie), récord, pasos I·II·III y paneles de vidrio
     equipo.css          Duelo Pokémon, paso 2 (oscuro): cinturón de 6 huecos (o uno grande:
                         [data-lista="luchador"]), buscador y análisis (plegado en <details>). Usa los colores de .duelo
-    simulacro.css       Ventana del combate en estilo pixel: marcadores, lienzo, mando (movimientos del color de
-                        su tipo) y registro; .en-pantalla-completa (solo la arena, con marcadores y mando encima)
+    simulacro.css       Ventana del combate en estilo de juego de rol (letra pixel, paneles de pizarra con borde
+                        claro): los marcadores ENCIMA del campo y, debajo, el cuadro de diálogo (el registro: lo
+                        último, grande) y el mando (movimientos del color de su tipo, de dos en dos). La ventana es
+                        tan ancha como la arena (sin franjas negras). Las reglas nuevas van en «ESTILO DE JUEGO DE
+                        ROL», después de las antiguas, y las corrigen. .en-pantalla-completa: solo la arena
     quien.css           Vista ¿Quién es ese Pokémon? («el teatro de las sombras», violeta noche y lavanda, con cabecera
                         y pie a juego): escenario a contraluz con la silueta, anillo del contrarreloj, revelación sobre el
                         hábitat, panel de vidrio (respuestas, pistas selladas, revelación), rastro, cifras y ajustes
     novedades.css       Inicio, «Ahora también puedes combatir» (acentos brasa, sin fondo propio): muestra en vivo,
-                        lo nuevo, tu equipo con tu récord y las 6 arenas
+                        lo nuevo, tu equipo con tu récord y las 10 arenas (5 + 5)
+    aventura.css        Vista Modo aventura («Nueve copas, una leyenda»), A PROPÓSITO DISTINTA del resto (lo pidió
+                        el usuario: «que se sienta diferente, llena de vida»): aire de videojuego de rol. Arriba el
+                        mapa (.av-mapa: lienzo, botones de las islas, título, tarjeta y ficha de la isla encima; en
+                        ≤1100 px van arriba y abajo del mapa, y en el móvil el mapa se desliza a lo ancho). Debajo,
+                        ventanas de juego (.av-ventana/.av-pantalla: azul noche, borde crema y otro oscuro), letra
+                        pixel (var(--pixel)), botones dorados que se hunden (.av-boton), diálogos letra a letra
+                        (.av-dialogo), la previa sobre la arena del partido (.av-previa), pestañas, tabla, cuadro,
+                        creador con miniaturas de cada pieza, campeón con confeti, salón de la fama y el trofeo
+                        dibujado con CSS (.trofeo). Colores de la región: --region-a/--region-b (@property). Clases
+                        con prefijo av-. La tarjeta del Inicio (.camino-aventura) está en portada.css
   js/                   Módulos ES (<script type="module">), uno por responsabilidad
     main.js             Arranca todo en orden
     datos.js            TIPOS (nombre, color, escenario, icono, efecto de su ataque), TABLA_TIPOS,
@@ -87,7 +100,13 @@ static/
                         MOVIMIENTOS_RESERVA (para quien casi no aprende ataques), PALETAS_ATAQUE, ESCENARIOS (con sus
                         climas), CLIMAS, ESTADOS, ENTRENADORES, FRASES_RIVAL, EVOLUCIONES_REGIONALES
                         y, para ¿Quién es?, MODOS_QUIEN, PISTAS_QUIEN, COLORES_ESPECIE y NOMBRES_ESPANOL (los 38
-                        nombres que no son su clave de PokéAPI con mayúsculas: Nidoran♀, Mr. Mime, Código Cero, los Paradoja…)
+                        nombres que no son su clave de PokéAPI con mayúsculas: Nidoran♀, Mr. Mime, Código Cero, los Paradoja…).
+                        Modo aventura: ASPECTO_ENTRENADOR (gorras, chaquetas, pantalones, peinados, colores, pieles, pelos) y
+                        ASPECTO_INICIAL, REGIONES_AVENTURA (copa, estadio, lema, colores, nivel, arenas y campeón con
+                        su as y su aspecto, y paisaje: cómo se pinta su isla en el mapa), NOMBRES_AVENTURA (13 por región:
+                        los del anime y los líderes de cada región, [nombre, género, tipo favorito]), RIVAL_AVENTURA
+                        (Kael), LEYENDAS_FINAL + ASES_FINAL (la final de Paldea), FRASES_AVENTURA (kael, campeon,
+                        leyendas) y ESTADIO_AVENTURA (va aparte de ESCENARIOS: no sale en el Duelo ni en el Inicio)
     datos-movimientos.js GENERADO (no editar): MOVIMIENTOS_DATOS, los 479 movimientos de daño de PokéAPI con
                         nombre en español, tipo, potencia, precisión, clase, prioridad y efectos
     datos-formas.js     GENERADO (no editar): FORMAS, las 363 claves de PokéAPI que no son la de su especie
@@ -105,7 +124,7 @@ static/
     guia.js             Inicio: caminos (18 tipos → Pokédex filtrada, estante animado, silueta de ¿Quién es?),
                         Pokémon del día (cambia cada día; su tipo tiñe la luz) y las 9 regiones
     novedades.js        Inicio, Duelo en vivo: combate de muestra EN VIVO (arena-pixel + combate), lo nuevo, tu
-                        equipo y las 6 arenas (pulsar una abre el Duelo con ella: elegirEscenario de duelo.js)
+                        equipo y las 10 arenas (pulsar una abre el Duelo con ella: elegirEscenario de duelo.js)
     catalogo.js         Pokédex, el archivo (la única vista de búsqueda): buscador, filtros por región y tipo, orden
                         y tandas de 24 que se cargan solas al bajar (o con «Ver más»). Pulsar una tarjeta la ESCANEA
                         (escaner.js). Exporta mostrarGeneracion(), mostrarTipo() y buscarDesdePortada() para que
@@ -126,8 +145,8 @@ static/
                         nombre en español, sin tildes ni signos: «Mr. Mime», «Farfetch'd», «Nidoran♀»),
                         nombreTitulo(clave): el nombre oficial en español de una especie o forma ('mr-mime' → «Mr. Mime»,
                         'giratina-altered' → «Giratina», 'charizard-mega-x' → «Mega-Charizard X») y nombreForma()...
-    vistas.js           Navegación por #hash (inicio, categorias, legendarios, catalogo, duelo, quien;
-                        alias: #explorar → catalogo, #equipo y #batalla → duelo). Pone <body data-vista> y, en
+    vistas.js           Navegación por #hash (inicio, aventura, categorias, legendarios, catalogo, duelo, quien;
+                        alias: #explorar → catalogo, #equipo y #batalla → duelo, #copa y #liga → aventura). Pone <body data-vista> y, en
                         las vistas de VISTAS_DEL_MUNDO (inicio, categorias), <body data-mundo>. Sube arriba solo si
                         cambia de vista o se pulsa el menú (cerrar una ficha con «Atrás» no mueve la página)
     habitats.js         crearHabitat({ tipo, rareza, semilla }): la escena animada (12 partículas con reparto fijo)
@@ -152,7 +171,9 @@ static/
                         (siguiente fase de su cadena; si es la última, megaevolución o forma primigenia;
                         las megas no traen movimientos en PokéAPI y heredan los de su forma normal)
     sonido.js           Web Audio: gritos (.ogg de PokéAPI), efectos sintetizados por tipo, música de batalla
-                        original generada nota a nota y fanfarria; interruptores guardados (pokedex.sonido)
+                        original generada nota a nota (CANCIONES: combate y, en las finales de la aventura, final)
+                        y fanfarria; himno() (el de la copa, original) y efectos ovacion/ovacionGrande (el público
+                        del estadio); interruptores guardados (pokedex.sonido)
     duelo.js            Duelo Pokémon: la maqueta de la arena (pintarMaqueta), el récord total (pintarCifras), los
                         tres pasos (configura → elige tus Pokémon o tu luchador → ¡a combatir!), la configuración
                         (modo, dificultad, escenario; se recuerda), la lista del modo (usarLista) y el resumen
@@ -162,29 +183,71 @@ static/
                         tipos que golpea ×2, estadísticas medias, consejos)
     combate.js          Batalla: REGLAS y estrategia del rival (lógica pura, sin DOM; azar inyectable).
                         movimientosDe() elige 4 movimientos reales para cada Pokémon; crearAtaque(clave).
-                        Precisión, prioridad, efectos, etapas, clima, estados, energía y evolución.
-                        resolverTurno() devuelve sucesos que simulacro.js anima
-    simulacro.js        El combate: empezarCombate({ modo, nivel, escenario, pantallaCompleta }) abre la ventana
-                        (#batalla-ventana); presentación (rival con nombre, clima), preparación (en el uno contra
-                        uno empieza solo), turnos animados, evolución, relevos, final, récord (leerRecord),
-                        bocadillos de diálogo, sonido y pantalla completa (sobre #simulacro)
-    escenarios.js       Las 6 arenas en pixel art (bosque, volcan, playa, cueva, nieve, ruinas): dibujarFondo()
-                        (una vez, con semilla) y crearAmbiente() (lo que se mueve). Constantes del mundo
-                        (ANCHO, ALTO, SUELO, CASA)
+                        Precisión, prioridad, efectos, etapas, clima, estados, energía, evolución y NIVELES (solo
+                        en la aventura: factorNivel, FACTOR_NIVEL 1,03 por nivel de diferencia en el daño; en el
+                        Duelo nadie lleva nivel). resolverTurno() devuelve sucesos que simulacro.js anima
+    simulacro.js        El combate: empezarCombate({ modo, nivel, escenario, pantallaCompleta, aventura? }) abre la
+                        ventana (#batalla-ventana); presentación (rival con nombre, clima), preparación (en el uno
+                        contra uno empieza solo), turnos animados, evolución, relevos, final, récord (leerRecord),
+                        bocadillos de diálogo, sonido y pantalla completa (sobre #simulacro). Con `aventura`: equipos
+                        fijos con nivel («Nv. 24» en el marcador), rival de la copa con su aspecto y sus frases,
+                        ovaciones en el estadio, himno y letreros en la final, y alTerminar(resultado) en vez del
+                        récord del Duelo («Continuar ▸»). Los entrenadores salen también en el Duelo
+    escenarios.js       Las 10 arenas en pixel art (bosque, volcan, playa, cueva, nieve, ruinas, jardin, desierto,
+                        ciudad, cielo) y el ESTADIO de la aventura (gradas con los colores de la región, focos,
+                        emblema de las nueve estrellas): dibujarFondo(escenario, { colores }) (una vez, con semilla)
+                        y crearAmbiente() (lo que se mueve). Constantes del mundo (ANCHO, ALTO, SUELO, CASA) y
+                        `pixel` (pinceles, ruido, tramado: los usa también el mapa de la aventura)
     arena-pixel.js      Arena en pixel art vista desde arriba (mundo 480×270, lienzo a resolución real): el
                         escenario de escenarios.js (dibujarVistaPrevia para las tarjetas), sprites
-                        animados (GIF: ImageDecoder o el lector propio leerGif), cámara, partículas, una
-                        animación para cada movimiento (familias + ANIMACIONES, ver «Animaciones»), el rótulo
+                        animados (GIF: ImageDecoder o el lector propio leerGif), cámara, partículas, TODOS los
+                        movimientos con los sprites GBA de sprites-ataques.js (ataqueGBA, ver «Ataques GBA»; las
+                        familias de antes, ANIMACIONES, quedan como animacionClasica, sin usar), el rótulo
                         con el nombre del movimiento, Poké Ball, evolución (silueta que alterna), clima,
-                        estados, transición y confeti.
+                        estados, transición y confeti. Con `entrenadores` ({ jugador, rival }: su aspecto), los
+                        dos entrenadores a los lados: entran caminando, lanzan la Poké Ball desde la mano, señalan
+                        al atacar, recogen con el rayo rojo, bajan la cabeza con cada K.O. y celebran.
                         crearModelo() (sin caché, dice de qué archivo salió) lo usan también las pruebas
-    fuente-pixel.js     Fuente de píxeles 5×7 para los números de daño y los letreros del lienzo
+    sprites-ataques.js  Los ataques en pixel art de la era GBA: hojaDeAtaque(tipo) → tira de 5 fotogramas de 48×48
+                        (carga, proyectil, impacto máximo, expansión, dispersión) pintada píxel a píxel con un campo
+                        de intensidad (bolas, llamas, rayos, hojas, cristales, rocas, estrellas, anillos, medias
+                        lunas) cuantizado a la paleta del tipo (PALETAS_GBA) y con contorno grueso. coloresDe(tipo)
+    fuente-pixel.js     Fuente de píxeles 5×7 para los números de daño y los letreros del lienzo (con Ñ)
+    entrenador.js       Entrenadores en pixel art (lienzo 48×72, de tres cuartos, ~4,5 cabezas, en contrapposto, con
+                        el estilo de los de HG/SS; pintados a mano con MAPAS de letras por capas: pelo de atrás →
+                        brazo de atrás → piernas → falda → torso → cabeza → gorra → brazo de delante). Color con
+                        rampas de 4 tonos con cambio de tono (rampa(): luces hacia el amarillo, sombras hacia el
+                        violeta; la piel, hacia el rosa) y contorno selectivo por capa (contorno(): la sombra profunda
+                        del vecino, más clara arriba y a la izquierda, casi #181420 abajo). vestir() convierte las
+                        piernas según el pantalón (vaquero, corto, falda, deportivo). lienzoEntrenador
+                        (aspecto, pose, paso) con poses quieto, paso, lanza1, lanza2, ordena, celebra y triste; MANO
+                        (de dónde sale la Poké Ball); retratoEntrenador()/pintarRetrato() para la página;
+                        normalizarAspecto(); tu entrenador guardado (leerEntrenador, guardarEntrenador → evento
+                        «entrenador-cambiado»)
+    liga.js             Modo aventura, LÓGICA PURA (como combate.js; azar con semilla, azarDe): la copa de cada
+                        región (crearTemporada, sortearEquipo, sortearGrupos, registrarCombate → cerrarRonda,
+                        clasificacion, ganadorCopa), la CURVA de dificultad (dificultad(region, ronda)), los equipos
+                        rivales (planEquipoRival sin descargar + completarEquipoRival con los detalles) y tu nivel
+                        (nivelJugador). La temporada es un objeto plano que se guarda tal cual
+    mapa-aventura.js    Modo aventura, el MAPA: un archipiélago en pixel art (mundo 960×400) con una isla por región
+                        (su paisaje, su estadio y una bandera si ganaste su copa; las bloqueadas, apagadas), la ruta
+                        entre islas y tu entrenador en la isla en curso. Se pinta una vez por estado y se anima
+                        (destellos y espuma, nubes con sombra, un barco, gaviotas, banderas, fuegos al ganar).
+                        crearMapa(lienzo) → pintar(), viajar(desde, hasta) (camina por la ruta), celebrar(), pausar()
+    aventura.js         Modo aventura, la vista: el mapa con un botón por isla (su ficha: copa, campeón, estado), tu
+                        tarjeta de entrenador, y el panel con UNA pantalla cada vez: creador (pestañas con miniaturas
+                        de cada pieza), llegada a la región (cartel con su nombre enorme y el campeón con su as),
+                        sorteo de tu equipo, sorteo de grupos bola a bola, la copa (previa sobre la arena del
+                        partido, con diálogo letra a letra y siluetas; debajo, pestañas Grupo · Cuadro · Tu equipo),
+                        campeón (y el viaje por el mapa a la siguiente isla), eliminado y leyenda; salón de la fama y
+                        la tarjeta del Inicio (#inicio-aventura). Lanza los combates con empezarCombate
     quien.js            ¿Quién es ese Pokémon?: modos, regiones, pistas a elegir, contrarreloj, revelación (hábitat,
                         grito, registro de la especie), puntos con desglose, rastro, colección y ajustes guardados
   img/
     icono.svg
-  fonts/                Playfair (normal y cursiva) y Manrope: woff2 variables, solo el juego latino, con su
-                        licencia OFL. Descargadas de Google Fonts y servidas desde aquí (sin conexión a Google)
+  fonts/                Playfair (normal y cursiva), Manrope y Pixelify Sans (la del modo aventura y el combate):
+                        woff2 variables, solo el juego latino, con su licencia OFL. Descargadas de Google Fonts y
+                        servidas desde aquí (sin conexión a Google)
 archivo/                Versión original y paisajes que no se usan. No se sirve ni está en git; se puede borrar.
 android/                App de Android (WebView con la web dentro, servida con WebViewAssetLoader desde
                         https://appassets.androidplatform.net). Ver android/LEEME.md
@@ -225,15 +288,18 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   Manrope (texto, botones, etiquetas en versalitas), definidas UNA vez en `:root` (base.css). No redefinirlas por
   vista ni escribir nombres de fuentes sueltos. Playfair tiene tamaño óptico (se ajusta sola a cada tamaño) y el
   body pide `lining-nums` (cifras alineadas). Se eligió frente a Cormorant y Bodoni (demasiado finas en letra
-  pequeña), Fraunces (su «g» cursiva parece una «q») e Instrument Serif (cifras estrechas). La ventana del
-  combate usa a propósito una monoespaciada (estilo pixel).
+  pequeña), Fraunces (su «g» cursiva parece una «q») e Instrument Serif (cifras estrechas). `var(--pixel)` =
+  Pixelify Sans, SOLO para el modo aventura y la ventana del combate (títulos, botones, diálogos, etiquetas): ahí
+  se quiere que se sienta como un videojuego; el texto largo sigue en Manrope.
 - **Datos fijos** (tipos, colores, listas) solo en `datos.js`.
 - **localStorage** solo para cosas de este navegador, siempre con try/catch: `pokedex.equipo`,
   `pokedex.luchador` (el del uno contra uno), `pokedex.sonido` (efectos y música encendidos o no),
   `pokedex.simulacro` (récord `{ equipo: {nivel: {v, d}}, duelo: {…} }`), `pokedex.duelo` (última
   configuración: modo, nivel, escenario, pantalla completa), `pokedex.quien.mejor-racha` (también la lee el
   Inicio), `pokedex.quien.adivinados` (ids de las especies adivinadas alguna vez: «Tu colección»),
-  `pokedex.quien.ajustes` (último modo y región de ¿Quién es?), `pokedex.vistos`
+  `pokedex.quien.ajustes` (último modo y región de ¿Quién es?), `pokedex.aventura` (el modo aventura:
+  `{ version, region, temporada, conquistas, estadisticas, ajustes }`; la temporada es la de liga.js tal cual),
+  `pokedex.entrenador` (tu entrenador: `{ nombre, aspecto }`; también lo usa el Duelo), `pokedex.vistos`
   (los Pokémon escaneados en la Pokédex: el contador «Vistos por ti») y, solo sin servidor, `pokedex.especies`
   (la Pokédex compacta armada desde PokéAPI, `{ fecha, lista }`, vale 7 días).
 
@@ -245,6 +311,11 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   `DIBUJOS` y su caso en `crearAmbiente` (escenarios.js). Sale sola en el paso 1 del Duelo y en las Novedades.
 - **Cambiar el hábitat animado de un tipo** (portal de Categorías y fondo de la ficha): su bloque
   `.habitat[data-tipo="…"]` en habitats.css; el símbolo usa el `icono` de `TIPOS`.
+- **Ajustar la dificultad de la aventura**: `CURVA` en liga.js (estrategias por región y ronda, poder, niveles,
+  contraataque de tipos y `ventajaLeyendas`) y `FACTOR_NIVEL` en combate.js. Después, vuelve a medirla con
+  temporadas simuladas (ver «Modo aventura» en «Detalles»).
+- **Otra región, copa o campeón de la aventura**: `REGIONES_AVENTURA` y `NOMBRES_AVENTURA` en datos.js (la liga y la
+  vista leen de ahí; la curva tiene una fila por región).
 - **Cambiar el lema o los Pokémon conocidos de un tipo** (Categorías): `PERFILES_TIPOS` en datos.js (los 72
   representantes se comprobaron contra PokéAPI: todos tienen su tipo).
 
@@ -412,13 +483,19 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   quita la clase) sin cerrar la ventana: el `cancel` de la ventana se anula si está (o acaba de estar, 400 ms) en
   pantalla completa; antes el mismo Esc salía Y abandonaba el combate. Para probarla en Chrome sin ventana: CDP `Browser.setPermission`
   ({ name: 'fullscreen', allowWithoutGesture: true }); sin eso responde «not granted».
-- **Arenas** (`ESCENARIOS` en datos.js, dibujadas en escenarios.js): seis lugares de verdad, no campos con líneas
+- **Arenas** (`ESCENARIOS` en datos.js, dibujadas en escenarios.js): diez lugares de verdad, no campos con líneas
   (los de antes parecían canchas de fútbol): bosque antiguo (troncos gigantes, arroyo, corro de setas, rayos de
   luz y luciérnagas), cráter volcánico (río y cascada de lava, grietas que brillan, fumarolas y ascuas), costa
   tropical (olas, muelle, barca, palmeras, poza de marea, un cangrejo y la sombra de una gaviota), cueva de
   cristal (cristales que tiñen de color, estalactitas, lago con gotas), cumbre nevada (montañas al anochecer,
   aurora, pinos, estanque helado, faroles, nieve) y ruinas antiguas (muro con arco y estatuas, antorchas, losas
-  con arena y un mosaico de runas que late). Vista 3/4: fondo arriba, suelo en medio y una PLATAFORMA por
+  con arena y un mosaico de runas que late), y desde la aventura: jardín de los cerezos (pagoda tras el muro,
+  grava rastrillada en círculos alrededor de cada plataforma, estanque con carpas que nadan, puente rojo,
+  farolillos, pétalos al viento), cañón del desierto (mesetas con estratos, dunas, oasis, cactus, un esqueleto
+  enorme, calima y un matojo que rueda), azotea de la ciudad (rascacielos con ventanas, neones que parpadean,
+  helipuerto, charcos, ventiladores que giran, un avión) y pilar celeste (losas antiguas sobre un mar de nubes,
+  columnas rotas, islas flotantes, nubes y ráfagas que pasan, una bandada). Cada región de la aventura juega sus
+  grupos en tres o cuatro de ellas (`arenas` de REGIONES_AVENTURA). Vista 3/4: fondo arriba, suelo en medio y una PLATAFORMA por
   Pokémon en `CASA` (como en los juegos). Pintadas píxel a píxel con paletas cortas, tramado Bayer y luces
   (`iluminar`, también en escalones tramados); lo animado va en `crearAmbiente` → `suelo(p, t)` y `aire(p, t)`
   con los pinceles de la arena. Si llega una clave antigua (tierra, pradera…), se usa el bosque. 60 fps con
@@ -480,7 +557,7 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   galerías (`galeria-movimientos.mjs`) y con `humo-animaciones.mjs` (una de cada fila + las de reserva, también
   con movimiento reducido): ninguna da error; 60 fps con las más cargadas.
   `atacar()` se cumple en el instante del impacto. Cerrar la ventana a mitad de combate es abandonarlo. La
-  ventana cabe sin desplazarse en escritorio (ancho del lienzo limitado con `calc((100vh - 250px) * 16 / 9)`).
+  ventana cabe sin desplazarse en escritorio (ancho del lienzo limitado con `calc((100dvh - 340px) * 16 / 9)`: debajo van el diálogo y el mando).
 - **Inicio («Mundo Pokémon»)**: un `<div id="inicio">` con 5 partes en este orden: héroe, «Elige tu camino»
   (bento: Legendarios grande, los 18 tipos, Pokédex y ¿Quién es?), Duelo en vivo (#novedades), Pokémon del día y
   regiones. Ninguna tiene fondo propio: todas se ven sobre `.mundo-fondo`, una capa FIJA (fuera de main, primer
@@ -504,7 +581,7 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   `data-momento` (antes del JS) título y relato están ocultos (`.hero-cambia`) para que no cambien de golpe. El
   relato reserva 3 líneas (`min-height`) para que el héroe no salte al cambiar de momento.
 - **Duelo en vivo** (#novedades, dentro del Inicio): combate de muestra en vivo (parejas reconocibles en `PAREJAS`,
-  4 ataques con sus movimientos reales y el daño real, y en cada ronda otra arena), lo nuevo, las 6 arenas (pulsar
+  4 ataques con sus movimientos reales y el daño real, y en cada ronda otra arena), lo nuevo, las 10 arenas (pulsar
   una abre el Duelo con ella elegida) y tu equipo con tu récord. No descarga nada hasta que se ve; la arena se pausa
   con `arena.pausar()` si sale de la pantalla, cambias de vista o de pestaña (un IntersectionObserver, un
   MutationObserver sobre el `hidden` de `#inicio` y visibilitychange). Con movimiento reducido, una escena quieta.
@@ -542,9 +619,71 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   (Legendarios los vuelve azul noche y dorado desde legendarios.css).
 - Legendarios: las 71 cartas se crean una vez y `actualizarArchivo()` muestra las primeras `mostradas` del
   filtro elegido (tandas de 10 con «Ver más»; cambiar de filtro vuelve a 10). Rejilla de 5 columnas: 10 = 2 filas.
-- Menú con 6 enlaces («Duelo Pokémon» es el más largo): `.brand-note` («Explora · combate · descubre») se oculta por
-  debajo de 1180 px, los enlaces se compactan a 1000 px, el menú baja a su propia línea a 880 px («Mundo Pokémon»
-  no se parte: `.logo-texto` con nowrap) y en teléfono (≤520 px) es una rejilla de 3 + 3.
+- Menú con 7 enlaces («✦ Aventura» lleva una estrella, `.nav-aventura`): `.brand-note` («Explora · combate ·
+  descubre») se oculta por debajo de 1320 px, los enlaces se compactan a 1080 px, el menú puede bajar a su propia
+  línea a 960 px («Mundo Pokémon» no se parte: `.logo-texto` con nowrap) y en teléfono (≤520 px) es una rejilla de
+  4 + 3. Medido de 360 a 1440 px: nunca desborda.
+- **Modo aventura** (#aventura, «Nueve copas, una leyenda»): las nueve regiones EN ORDEN; en cada una, su copa al
+  estilo de una liga de campeones (liga.js): 16 entrenadores (tú, Kael, el campeón vigente y 13 con nombre de la
+  región: los del anime y los líderes, cada uno con su tipo favorito, que elige parte de su equipo), sorteo con 4 bombos (tú en el 4; Kael SIEMPRE en tu grupo; el campeón en la otra mitad
+  del cuadro, así que solo puede cruzarse contigo en la final, y gana todos sus combates simulados: la final es
+  siempre contra él), grupos de 4 a una vuelta (primero contra el del bombo 3, luego Kael, por último el cabeza de
+  serie; 3 puntos por victoria; el marcador son los K.O., «6–2»; desempates: diferencia de K.O., K.O. hechos,
+  enfrentamiento directo), cuartos (1.º contra 2.º del grupo vecino), semifinal y final a partido único. Los demás
+  combates se simulan con la fuerza de cada entrenador. TU EQUIPO es un «random lock»: 5 al azar y 1 inicial que
+  eliges entre 3, todos de la región, cada uno con un 1 % de ser legendario o singular (medido: 1,00 %), sellado
+  toda la copa; si te eliminan, la próxima temporada sorteas OTRO equipo (lo pidió el usuario; antes se repetía con
+  el mismo) con +1 nivel por intento (hasta +3, «la experiencia de tus intentos»). Subes un nivel
+  por victoria. Entre bastidores: niveles de Nv. 5–13 en Kanto a Nv. 88–94 en Paldea; desde Kalos, sin ayudas de
+  tipos. Ases de los campeones: el pseudolegendario de su región (en Kanto y Hoenn su fase media, que puede evolucionar
+  en plena final: Dragonair y Metang; en Johto, Tyranitar). Los campeones son guiños a los del anime y los juegos:
+  Lance, Karen, Steven, Cynthia, Iris, Diantha, Kukui, Leon y Geeta (con aspectos nuestros). Geeta, en PALDEA, lleva Koraidon o
+  Miraidon y cinco leyendas «medias» (aves, bestias, gólems, trío del lago, espadas, tapus…) unos niveles por debajo
+  de ti: con las de 680 de poder (Mewtwo, Rayquaza, Dialga…) no se ganaba ni con 8 niveles a favor. Las eliminatorias
+  y la final se juegan en el ESTADIO (escenarios.js) con público; la final empieza con himno, ovación y letreros.
+  El equipo del rival se decide al ver la previa (planEquipoRival → descarga ~32 candidatos → completarEquipoRival,
+  con semilla) y se guarda en la temporada; «¡Al combate!» espera a tenerlo (así empezarCombate va dentro del clic).
+  Cerrar el combate a medias no cuenta: el partido sigue pendiente. EQUILIBRIO medido con miles de temporadas
+  simuladas con el motor real y datos del snapshot (`balance-aventura`, fuera del proyecto; un «jugador» automático
+  con la estrategia del Maestro): copa ganada al primer intento ≈ Kanto 59 %, Johto 59 %, Hoenn 41 %, Sinnoh 26 %,
+  Teselia 26 %, Kalos 16 %, Alola 12 %, Galar 7 %, Paldea 6 % (la final de Paldea, ≈ 10–20 % si llegas). Un 6
+  contra 6 amplifica cualquier ventaja pequeña: por eso la CURVA sube a pasos finos; la estrategia «maestro» del
+  rival pesa muchísimo (solo en las finales desde Teselia). Si cambias la curva, vuelve a medir.
+- **Entrenadores** (entrenador.js): pixel art propio, no copia a ningún personaje (el aspecto inicial no es la gorra
+  roja y la chaqueta azul del protagonista del anime, a propósito). El usuario rechazó la primera versión (de perfil,
+  24×42: «feos») y pasó como REFERENCIA hojas de sprites de los juegos de la 4.ª y 5.ª generación: se tomó su estilo
+  (tres cuartos, ~4 cabezas, piernas separadas, sombras de tres tonos, contorno teñido), no sus personajes. Mapas de
+  letras pintados a mano (ver la cabecera del archivo). Después pidió que se parecieran MÁS a los de HG/SS y pasó
+  una especificación que se siguió al rehacerlos desde cero: lienzo de 48×72, ~4,5 cabezas, contrapposto (peso en la
+  pierna de delante; al lanzar y al señalar da un paso: piernas `zancada`), rampas con hue-shifting, sel-out por
+  capa, ojos de 2×3 con brillo blanco (OJO, filas 13–15), mechones irregulares y la Poké Ball en la mano. Señala
+  con el brazo de ATRÁS (BRAZOS_ATRAS.ordena): con el de delante el brazo tapaba la cara. Pantalones nuevos
+  (`pantalon` y `colorPantalon` en el aspecto; los guardados antes salen con el vaquero del inicial). Kael y los
+  nueve campeones tienen su aspecto en datos.js. En la arena están 7 unidades por detrás de los Pokémon (se dibujan
+  antes que ellos) a 1 unidad por píxel: miden ~67. En la página, los retratos miden múltiplos de 72 px (216,
+  288, 360…) para que los píxeles salgan parejos.
+- **Ataques GBA** (sprites-ataques.js + ataqueGBA en arena-pixel.js): el usuario dijo que los ataques «se veían muy
+  sencillos» y pasó una especificación: pixel art de Game Boy Advance, sin suavizado ni alfa parcial, contorno
+  exterior grueso y oscuro, núcleo blanco con 2–3 tonos saturados hacia el borde, píxeles sueltos alrededor, tiras de
+  5 fotogramas de 48×48 y paletas EXACTAS para fuego (#5A0000 #D81800 #FF7800 #FFE800 #FFFFFF), agua (#001848
+  #0058D8 #18B8FF #98F0FF #FFFFFF), eléctrico (#482800 #D89000 #FFF018 #FFFFFF), planta (#083008 #188818 #78E818
+  #E8FFB8) y fantasma (#180028 #581088 #C838E8 #F8B8FF): no cambiarlas. Los otros 13 tipos siguen la misma estructura.
+  Cada movimiento usa la tira de SU tipo con un patrón (`patronDe`): contacto y golpes (físicos: embiste con el aura
+  del tipo y golpea), proyectil, rafaga (varios), haz (rayos, cañones, Lanzallamas, Hidrobomba…), cielo (cae de
+  arriba: Trueno, Ventisca, Avalancha…) y suelo (sale de debajo del rival: Terremoto, Surf, Tierra Viva…). El sprite
+  se dibuja en la capa de efectos con un número entero de píxeles por píxel del sprite (`spriteAtaque`), el
+  impacto pasa por los fotogramas 2→3→4 con temblor, golpe de cámara, destello y chispas, y en los fuertes (potencia
+  ≥ 100) el «marco de impacto». atacar() se sigue cumpliendo en el instante del impacto.
+- **Mapa de la aventura** (mapa-aventura.js): el archipiélago se pinta píxel a píxel (forma de cada isla con ruido,
+  bajíos, arena, acantilados y su paisaje) una vez por estado (región en curso + copas ganadas) y cada fotograma se
+  copia y se le dibuja encima lo que se mueve, en un lienzo del mundo (960×400) que se amplía sin suavizar al visible.
+  Los botones de las islas son HTML posicionados en % encima (--x, --y). Se pausa si no se ve (IntersectionObserver,
+  `hidden` de la sección y visibilitychange). Al ganar una copa, «Viajar a…» hace caminar a tu entrenador por la ruta.
+- **Combate con aire de juego de rol** (simulacro.js + el final de simulacro.css): el usuario pasó como referencia
+  una escena de combate en pixel art con los marcadores sobre el campo, el cuadro de diálogo abajo a la izquierda y
+  el menú abajo a la derecha. El DOM es: barra · `.arena-cuerpo` (rejilla: `escena` arriba; `dialogo` y `mando`
+  abajo) con `.arena-lienzo-marco` (lienzo + `.arena-marcadores` encima + bocadillo), `.arena-registro-marco` y el
+  mando. En ≤700 px los marcadores vuelven a ir encima del lienzo (no sobre él).
 - Legendarios usa su propia paleta (azul medianoche + oro) y la letra con serifa (Playfair) en todo: es intencionado,
   para que la vista se sienta distinta. El Duelo usa el MISMO lenguaje con otra paleta (verde bosque casi
   negro + brasa): una versión anterior «de videojuego» (cielo, Poké Balls, colores chillones) se descartó por
@@ -561,6 +700,10 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   tabla escapan del contenedor con scroll y ensanchan toda la página en móvil.
 
 ## Pendiente / ideas
+
+- Modo aventura: evolución permanente al subir de nivel (COMO_EVOLUCIONA ya dice «Nv. 16»), más frases y una
+  pequeña escena de llegada a cada región; animaciones de ataque más grandes y vistosas (el usuario quiere que se
+  parezcan a su referencia de combate: llamas y partículas grandes sobre un escenario muy detallado).
 
 - Movimientos en la ficha (el Duelo ya usa los reales: datos-movimientos.js). El equipo del Duelo Pokémon ya
   hace de favoritos (hasta 6).

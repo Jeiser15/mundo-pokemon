@@ -1,9 +1,9 @@
 // Navegación entre vistas. La página es una sola: cada vista es una <section> que se
 // muestra u oculta según el #hash de la dirección (#inicio, #categorias...).
 
-const VISTAS = ['inicio', 'categorias', 'legendarios', 'catalogo', 'duelo', 'quien'];
+const VISTAS = ['inicio', 'aventura', 'categorias', 'legendarios', 'catalogo', 'duelo', 'quien'];
 // Nombres antiguos: «Buscar» ahora es la Pokédex; «Mi equipo» y «Batalla de equipos», el Duelo Pokémon.
-const ALIAS = { explorar: 'catalogo', equipo: 'duelo', batalla: 'duelo' };
+const ALIAS = { explorar: 'catalogo', equipo: 'duelo', batalla: 'duelo', copa: 'aventura', liga: 'aventura' };
 // Vistas «del mundo»: comparten el fondo continuo oscuro de base.css (<body data-mundo>).
 const VISTAS_DEL_MUNDO = ['inicio', 'categorias'];
 

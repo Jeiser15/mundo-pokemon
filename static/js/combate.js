@@ -29,6 +29,8 @@
 // evoluciona ANTES de actuar, sin gastar el turno: toma las estadísticas, tipos y movimientos de su
 // evolución, conserva la parte de vida que tenía y recupera un 15 %. La barra vuelve a 0 (puede volver a
 // evolucionar si aún le queda otra fase).
+// Niveles (solo en el modo aventura; en el Duelo nadie lleva nivel): cada nivel de ventaja multiplica por
+// FACTOR_NIVEL el daño que haces (y lo divide el que recibes). Con el mismo nivel, no cambia nada.
 // Gana quien deja K.O. a todo el equipo contrario.
 
 import { CLIMAS, ESTADOS, MOVIMIENTOS_RESERVA, NIVELES_SIMULACRO, rarezaDe, TIPOS } from './datos.js';
@@ -46,6 +48,7 @@ const DANIO_ESTADO = { quemado: 1 / 16, envenenado: 1 / 10 }; // parte de la vid
 export const ENERGIA_LLENA = 100;
 const ENERGIA = { golpea: 34, recibe: 20, concentra: 34 };
 const CURA_EVOLUCION = 0.15;
+export const FACTOR_NIVEL = 1.03;
 export const MAX_MOVIMIENTOS = 4;
 const LADOS = ['jugador', 'rival'];
 const ATAQUE_DE = { fisico: 'attack', especial: 'special-attack' };
@@ -180,7 +183,7 @@ const valoresDe = (detalles, vida) => ({
  * `vida` multiplica sus PV (en el duelo es 2: así dura más y cuenta más la estrategia).
  * `detalles.evoluciones` (evoluciones.js): las formas en las que puede evolucionar, cada una con las suyas.
  */
-export function crearLuchador(detalles, vida = 1, clima = null) {
+export function crearLuchador(detalles, vida = 1, clima = null, nivel = null) {
   const valores = valoresDe(detalles, vida);
   return {
     ...detalles,
@@ -188,6 +191,7 @@ export function crearLuchador(detalles, vida = 1, clima = null) {
     pv: valores.pvMax,
     vida,
     clima,             // el clima del combate (lo usa el cálculo del daño)
+    nivel,             // solo en la aventura (null en el Duelo): ver factorNivel
     evoluciones: detalles.evoluciones || [],
     mega: /-mega|-primal/.test(detalles.nombre),
     energia: 0,        // de 0 a ENERGIA_LLENA
@@ -215,6 +219,10 @@ export const factorClima = (clima, tipoAtaque) => (tipoAtaque && CLIMAS[clima]?.
 /** ¿El movimiento es de uno de sus tipos? (pega ×1,5 más que uno de otro tipo). */
 export const esPropio = (luchador, ataque) => luchador.tipos.includes(ataque.tipo);
 
+/** Lo que pesan los niveles en el daño (1 si alguno no tiene nivel o si son iguales). */
+export const factorNivel = (atacante, defensor) =>
+  (atacante.nivel && defensor.nivel ? FACTOR_NIVEL ** (atacante.nivel - defensor.nivel) : 1);
+
 function danioBase(atacante, defensor, ataque) {
   const mult = multiplicadorContra(ataque.tipo, defensor.tipos);
   const fuerza = estadistica(atacante, ATAQUE_DE[ataque.categoria]);
@@ -222,7 +230,7 @@ function danioBase(atacante, defensor, ataque) {
   const potencia = (ataque.poder / POTENCIA_REFERENCIA) * (esPropio(atacante, ataque) ? 1 : SIN_STAB)
     * (ataque.segunVida ? Math.max(0.1, atacante.pv / atacante.pvMax) : 1);
   const valor = BASE_DANIO * (fuerza / aguante) * potencia * mult
-    * factorClima(atacante.clima, ataque.tipo)
+    * factorClima(atacante.clima, ataque.tipo) * factorNivel(atacante, defensor)
     * (atacante.estado?.tipo === 'quemado' && ataque.categoria === 'fisico' ? 0.75 : 1)
     * (atacante.cargado ? BONO_CONCENTRAR : 1) * (defensor.protegido ? 0.5 : 1);
   return { mult, valor };
@@ -374,16 +382,17 @@ function cambiarEtapas(luchador, cambios, lado, sucesos) {
 /**
  * Estado inicial. Los equipos son listas de detalles; nadie está en el campo todavía (activo = -1).
  * `vida`: multiplicador de PV de todos (MODOS_BATALLA.duelo.vida en el duelo). `clima`: clave de CLIMAS o null.
+ * `niveles`: { jugador, rival } en el modo aventura (el nivel de cada equipo); sin él, nadie lleva nivel.
  */
-export function crearCombate(detallesJugador, detallesRival, nivel, { vida = 1, clima = null } = {}) {
+export function crearCombate(detallesJugador, detallesRival, nivel, { vida = 1, clima = null, niveles = null } = {}) {
   return {
     nivel,
     clima,
     turno: 1,
     cambiosRival: 0,
     ultimoCambioRival: -9,
-    jugador: { equipo: detallesJugador.map(d => crearLuchador(d, vida, clima)), activo: -1 },
-    rival: { equipo: detallesRival.map(d => crearLuchador(d, vida, clima)), activo: -1 },
+    jugador: { equipo: detallesJugador.map(d => crearLuchador(d, vida, clima, niveles?.jugador ?? null)), activo: -1 },
+    rival: { equipo: detallesRival.map(d => crearLuchador(d, vida, clima, niveles?.rival ?? null)), activo: -1 },
   };
 }
 

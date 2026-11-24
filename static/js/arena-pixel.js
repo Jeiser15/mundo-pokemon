@@ -28,9 +28,14 @@
 // granizo, arena, niebla o sol) se dibuja encima del campo; los estados alterados se ven sobre el Pokémon;
 // el combate empieza con una transición de franjas y la victoria acaba con confeti. La arena no suena por
 // sí misma: avisa con `sonar(nombre)` (sonido.js) en los momentos justos.
+// Entrenadores (opcional, `entrenadores: { jugador, rival }` con su aspecto; entrenador.js): entran caminando por
+// los lados al empezar, lanzan la Poké Ball desde la mano, señalan al rival al dar una orden, recogen a su Pokémon
+// con el rayo rojo, bajan la cabeza cuando cae uno de los suyos y celebran al ganar.
 
 import { PALETAS_ATAQUE } from './datos.js';
+import { coloresDe, hojaDeAtaque, LADO_SPRITE } from './sprites-ataques.js';
 import { ALTO, ANCHO, CASA, crearAmbiente, dibujarFondo, SUELO } from './escenarios.js';
+import { ALTO_ENTRENADOR, ANCHO_ENTRENADOR, lienzoEntrenador, MANO, PIES_ENTRENADOR } from './entrenador.js';
 import { anchoTexto, dibujarTexto } from './fuente-pixel.js';
 
 export { ALTO, ANCHO }; // tamaño del mundo (el lienzo real se ajusta a la pantalla)
@@ -308,7 +313,7 @@ const posicionDe = (lado, ancho) => (lado === 'jugador'
  * @param {HTMLCanvasElement} lienzo
  * @param {{ escenario?: string }} opciones  escenario: clave de ESCENARIOS (datos.js; los dibuja escenarios.js)
  */
-export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, sonar = () => {} } = {}) {
+export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, sonar = () => {}, entrenadores: aspectos = null, colores = null } = {}) {
   // Dos capas de efectos a baja resolución (2 píxeles por unidad del mundo, como los de los sprites) que se
   // amplían sin suavizar: así los ataques, partículas y climas se ven en pixel art, igual que los Pokémon.
   const RESOLUCION_EFECTOS = 2;
@@ -317,8 +322,8 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
   for (const capa of [capaSuelo, capaAire]) { capa.width = ANCHO * RESOLUCION_EFECTOS; capa.height = ALTO * RESOLUCION_EFECTOS; }
   const contextos = { real: lienzo.getContext('2d'), suelo: capaSuelo.getContext('2d'), aire: capaAire.getContext('2d') };
   let ctx = contextos.real;
-  const campo = dibujarFondo(escenario);
-  const ambiente = crearAmbiente(escenario);
+  const campo = dibujarFondo(escenario, { colores });
+  const ambiente = crearAmbiente(escenario, { colores });
   const bufer = document.createElement('canvas'); // para teñir un sprite (destello blanco, color del ataque)
   const bctx = bufer.getContext('2d');
 
@@ -342,6 +347,13 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
     reloj: Math.random() * 1000, fase: lado === 'jugador' ? 0 : 1.7,
   });
   const luchadores = { jugador: nuevoLuchador('jugador'), rival: nuevoLuchador('rival') };
+  // Entrenadores: a cada lado, un poco por detrás de los Pokémon (más arriba en la vista 3/4).
+  const ESCALA_ENTRENADOR = 1; // unidades del mundo por píxel de su sprite (32×48)
+  const PIES_ENTRENADOR_Y = SUELO - 7;
+  const CASA_ENTRENADOR = { jugador: 24, rival: ANCHO - 24 };
+  const entrenadores = Object.fromEntries(['jugador', 'rival'].map(lado => [lado, aspectos?.[lado]
+    ? { lado, aspecto: aspectos[lado], x: CASA_ENTRENADOR[lado], pose: 'quieto', paso: 0, visible: false, hastaPose: 0, celebrando: false }
+    : null]));
   const camara = { x: ANCHO / 2, y: ALTO / 2, zoom: 1 };
   const tweens = [];
   const particulas = [];
@@ -2672,8 +2684,172 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
       dragon: ['pulsoDragon', {}], dark: ['pulsoUmbrio', {}], steel: ['haz', HAZ.metal], fairy: ['fuerzaLunar', {}],
     },
   };
-  /** La animación de un movimiento { clave, tipo, categoria }: (A, D) => promesa que se cumple al impactar. */
-  function animacionDe({ clave = '', tipo = 'normal', categoria = 'especial' } = {}) {
+  // --- Ataques con sprites de la era GBA (sprites-ataques.js) -----------------------------------------------
+  // TODOS los movimientos se dibujan así (lo pidió el usuario: los de antes «se veían muy sencillos»). Cada tipo tiene
+  // su tira de 5 fotogramas de 48×48 (carga · proyectil · impacto máximo · expansión · dispersión) y cada movimiento,
+  // un PATRÓN: proyectil (especial por defecto), rafaga (varios a la vez), haz (rayos y cañones), cielo (cae de
+  // arriba), suelo (sale de debajo del rival), contacto (físico: embiste y golpea) o golpes (varios golpes seguidos).
+  const FONDO_DE_TIPO = {
+    fire: 'fuego', water: 'agua', electric: 'tormenta', grass: 'planta', ice: 'hielo', fighting: 'aura', poison: 'veneno',
+    ground: 'tierra', flying: 'aire', psychic: 'psiquico', bug: 'bicho', rock: 'tierra', ghost: 'sombra', dragon: 'dragon',
+    dark: 'oscuro', steel: 'acero', fairy: 'luz', normal: 'hiper',
+  };
+  const PATRON_HAZ = /beam|cannon|-ray$|^ray|hyper-voice|solar|flash-cannon|blast-burn|frenzy-plant|roar-of-time|prismatic|moongeist|photon|eternabeam|dynamax|spacial-rend|hydro-pump|flamethrower|dragon-pulse|dark-pulse|aura-sphere|focus-blast|energy-ball|origin-pulse|steam-eruption|tri-attack/;
+  const PATRON_CIELO = /^thunder$|thunder-cage|blizzard|hurricane|meteor|rock-slide|sky-attack|draco|fire-blast|heat-wave|bolt-strike|wildbolt|bleakwind|icicle-crash|stone-axe|diamond-storm|razor-leaf|leaf-storm|petal-blizzard|spike-cannon|bullet-punch|glacial-lance|fly$|bounce|dive|sky-drop|make-it-rain|astral|hyperspace/;
+  const PATRON_SUELO = /earthquake|earth-power|magnitude|bulldoze|fissure|stomping|precipice|thousand|eruption|stone-edge|headlong|high-horsepower|drill-run|dig$|lava-plume|scorching|sludge-wave|surf|muddy-water|whirlpool|ground|sandsear|mortal-spin|rock-wrecker|head-smash/;
+  const PATRON_RAFAGA = /bullet|seed|needle|shard|barrage|rock-blast|icicle-spear|pin-missile|shuriken|scale-shot|swift|spikes|water-gun|ember|bubble|absorb|leafage|powder-snow|acid|smog|gust|thunder-shock|razor-shell|mud-shot|sludge|gunk/;
+  function patronDe({ clave = '', categoria = 'especial', golpes = 1 } = {}) {
+    if (PATRON_SUELO.test(clave)) return 'suelo';
+    if (PATRON_CIELO.test(clave)) return 'cielo';
+    if (categoria === 'fisico') return golpes > 1 || /double|dual|triple|fury|arm-thrust|comet-punch|surging|bonemerang|tachyon/.test(clave) ? 'golpes' : 'contacto';
+    if (PATRON_HAZ.test(clave)) return 'haz';
+    if (golpes > 1 || PATRON_RAFAGA.test(clave)) return 'rafaga';
+    return 'proyectil';
+  }
+
+  /** Un fotograma (0–4) del sprite del tipo en (x, y), a `escala` unidades del mundo por píxel del sprite (píxeles enteros). */
+  function spriteAtaque(tipo, fotograma, x, y, escala = 1.4, espejo = false) {
+    const k = Math.max(1, Math.round(escala * S));
+    const tam = LADO_SPRITE * k;
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(Math.round(X(x)), Math.round(Y(y)));
+    if (espejo) ctx.scale(-1, 1);
+    ctx.drawImage(hojaDeAtaque(tipo), fotograma * LADO_SPRITE, 0, LADO_SPRITE, LADO_SPRITE, -Math.round(tam / 2), -Math.round(tam / 2), tam, tam);
+    ctx.restore();
+  }
+  /** Píxeles sueltos que saltan (chispas, gotas, fragmentos) con los colores del tipo. */
+  function chispasGBA(x, y, tipo, cuantas = 12, fuerza = 1) {
+    const colores = coloresDe(tipo);
+    for (let i = 0; i < cuantas; i++) {
+      const a = Math.random() * Math.PI * 2; const v = entre(60, 190) * fuerza;
+      particula({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, g: 220, arrastre: 2, vida: entre(300, 620), colores: [colores[0], colores[1], colores[2]], tam: entre(1.5, 3) });
+    }
+  }
+  const pausa = ms => efimero(ms, () => {});
+  /** Carga: la chispa inicial (fotograma 0) delante del atacante, creciendo. */
+  function cargaGBA(A, tipo, ms = 300) {
+    const dir = DIRECCION[A.lado];
+    const b = boca(A);
+    cargar({ x: b.x + dir * 6, y: b.y }, coloresDe(tipo).slice(0, 3), ms, 30);
+    return efimero(ms, p => spriteAtaque(tipo, 0, b.x + dir * 8, b.y, 0.7 + 0.5 * p, dir < 0));
+  }
+  /** El proyectil (fotograma 1) de `desde` a `hasta` con una estela; se cumple al llegar. */
+  function viajeGBA(desde, hasta, tipo, ms, { escala = 1, arco = 0, espejo = false } = {}) {
+    const punto = q => ({ x: desde.x + (hasta.x - desde.x) * q, y: desde.y + (hasta.y - desde.y) * q - Math.sin(q * Math.PI) * arco });
+    return efimero(ms, p => {
+      const q = CURVAS.acelera(p) * 0.6 + p * 0.4;
+      for (let k = 3; k >= 1; k--) { const e = punto(Math.max(0, q - k * 0.07)); spriteAtaque(tipo, 1, e.x, e.y, escala * (1 - k * 0.2), espejo); }
+      const c = punto(q);
+      spriteAtaque(tipo, 1, c.x, c.y, escala, espejo);
+    });
+  }
+  /** Impacto: impacto máximo → expansión → dispersión en el rival, con temblor, destello y píxeles sueltos. */
+  function impactoGBA(x, y, tipo, { escala = 1.5, fuerza = 1, espejo = false } = {}) {
+    temblar(3 + 3 * fuerza, 260);
+    golpeCamara(x, fuerza);
+    destellar('#ffffff', 90, 0.22 * fuerza);
+    chispasGBA(x, y, tipo, Math.round(12 * fuerza), fuerza);
+    efimero(480, p => {
+      const f = p < 0.34 ? 2 : p < 0.67 ? 3 : 4;
+      spriteAtaque(tipo, f, x, y, escala * (f === 2 ? 1 : 1 + (p - 0.34) * 0.25), espejo);
+    });
+  }
+
+  async function ataqueGBA(A, D, ataque) {
+    const tipo = ataque.tipo || 'normal';
+    const patron = patronDe(ataque);
+    const dir = DIRECCION[A.lado];
+    const espejo = dir < 0;
+    if (A.oculto) revelar(A);
+    const d = centro(D);
+    const fuerte = (ataque.poder || 60) >= 100;
+    if (ataque.categoria !== 'fisico' && FONDOS[FONDO_DE_TIPO[tipo]]) fondo(patron === 'haz' || fuerte ? 1300 : 900, FONDO_DE_TIPO[tipo], { desde: boca(A) });
+    switch (patron) {
+      case 'contacto': case 'golpes': {
+        await anticipar(A, 140);
+        const golpes = patron === 'golpes' ? Math.min(5, Math.max(2, ataque.golpes || 3)) : 1;
+        const hasta = D.x + D.ox - dir * (anchoDe(D) * 0.45 + anchoDe(A) * 0.35) - A.x;
+        efimero(240 + golpes * 160, () => { const c = centro(A); spriteAtaque(tipo, 1, c.x + dir * 6, c.y, 1.05, espejo); });
+        await animar(A, { ox: hasta, sx: 1.08, sy: 0.94 }, 170, 'acelera');
+        for (let g = 0; g < golpes; g++) {
+          if (g) await animar(A, { ox: hasta - dir * 10 }, 70, 'frena').then(() => animar(A, { ox: hasta }, 70, 'acelera'));
+          impactoGBA(d.x - dir * 4 + entre(-4, 4), d.y + entre(-6, 6), tipo, { escala: golpes > 1 ? 1.1 : 1.45, fuerza: golpes > 1 ? 0.7 : 1 + (fuerte ? 0.3 : 0), espejo });
+          if (fuerte && golpes === 1) marcoImpacto(d.x, d.y);
+        }
+        animar(A, { ox: 0, sx: 1, sy: 1 }, 320).then(() => { A.quieto = true; });
+        return;
+      }
+      case 'haz': {
+        await anticipar(A, 120);
+        await cargaGBA(A, tipo, 420);
+        soltar(A);
+        const b = boca(A);
+        const desde = { x: b.x + dir * 10, y: b.y };
+        efimero(620, p => { // un chorro de proyectiles pegados que avanza y se queda un momento
+          const cabeza = Math.min(1, p * 2.6); const cola = Math.max(0, (p - 0.55) * 2.2);
+          for (let q = cola; q <= cabeza; q += 0.07) spriteAtaque(tipo, 1, desde.x + (d.x - desde.x) * q, desde.y + (d.y - desde.y) * q + Math.sin(q * 20 + p * 30) * 1.5, 0.85, espejo);
+        });
+        await pausa(240);
+        impactoGBA(d.x, d.y, tipo, { escala: 1.7, fuerza: 1.3, espejo });
+        marcoImpacto(d.x, d.y);
+        return;
+      }
+      case 'cielo': {
+        await anticipar(A, 120);
+        await cargaGBA(A, tipo, 260);
+        soltar(A);
+        for (const [k, dx] of (fuerte ? [[0, 0], [1, -14], [2, 14]] : [[0, 0]]).entries()) {
+          await viajeGBA({ x: d.x + dx[1] - 30, y: -30 }, { x: d.x + dx[1], y: d.y }, tipo, k ? 160 : 240, { escala: 1.15 });
+          impactoGBA(d.x + dx[1], d.y, tipo, { escala: k ? 1.2 : 1.6, fuerza: k ? 0.8 : 1.2 });
+        }
+        return;
+      }
+      case 'suelo': {
+        await animar(A, { oy: -14 }, 150, 'frena');
+        await animar(A, { oy: 0 }, 110, 'acelera');
+        temblar(8, 500);
+        const pies = pie(D);
+        efimero(260, p => spriteAtaque(tipo, 0, pies.x + (A.x - pies.x) * (1 - p), SUELO - 4, 0.9, espejo), { capa: 'suelo' }); // la onda que corre por el suelo
+        await pausa(240);
+        impactoGBA(pies.x, SUELO - 22, tipo, { escala: 1.8, fuerza: 1.2, espejo });
+        efimero(500, p => spriteAtaque(tipo, p < 0.5 ? 3 : 4, pies.x, SUELO - 8, 1.3, espejo), { capa: 'suelo' });
+        return;
+      }
+      case 'rafaga': {
+        await anticipar(A, 100);
+        await cargaGBA(A, tipo, 220);
+        soltar(A);
+        const b = boca(A);
+        const cuantos = Math.min(5, Math.max(3, ataque.golpes || 4));
+        for (let k = 0; k < cuantos; k++) {
+          const llega = viajeGBA({ x: b.x + dir * 8, y: b.y }, { x: d.x + entre(-6, 6), y: d.y + entre(-8, 8) }, tipo, 260, { escala: 0.75, arco: entre(-10, 14), espejo });
+          if (k < cuantos - 1) { llega.then(() => impactoGBA(d.x + entre(-8, 8), d.y + entre(-8, 8), tipo, { escala: 0.95, fuerza: 0.6, espejo })); await pausa(90); } else { await llega; impactoGBA(d.x, d.y, tipo, { escala: 1.35, fuerza: 1, espejo }); }
+        }
+        return;
+      }
+      default: { // proyectil
+        await anticipar(A, 120);
+        await cargaGBA(A, tipo, 320);
+        soltar(A);
+        const b = boca(A);
+        await viajeGBA({ x: b.x + dir * 10, y: b.y }, d, tipo, fuerte ? 300 : 360, { escala: fuerte ? 1.2 : 1, arco: 8, espejo });
+        impactoGBA(d.x, d.y, tipo, { escala: fuerte ? 1.65 : 1.45, fuerza: fuerte ? 1.25 : 1, espejo });
+        if (fuerte) marcoImpacto(d.x, d.y);
+      }
+    }
+  }
+
+  /**
+   * La animación de un movimiento { clave, tipo, categoria, golpes, poder }: (A, D) => promesa que se cumple al
+   * impactar. Desde la v2 del modo aventura todos usan los sprites GBA (ataqueGBA); las familias de antes
+   * (ANIMACIONES, POR_TIPO) quedan como `animacionClasica` por si se quieren recuperar.
+   */
+  function animacionDe(ataque = {}) {
+    return (A, D) => ataqueGBA(A, D, ataque);
+  }
+  // eslint-disable-next-line no-unused-vars
+  function animacionClasica({ clave = '', tipo = 'normal', categoria = 'especial' } = {}) {
     const [familia, opciones] = ANIMACIONES[clave] || POR_TIPO[categoria === 'fisico' ? 'fisico' : 'especial'][tipo] || POR_TIPO.fisico.normal;
     const paleta = PALETAS_ATAQUE[tipo] || PALETAS_ATAQUE.directo;
     return (A, D) => FAMILIAS[familia](A, D, paleta, opciones);
@@ -2707,6 +2883,55 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
     }
   }
 
+  // --- Entrenadores ------------------------------------------------------------------------------------
+  /** Dónde tiene la mano (en el mundo) el entrenador de un lado, en su pose actual. */
+  function manoDe(E) {
+    const [hx, hy] = MANO[E.pose] || MANO.quieto;
+    const dir = E.lado === 'jugador' ? 1 : -1;
+    return { x: E.x + (hx + 0.5 - ANCHO_ENTRENADOR / 2) * ESCALA_ENTRENADOR * dir, y: PIES_ENTRENADOR_Y - (PIES_ENTRENADOR + 0.5 - hy) * ESCALA_ENTRENADOR };
+  }
+  /** Pone una pose un rato (luego vuelve a quieto). */
+  function posar(E, pose, ms = 0) {
+    if (!E) return;
+    E.pose = pose;
+    E.hastaPose = ms ? ahora() + ms : 0;
+  }
+  function dibujarEntrenador(E, t) {
+    if (!E?.visible) return;
+    if (E.hastaPose && t > E.hastaPose) { E.pose = 'quieto'; E.hastaPose = 0; }
+    const bruto = Sreal * ESCALA_ENTRENADOR;
+    const k = bruto < 0.75 ? bruto : Math.max(1, Math.round(bruto));
+    const ancho = Math.round(ANCHO_ENTRENADOR * k); const alto = Math.round(ALTO_ENTRENADOR * k);
+    const respira = E.pose === 'quieto' && !reducido() && Math.floor((t + (E.lado === 'rival' ? 700 : 0)) / 900) % 2 ? 1 : 0;
+    const salto = E.celebrando && !reducido() ? Math.abs(Math.sin(t / 160)) * 6 : 0;
+    const pies = Y(PIES_ENTRENADOR_Y);
+    // sombra bajo los pies
+    ctx.globalAlpha = 0.3; ctx.fillStyle = '#1a0e05';
+    ctx.beginPath(); ctx.ellipse(X(E.x), pies + S * 0.5, 9 * S * (1 - salto / 30), 2.2 * S, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    const x = Math.round(X(E.x) - ancho / 2);
+    const y = Math.round(pies - (PIES_ENTRENADOR + 1) * k + respira * k - salto * S);
+    ctx.save();
+    ctx.imageSmoothingEnabled = k < 1;
+    if (E.lado === 'rival') { ctx.translate(x + ancho, y); ctx.scale(-1, 1); } else ctx.translate(x, y);
+    ctx.drawImage(lienzoEntrenador(E.aspecto, E.pose, E.paso), 0, 0, ancho, alto);
+    ctx.restore();
+  }
+  /** Los dos entrenadores entran caminando desde fuera hasta su sitio. */
+  function entrarEntrenadores() {
+    for (const E of Object.values(entrenadores)) {
+      if (!E) continue;
+      E.visible = true;
+      if (reducido()) continue;
+      const casa = CASA_ENTRENADOR[E.lado];
+      E.x = E.lado === 'jugador' ? -20 : ANCHO + 20;
+      E.pose = 'paso';
+      const inicio = ahora();
+      efimero(1100, () => { E.paso = Math.floor((ahora() - inicio) / 150) % 2; }, { capa: 'suelo' });
+      animar(E, { x: casa }, 1100, 'frena').then(() => { E.pose = 'quieto'; E.paso = 0; });
+    }
+  }
+
   // --- Poké Ball, transición y confeti -------------------------------------------------------------
   /** Una Poké Ball en (x, y), de radio r, girada `giro`; `abierta` (0–1) separa la mitad de arriba. */
   function pokeBall(x, y, r, giro = 0, abierta = 0) {
@@ -2733,7 +2958,14 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
   /** Lanza una Poké Ball desde el borde de su bando hasta su casilla, rebota y se abre. */
   async function lanzarPokeBall(L) {
     const dir = DIRECCION[L.lado];
-    const desde = { x: L.lado === 'jugador' ? -14 : ANCHO + 14, y: SUELO - 46 };
+    const E = entrenadores[L.lado];
+    let desde = { x: L.lado === 'jugador' ? -14 : ANCHO + 14, y: SUELO - 46 };
+    if (E?.visible) { // el entrenador echa el brazo atrás y la lanza
+      posar(E, 'lanza1');
+      await pausa(230);
+      posar(E, 'lanza2', 520);
+      desde = manoDe(E);
+    }
     const hasta = { x: L.x, y: SUELO - 4 };
     const r = 4.6;
     sonar('lanzarBall');
@@ -2759,6 +2991,7 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
   /** Cortina de franjas negras que se abren (al empezar el combate). */
   function transicion() {
     tapado = false;
+    entrarEntrenadores();
     if (reducido()) return Promise.resolve();
     sonar('transicion');
     return efimero(900, q => {
@@ -3051,6 +3284,7 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
     dibujarCapa('suelo', t, dt);
     for (const p of particulas) if (p.capa === 'suelo') dibujarParticula(p, t);
     componer(capaSuelo);
+    for (const E of Object.values(entrenadores)) dibujarEntrenador(E, t);
     for (const L of Object.values(luchadores)) dibujarSombra(L, t);
     for (const L of Object.values(luchadores)) dibujarLuchador(L, t);
     // Capa de efectos del aire (encima): ataques, partículas, clima y destellos de pantalla.
@@ -3147,6 +3381,7 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
       const D = luchadores[lado === 'jugador' ? 'rival' : 'jugador'];
       A.preparado = null;
       if (reducido()) { revelar(A); const c = centro(D); impacto(c.x, c.y, PALETAS_ATAQUE[ataque.tipo] || PALETAS_ATAQUE.directo, 1); return; }
+      posar(entrenadores[lado], 'ordena', 700);
       await animacionDe(ataque)(A, D);
       if (A.oculto) revelar(A);
     },
@@ -3258,7 +3493,9 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
       revelar(L);
       if (!L.visible) return;
       const c = centro(L);
-      const lejos = { x: lado === 'jugador' ? -14 : ANCHO + 14, y: SUELO - 46 };
+      const E = entrenadores[lado];
+      if (E?.visible) posar(E, 'ordena', 600);
+      const lejos = E?.visible ? manoDe(E) : { x: lado === 'jugador' ? -14 : ANCHO + 14, y: SUELO - 46 };
       sonar('retirar');
       if (!reducido()) efimero(460, q => trazo([[c.x, c.y], [lejos.x, lejos.y]], 3.2 * (1 - q * 0.6), '#ff4a3a', { halo: '#ff9a8a', alfa: 1 - q }));
       L.quieto = false;
@@ -3379,6 +3616,7 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
     /** K.O.: se tambalea, parpadea, suelta polvo y desaparece. */
     async ko(lado) {
       const L = luchadores[lado];
+      posar(entrenadores[lado], 'triste', 1300);
       revelar(L);
       L.cargado = false;
       L.quieto = false;
@@ -3394,12 +3632,19 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
     /** Saltitos de victoria (y confeti si ganas tú). */
     async celebrar(lado) {
       const L = luchadores[lado];
+      const ganador = entrenadores[lado];
+      const perdedor = entrenadores[lado === 'jugador' ? 'rival' : 'jugador'];
+      if (ganador) { posar(ganador, 'celebra'); ganador.celebrando = true; setTimeout(() => { ganador.celebrando = false; }, 2400); }
+      if (perdedor) posar(perdedor, 'triste');
       if (lado === 'jugador') confeti();
       if (!L.visible) return;
       L.quieto = false;
       for (let i = 0; i < 3; i++) { await animar(L, { oy: -14 }, 220, 'frena'); await animar(L, { oy: 0 }, 200, 'acelera'); polvo(L.x, SUELO, 3); }
       L.quieto = true;
     },
+
+    /** Pose de un entrenador durante `ms` (o hasta otra orden): 'ordena', 'celebra', 'triste'… */
+    entrenador(lado, pose, ms = 0) { posar(entrenadores[lado], pose, ms); },
 
     /** Alto en el mundo de los dos Pokémon (lo usan las pruebas de tamaños). */
     medidas() { return { jugador: Math.round(altoDe(luchadores.jugador)), rival: Math.round(altoDe(luchadores.rival)) }; },

@@ -11,7 +11,17 @@
 //   playa  — costa tropical: mar con olas, muelle, palmeras, una barca y una poza con estrellas de mar;
 //   cueva  — cueva de cristal: cristales gigantes que iluminan de colores, estalactitas y un lago subterráneo;
 //   nieve  — cumbre nevada al anochecer: montañas, aurora, pinos con nieve, un estanque helado y faroles;
-//   ruinas — ruinas antiguas: muro con arco, columnas con antorchas, baldosas con arena y un mosaico de runas.
+//   ruinas — ruinas antiguas: muro con arco, columnas con antorchas, baldosas con arena y un mosaico de runas;
+//   jardin — jardín de los cerezos: pagoda tras el muro, cerezos en flor, grava rastrillada, estanque con carpas y
+//            puente rojo, farolillos de piedra y pétalos al viento;
+//   desierto — cañón del desierto: mesetas rojas con estratos, dunas, oasis, cactus, un esqueleto enorme, calima
+//            y un matojo que rueda;
+//   ciudad — azotea de noche: rascacielos con ventanas, neones, depósito de agua, helipuerto, charcos que reflejan
+//            las luces y ventiladores que giran;
+//   cielo  — pilar celeste: losas antiguas por encima de un mar de nubes, columnas rotas, islas flotantes, nubes y
+//            ráfagas de viento que pasan.
+//   estadio — (solo modo aventura: eliminatorias y final) el estadio de la copa de noche: gradas llenas con los
+//             colores de la región, focos, paneles de luz, el emblema de las nueve estrellas y el público delante.
 
 export const ANCHO = 480;
 export const ALTO = 270;
@@ -605,15 +615,435 @@ function ruinas(ctx, azar) {
   ]);
 }
 
-const DIBUJOS = { bosque, volcan, playa, cueva, nieve, ruinas };
+// --- Estadio de la copa (modo aventura) ------------------------------------------------------------------
+const LOSA_ESTADIO = paleta('#121624', '#161b2b', '#1b2133', '#20273c', '#262e46', '#2d3651', '#35405e');
+const FOCOS_ESTADIO = [[18, 2], [462, 2]];
+const EMBLEMA = { x: 240, y: 178, rx: 40, ry: 13 };
+const ANILLO = { x: 240, y: 178, rx: 212, ry: 72 };
+const oscurecer = (hex, f) => '#' + aRgb(hex).map(v => Math.min(255, Math.round(v * f)).toString(16).padStart(2, '0')).join('');
 
-/** El fondo de un escenario (lienzo de 480×270). Si la clave no existe (una guardada de antes), el primero. */
-export function dibujarFondo(escenario) {
+function estadio(ctx, azar, { colores = ['#c8d2e6', '#8fa8d8'] } = {}) {
+  const h = herramientas(ctx);
+  const [ca, cb] = colores;
+  const manchas = ruido(azar, 26);
+  // Suelo de losas pulidas, más claro en el centro (lo iluminan los focos).
+  pintarTerreno(ctx, (x, y) => {
+    const lx = x % 40; const ly = (y - 70) % 22;
+    let n = manchas(x, y) * 0.45 + azar() * 0.1 + 0.15;
+    n += 0.42 * Math.max(0, 1 - Math.hypot((x - 240) / 250, (y - 178) / 100));
+    if (lx === 0 || ly === 0) n -= 0.18;
+    if (lx === 1 || ly === 1) n += 0.08;
+    return tonoDe(LOSA_ESTADIO, n, x, y);
+  });
+  // Gradas: cielo de noche, techo con bombillas y ocho filas de público con los colores de la región.
+  h.rect(0, 0, ANCHO, 70, '#0a0d17');
+  for (let i = 0; i < 40; i++) h.punto(azar() * ANCHO, azar() * 7, azar() < 0.5 ? '#56628a' : '#c8d2f0');
+  h.rect(0, 7, ANCHO, 4, '#1a2033');
+  for (let x = 0; x < ANCHO; x += 12) { h.linea(x, 7, x + 6, 10, '#2c3552'); h.linea(x + 6, 10, x + 12, 7, '#2c3552'); }
+  for (let x = 6; x < ANCHO; x += 24) { h.punto(x, 11, '#fff4d0'); h.punto(x, 12, '#8a7a5a'); }
+  const pieles = ['#f0c8a0', '#d8a878', '#b07850', '#7a4a30'];
+  const camisetas = [ca, ca, cb, cb, '#e9ecf1', '#2b2b36', '#d8433a', '#3a66d4', '#e6bd3a'];
+  for (let fila = 0; fila < 8; fila++) {
+    const y = 13 + fila * 6;
+    const luz = 0.55 + fila * 0.06; // las filas de arriba, más en sombra
+    h.rect(0, y + 4, ANCHO, 2, oscurecer('#2a3150', luz));
+    for (let x = (fila % 2) * 2; x < ANCHO; x += 4) {
+      if (azar() < 0.07) continue;
+      const camiseta = camisetas[Math.floor(azar() * camisetas.length)];
+      h.rect(x, y + 2, 3, 2, oscurecer(camiseta, luz));
+      h.rect(x + 1, y, 2, 2, oscurecer(pieles[Math.floor(azar() * pieles.length)], luz));
+      if (azar() < 0.05) h.rect(x + 1, y - 2, 1, 2, oscurecer(camiseta, luz)); // un brazo en alto con su bufanda
+    }
+  }
+  // Pancartas con los colores de la región colgadas de la barandilla.
+  for (let x = 20, i = 0; x < ANCHO; x += 64, i++) {
+    const color = i % 2 ? cb : ca;
+    h.rect(x, 54, 22, 9, oscurecer(color, 0.7)); h.rect(x, 54, 22, 1, color);
+    for (let k = 0; k < 3; k++) h.rect(x + 4 + k * 6, 57, 3, 3, color);
+    h.rect(x + 2, 63, 2, 1, oscurecer(color, 0.5)); h.rect(x + 18, 63, 2, 1, oscurecer(color, 0.5));
+  }
+  // Barrera con paneles de luz (el ambiente hace correr la luz por ellos).
+  h.rect(0, 63, ANCHO, 7, '#0c0f1a'); h.rect(0, 63, ANCHO, 1, '#3a4466');
+  for (let x = 2; x < ANCHO; x += 30) h.rect(x, 65, 26, 3, '#161b2c');
+  // Focos en las esquinas: torre y panel de lámparas.
+  for (const [fx, fy] of FOCOS_ESTADIO) {
+    h.rect(fx - 1, fy + 10, 3, 30, '#252c44');
+    h.rect(fx - 12, fy, 25, 11, '#1a2033'); h.rect(fx - 12, fy, 25, 1, '#3a4466');
+    for (let i = 0; i < 6; i++) for (let j = 0; j < 2; j++) h.rect(fx - 10 + i * 4, fy + 2 + j * 4, 3, 3, '#fffbe8');
+  }
+  // El gran anillo del campo, con la línea de la región dentro.
+  for (let i = 0; i < 360; i++) {
+    const a = (i / 360) * Math.PI * 2;
+    h.punto(ANILLO.x + Math.cos(a) * ANILLO.rx, ANILLO.y + Math.sin(a) * ANILLO.ry, '#56628a');
+    if (i % 2) h.punto(ANILLO.x + Math.cos(a) * (ANILLO.rx - 6), ANILLO.y + Math.sin(a) * (ANILLO.ry - 3), oscurecer(ca, 0.7));
+  }
+  // Emblema del centro: un anillo con nueve estrellas (las nueve regiones) y una línea, como una Poké Ball.
+  const { x: ex, y: ey, rx, ry } = EMBLEMA;
+  h.elipse(ex, ey, rx + 2, ry + 1, '#0d1120');
+  h.elipse(ex, ey, rx, ry, '#2a3352');
+  h.elipse(ex, ey, rx - 3, ry - 2, '#1a2036');
+  h.rect(ex - rx + 3, ey, (rx - 3) * 2, 1, '#8a96bc');
+  h.elipse(ex, ey, 8, 3, '#8a96bc'); h.elipse(ex, ey, 5, 2, '#1a2036'); h.elipse(ex, ey, 2, 1, '#e9ecf1');
+  for (let i = 0; i < 9; i++) {
+    const a = -Math.PI / 2 + (i / 9) * Math.PI * 2;
+    const x = ex + Math.cos(a) * (rx - 1.5); const y = ey + Math.sin(a) * (ry - 0.5);
+    h.punto(x, y, '#e9ecf1'); h.punto(x - 1, y, '#8a96bc'); h.punto(x + 1, y, '#8a96bc');
+  }
+  // Plataformas de metal con un aro del color de la región.
+  plataformas(h, {
+    borde: '#3a4466', cara: '#222a42', luz: '#56628a',
+    adorno: (x, y) => { for (let i = 0; i < 44; i++) { const a = (i / 44) * Math.PI * 2; h.punto(x + Math.cos(a) * 29, y - 1 + Math.sin(a) * 7.5, ca); } },
+  });
+  // Primera fila del público, a contraluz, delante del campo.
+  h.rect(0, 258, ANCHO, 12, '#06080f'); h.rect(0, 256, ANCHO, 2, '#2a3150');
+  for (let x = -2; x < ANCHO; x += 7 + Math.floor(azar() * 3)) { h.elipse(x + 3, 256, 3, 4, '#06080f'); if (azar() < 0.15) h.rect(x + 5, 246, 2, 8, '#06080f'); }
+  iluminar(ctx, [
+    { x: 240, y: 175, r: 260, ry: 105, color: '#2a3250', fuerza: 0.55 },
+    ...FOCOS_ESTADIO.map(([x, y]) => ({ x, y: y + 5, r: 40, ry: 26, color: '#8a8060', fuerza: 0.7 })),
+    { x: 240, y: 300, r: 300, ry: 80, fuerza: -0.5 },
+  ]);
+}
+
+// --- Jardín de los cerezos ------------------------------------------------------------------------------
+const GRAVA = paleta('#8e8a80', '#9c988c', '#aaa69a', '#b8b4a8', '#c6c2b6', '#d2cec2');
+const MUSGO_JARDIN = paleta('#34522a', '#3f6032', '#4a6e3a', '#567c42', '#628a4a');
+const CIELO_JARDIN = paleta('#6aaedc', '#84bee4', '#a0ceea', '#bcdcee', '#e6dcea', '#f4dce6');
+const ESTANQUE_JARDIN = { x: 92, y: 236, rx: 74, ry: 24 };
+const FAROLILLOS = [[52, 112], [428, 112]];
+const CEREZOS = [[26, 20, 30], [118, 14, 24], [206, 24, 18], [292, 16, 24], [462, 22, 30]];
+/** La distancia «ovalada» a la plataforma más cercana (para los surcos de la grava rastrillada). */
+const surco = (x, y) => Math.min(Math.hypot(x - CASA.jugador, (y - SUELO) * 2.8), Math.hypot(x - CASA.rival, (y - SUELO) * 2.8));
+
+function jardin(ctx, azar) {
+  const h = herramientas(ctx);
+  const manchas = ruido(azar, 18); const musgo = ruido(azar, 34);
+  pintarTerreno(ctx, (x, y) => {
+    if (y < 36) return tonoDe(CIELO_JARDIN, y / 36, x, y);
+    let n = manchas(x, y) * 0.4 + azar() * 0.18 + 0.28;
+    if (musgo(x, y) > 0.76 && y > 70) return tonoDe(MUSGO_JARDIN, n + (musgo(x, y) - 0.76) * 2, x, y);
+    n += Math.sin(surco(x, y) / 3.1) * 0.16; // la grava rastrillada en círculos alrededor de cada plataforma
+    return tonoDe(GRAVA, n, x, y);
+  });
+  // Montes lejanos y una pagoda de cinco tejados detrás del muro.
+  h.poligono([[0, 36], [60, 18], [130, 30], [200, 12], [290, 28], [360, 16], [480, 30], [480, 40], [0, 40]], '#7a9ec4');
+  h.poligono([[0, 38], [90, 28], [170, 36], [260, 24], [380, 34], [480, 26], [480, 42], [0, 42]], '#6a8cb4');
+  const pagoda = (x) => {
+    for (let k = 0; k < 5; k++) {
+      const y = 40 - k * 9; const w = 30 - k * 4;
+      h.rect(x - w / 2 + 4, y - 6, w - 8, 6, k % 2 ? '#c8402e' : '#b03424');
+      h.rect(x - w / 2 + 6, y - 5, 2, 4, '#f0d8a0'); h.rect(x + w / 2 - 8, y - 5, 2, 4, '#f0d8a0');
+      h.poligono([[x - w / 2 - 4, y - 6], [x + w / 2 + 4, y - 6], [x + w / 2 - 2, y - 10], [x - w / 2 + 2, y - 10]], '#2e3440');
+      h.punto(x - w / 2 - 5, y - 7, '#2e3440'); h.punto(x + w / 2 + 4, y - 7, '#2e3440');
+      h.rect(x - w / 2 + 2, y - 10, w - 4, 1, '#4a5262');
+    }
+    h.rect(x - 1, -6, 2, 10, '#c89a3a'); for (let k = 0; k < 4; k++) h.rect(x - 2, k * 2 - 4, 4, 1, '#e0b84a');
+  };
+  pagoda(398);
+  // El muro del jardín: tejado de tejas oscuras, enlucido blanco y zócalo de piedra.
+  h.rect(0, 40, ANCHO, 18, '#e8e0d0');
+  for (let x = 0; x < ANCHO; x += 40) h.rect(x, 40, 2, 18, '#8a5a3a'); // pilares de madera
+  h.rect(0, 46, ANCHO, 1, '#d4cab8');
+  h.rect(0, 56, ANCHO, 5, '#8a8478'); for (let x = 0; x < ANCHO; x += 9) h.rect(x, 56, 1, 5, '#6a6458');
+  h.rect(0, 36, ANCHO, 5, '#363c48'); h.rect(0, 35, ANCHO, 1, '#4e5666');
+  for (let x = 0; x < ANCHO; x += 4) h.rect(x, 37, 1, 4, '#262a34');
+  h.rect(0, 41, ANCHO, 1, 'rgba(0,0,0,0.25)');
+  // Cerezos en flor asomando por encima del muro.
+  for (const [x, y, r] of CEREZOS) {
+    h.rect(x - 3, y + 6, 6, 50 - y, '#4a2e22'); h.rect(x - 2, y + 6, 2, 50 - y, '#6a4430');
+    h.linea(x, y + 18, x - r * 0.6, y + 4, '#4a2e22', 2); h.linea(x, y + 14, x + r * 0.6, y + 2, '#4a2e22', 2);
+    for (let k = 0; k < 16; k++) {
+      const a = azar() * Math.PI * 2; const d = azar() * r;
+      const cx = x + Math.cos(a) * d; const cy = y + Math.sin(a) * d * 0.55;
+      const rr = 5 + azar() * 6;
+      h.elipse(cx + 1, cy + 2, rr, rr * 0.7, '#c0567c');
+      h.elipse(cx, cy, rr, rr * 0.7, '#ee8eae');
+      h.elipse(cx - rr * 0.3, cy - rr * 0.25, rr * 0.55, rr * 0.38, '#fcc4d6');
+    }
+  }
+  // Pétalos ya caídos en la grava y el musgo.
+  for (let i = 0; i < 340; i++) {
+    const x = azar() * ANCHO; const y = 62 + azar() * 208;
+    if (Math.hypot(x - CASA.jugador, (y - SUELO) * 3) < 40 || Math.hypot(x - CASA.rival, (y - SUELO) * 3) < 40) continue;
+    h.punto(x, y, azar() < 0.6 ? '#f6a8c2' : '#fcd4e0');
+  }
+  // Estanque de las carpas con su orilla de piedras y un puente rojo en arco.
+  const { x: ex, y: ey, rx, ry } = ESTANQUE_JARDIN;
+  for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2; const px = ex + Math.cos(a) * (rx + 3); const py = ey + Math.sin(a) * (ry + 3); h.elipse(px, py, 5, 3, '#6a665c'); h.elipse(px - 1, py - 1, 3, 1.5, '#9a968a'); }
+  h.elipse(ex, ey, rx, ry, '#1e5468'); h.elipse(ex, ey + 2, rx - 5, ry - 5, '#2a6e84'); h.elipse(ex - 10, ey - 4, rx - 30, ry - 14, '#3a8a9c');
+  for (const [lx, ly] of [[ex - 40, ey + 6], [ex + 30, ey - 8], [ex + 48, ey + 9]]) { h.elipse(lx, ly, 6, 2.5, '#3a7a3a'); h.punto(lx + 2, ly - 1, '#f6b8cc'); h.punto(lx + 3, ly - 1, '#ffffff'); } // nenúfares
+  const arco = []; for (let i = 0; i <= 20; i++) { const q = i / 20; arco.push([ex - 58 + q * 116, ey - 2 - Math.sin(q * Math.PI) * 20]); }
+  h.trazo(arco.map(([x, y]) => [x, y + 4]), '#5a1a14', 5);
+  h.trazo(arco, '#c8402e', 4); h.trazo(arco.map(([x, y]) => [x, y - 1]), '#e8603e', 1);
+  for (let i = 0; i <= 20; i += 4) { const [x, y] = arco[i]; h.rect(x - 1, y - 9, 2, 9, '#a83224'); h.rect(x - 1, y - 10, 2, 1, '#e8b040'); }
+  h.trazo(arco.map(([x, y]) => [x, y - 8]), '#c8402e', 1);
+  // Farolillos de piedra.
+  for (const [x, y] of FAROLILLOS) {
+    h.elipse(x + 3, y + 22, 10, 3, 'rgba(30,30,20,0.3)');
+    h.rect(x - 6, y + 16, 12, 4, '#6a665c'); h.rect(x - 2, y + 6, 4, 10, '#8a867a');
+    h.rect(x - 7, y + 2, 14, 4, '#7a766a'); h.rect(x - 5, y - 4, 10, 6, '#8a867a'); h.rect(x - 2, y - 3, 4, 4, '#ffe08a');
+    h.poligono([[x - 9, y - 4], [x + 9, y - 4], [x + 4, y - 10], [x - 4, y - 10]], '#6a665c'); h.rect(x - 1, y - 13, 2, 3, '#6a665c');
+  }
+  // Camino de losas que cruza el jardín por delante.
+  for (let i = 0; i < 9; i++) { const x = 196 + i * 12 + (i % 2) * 3; const y = 262 - i * 2.2; h.elipse(x, y, 5, 2.5, '#5a564c'); h.elipse(x, y - 1, 4.5, 2, '#9a968a'); }
+  // Arbustos podados en los bordes.
+  const bola = (x, y, r) => { h.elipse(x + 2, y + 3, r, r * 0.6, 'rgba(20,30,10,0.35)'); h.elipse(x, y, r, r * 0.7, '#2e5226'); h.elipse(x - 2, y - 2, r * 0.75, r * 0.5, '#46703a'); h.elipse(x - r * 0.35, y - r * 0.35, r * 0.3, r * 0.2, '#6a9a4e'); };
+  for (const [x, y, r] of [[470, 150, 14], [456, 262, 16], [12, 150, 12], [300, 268, 10], [392, 250, 9]]) bola(x, y, r);
+  plataformas(h, {
+    borde: '#4e4a42', cara: '#9e9a8e', luz: '#c2beb2',
+    adorno: (x, y) => { for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2 + 0.3; h.punto(x + Math.cos(a) * 30, y + Math.sin(a) * 8, '#5e8a4a'); h.punto(x + Math.cos(a) * 30 + 1, y + Math.sin(a) * 8, '#f6a8c2'); } },
+  });
+  iluminar(ctx, [
+    { x: 240, y: 150, r: 260, ry: 120, color: '#2a2418', fuerza: 0.7 },
+    ...FAROLILLOS.map(([x, y]) => ({ x, y: y - 1, r: 22, color: '#5a4010', fuerza: 0.6 })),
+    { x: 0, y: 270, r: 130, fuerza: -0.35 }, { x: 480, y: 270, r: 130, fuerza: -0.35 },
+  ]);
+}
+
+// --- Cañón del desierto ---------------------------------------------------------------------------------
+const ARENA_DESIERTO = paleta('#b8703c', '#c67e46', '#d28c52', '#dc9a5e', '#e6a86c', '#eeb87c', '#f4c890');
+const CIELO_DESIERTO = paleta('#1e4c94', '#2c62aa', '#4278ba', '#6492c2', '#94aec2', '#c8c4ae', '#ecd6a4');
+const MESAS = [[-10, 70, 30, '#a0586a'], [90, 190, 22, '#a0586a'], [250, 330, 34, '#a0586a'], [360, 490, 26, '#a0586a'],
+  [30, 120, 40, '#b4502e'], [300, 400, 44, '#b4502e'], [170, 230, 48, '#c0603a']];
+const CACTUS = [[40, 150, 1], [446, 128, 1.2], [300, 262, 0.8], [96, 104, 0.7]];
+const OASIS = { x: 58, y: 236, rx: 46, ry: 14 };
+const SOL_DESIERTO = { x: 410, y: 16 };
+
+function desierto(ctx, azar) {
+  const h = herramientas(ctx);
+  const manchas = ruido(azar, 26); const dunas = ruido(azar, 60);
+  pintarTerreno(ctx, (x, y) => {
+    if (y < 62) return tonoDe(CIELO_DESIERTO, Math.pow(y / 62, 1.2), x, y);
+    let n = manchas(x, y) * 0.35 + dunas(x, y) * 0.35 + azar() * 0.12;
+    n += Math.sin((x * 0.5 + y * 2.4 + dunas(x, y) * 40) / 5) * 0.09; // ondas que deja el viento
+    return tonoDe(ARENA_DESIERTO, n, x, y);
+  });
+  // El sol con su halo.
+  for (const [r, c] of [[24, 'rgba(255,240,200,0.10)'], [16, 'rgba(255,240,200,0.16)'], [10, '#fff3c8'], [7, '#ffffff']]) h.elipse(SOL_DESIERTO.x, SOL_DESIERTO.y, r, r, c);
+  // Mesetas: las lejanas, violetas; las cercanas, rojas con sus estratos.
+  for (const [x0, x1, alto, color] of MESAS) {
+    const base = 64; const cima = base - alto; const talud = alto * 0.35;
+    h.poligono([[x0, base], [x0 + talud, cima], [x1 - talud, cima], [x1, base]], color);
+    const claro = color === '#a0586a' ? '#b46a78' : '#d8784a';
+    h.rect(x0 + talud, cima, x1 - x0 - talud * 2, 2, claro);
+    for (let k = cima + 6; k < base - 2; k += 5) {
+      const q = (k - cima) / alto; const a = x0 + talud * (1 - q); const b = x1 - talud * (1 - q);
+      for (let x = a + 1; x < b - 1; x++) if (umbral(x, k) < 0.7) h.punto(x, k, k % 2 ? claro : 'rgba(60,20,20,0.25)');
+    }
+    h.poligono([[x1 - talud, cima], [x1, base], [x1 - talud * 0.6, base]], 'rgba(40,10,20,0.28)'); // la cara en sombra
+  }
+  h.rect(0, 62, ANCHO, 2, '#c87c48');
+  // Grietas de tierra reseca.
+  for (let i = 0; i < 7; i++) {
+    let x = 180 + azar() * 120; let y = 220 + azar() * 40;
+    for (let k = 0; k < 6; k++) { const nx = x + (azar() - 0.5) * 16; const ny = y + (azar() - 0.5) * 8; h.linea(x, y, nx, ny, '#8a4a26'); x = nx; y = ny; }
+  }
+  // Oasis con juncos.
+  const { x: ox, y: oy, rx, ry } = OASIS;
+  h.elipse(ox, oy, rx + 6, ry + 4, '#9a8a4a'); h.elipse(ox, oy, rx + 2, ry + 1, '#6a8a3a');
+  h.elipse(ox, oy, rx, ry, '#1e7a8a'); h.elipse(ox + 4, oy + 2, rx - 8, ry - 5, '#2a96a2'); h.elipse(ox - 8, oy - 3, rx - 24, ry - 9, '#5ac0c4');
+  for (let i = 0; i < 22; i++) { const a = Math.PI * (0.9 + azar() * 1.2); const x = ox + Math.cos(a) * (rx + 2); const y = oy + Math.sin(a) * (ry + 1); h.linea(x, y, x + (azar() - 0.5) * 3, y - 6 - azar() * 6, azar() < 0.5 ? '#4a7a2a' : '#6a9a3a'); }
+  // Cactus (saguaro) con brazos.
+  const cactus = (x, y, k) => {
+    const alto = 30 * k; const ancho = Math.max(4, 6 * k);
+    h.elipse(x + 8 * k, y + 2, 12 * k, 3 * k, 'rgba(80,30,10,0.3)');
+    h.rect(x - ancho / 2, y - alto, ancho, alto, '#2a5a2a'); h.rect(x - ancho / 2 + 1, y - alto, ancho / 2, alto, '#3e7a36'); h.rect(x - ancho / 2 + 1, y - alto, 1, alto, '#5a9a4a');
+    h.elipse(x, y - alto, ancho / 2, ancho / 3, '#3e7a36');
+    for (const [lado, alt] of [[-1, 0.55], [1, 0.4]]) {
+      const ay = y - alto * alt; const ax = x + lado * (ancho / 2 + 4 * k);
+      h.rect(Math.min(x, ax), ay, Math.abs(ax - x), 4 * k, '#2a5a2a');
+      h.rect(ax - 2 * k, ay - 12 * k, 4 * k, 12 * k + 4 * k, '#2a5a2a'); h.rect(ax - 2 * k + 1, ay - 12 * k, 2 * k, 12 * k, '#3e7a36');
+      h.elipse(ax, ay - 12 * k, 2 * k, 1.5 * k, '#3e7a36');
+    }
+    for (let i = 0; i < alto; i += 3) h.punto(x - ancho / 2 - 1, y - i, '#f0e0b0'); // espinas
+    h.punto(x, y - alto - 2, '#f05a7a'); h.punto(x + 1, y - alto - 2, '#ff8aa0'); // una flor
+  };
+  for (const [x, y, k] of CACTUS) cactus(x, y, k);
+  // Un esqueleto enorme medio enterrado (costillas blanqueadas por el sol).
+  for (let i = 0; i < 6; i++) {
+    const x = 352 + i * 11; const alto = 22 - Math.abs(i - 2.5) * 4;
+    const arco = []; for (let q = 0; q <= 1.001; q += 0.1) arco.push([x + Math.sin(q * Math.PI) * 8, 242 - Math.sin(q * Math.PI * 0.95) * alto]);
+    h.trazo(arco.map(([a, b]) => [a + 1, b + 1]), '#8a6a4a', 3); h.trazo(arco, '#efe6d2', 2);
+  }
+  h.trazo([[346, 244], [420, 240]], '#efe6d2', 3); h.elipse(428, 238, 9, 6, '#efe6d2'); h.elipse(431, 238, 2, 2, '#4a3020');
+  // Rocas sueltas.
+  for (let i = 0; i < 26; i++) {
+    const x = azar() * ANCHO; const y = 70 + azar() * 196;
+    if (Math.hypot(x - CASA.jugador, (y - SUELO) * 3) < 44 || Math.hypot(x - CASA.rival, (y - SUELO) * 3) < 44) continue;
+    const r = 1.5 + azar() * 3; h.elipse(x + 1, y + 1, r, r * 0.6, '#8a4a26'); h.elipse(x, y, r, r * 0.65, '#a8683e'); h.punto(x - r * 0.4, y - r * 0.3, '#d8946a');
+  }
+  plataformas(h, {
+    borde: '#7a3e1e', cara: '#d08a50', luz: '#eab070',
+    adorno: (x, y) => { for (let k = -2; k <= 2; k++) h.rect(x - 22, y - 2 + k * 2, 44, 1, k % 2 ? 'rgba(122,62,30,0.25)' : 'rgba(255,220,160,0.18)'); },
+  });
+  iluminar(ctx, [
+    { x: SOL_DESIERTO.x, y: SOL_DESIERTO.y, r: 220, ry: 160, color: '#3a2a10', fuerza: 0.8 },
+    { x: 240, y: 180, r: 240, ry: 100, color: '#2a1a08', fuerza: 0.5 },
+    { x: 0, y: 270, r: 140, fuerza: -0.3 },
+  ]);
+}
+
+// --- Azotea de la ciudad (de noche) ---------------------------------------------------------------------
+const CIELO_CIUDAD = paleta('#0a0a22', '#100e30', '#18143e', '#22184a', '#321e58', '#4a2862', '#6a3268');
+const AZOTEA = paleta('#262a3a', '#2c3142', '#32384a', '#383f52', '#3f475c');
+const NEONES = [{ x: 18, y: 18, w: 26, h: 9, color: '#ff4fa8' }, { x: 300, y: 26, w: 30, h: 8, color: '#4fe6ff' }, { x: 196, y: 30, w: 20, h: 7, color: '#ffd84f' }];
+const ANTENA = { x: 368, y: 2 };
+const VENTILADORES = [[440, 210], [34, 214]];
+const CHARCOS = [[250, 228, 26, 5], [96, 118, 18, 4], [390, 120, 20, 4]];
+
+function ciudad(ctx, azar) {
+  const h = herramientas(ctx);
+  const manchas = ruido(azar, 14);
+  pintarTerreno(ctx, (x, y) => {
+    if (y < 64) return tonoDe(CIELO_CIUDAD, Math.pow(y / 64, 1.4), x, y);
+    let n = manchas(x, y) * 0.45 + azar() * 0.2 + 0.25;
+    if ((x + Math.floor((y - 64) / 18) * 12) % 24 === 0 || (y - 64) % 18 === 0) n -= 0.35; // juntas de las losas
+    return tonoDe(AZOTEA, n, x, y);
+  });
+  for (let i = 0; i < 60; i++) { const x = azar() * ANCHO; const y = azar() * 34; h.punto(x, y, azar() < 0.8 ? '#8a8ab8' : '#ffffff'); }
+  h.elipse(64, 14, 7, 7, '#f4eed8'); h.elipse(62, 13, 2, 2, '#d8d0b8'); h.elipse(66, 16, 1.5, 1.5, '#d8d0b8');
+  // Los rascacielos con sus ventanas encendidas.
+  const torres = [];
+  for (let x = -6; x < ANCHO;) { const w = 18 + Math.floor(azar() * 26); torres.push([x, w, 18 + Math.floor(azar() * 38)]); x += w + Math.floor(azar() * 3); }
+  torres.push([ANTENA.x - 12, 24, 58]);
+  for (const [x, w, alto] of torres) {
+    const cima = 64 - alto; const tono = azar() < 0.5 ? '#151b38' : '#1b2244';
+    h.rect(x, cima, w, alto, tono); h.rect(x, cima, 1, alto, '#2a3462'); h.rect(x, cima, w, 1, '#2e3868');
+    for (let wy = cima + 4; wy < 60; wy += 4) for (let wx = x + 3; wx < x + w - 2; wx += 4) {
+      const v = azar();
+      h.rect(wx, wy, 2, 2, v < 0.3 ? '#ffd86a' : v < 0.42 ? '#8ae4ff' : v < 0.5 ? '#ffb070' : '#0e1330');
+    }
+  }
+  h.rect(ANTENA.x - 1, ANTENA.y, 2, 8, '#4a5068'); h.rect(ANTENA.x - 4, ANTENA.y + 4, 8, 1, '#4a5068');
+  for (const { x, y, w, h: alto, color } of NEONES) { h.rect(x - 1, y - 1, w + 2, alto + 2, '#0a0a18'); h.rect(x, y, w, alto, color); h.rect(x + 2, y + 2, w - 4, alto - 4, '#0a0a18'); for (let k = x + 4; k < x + w - 4; k += 4) h.rect(k, y + 3, 2, alto - 6, color); }
+  // El pretil del fondo y el depósito de agua.
+  h.rect(0, 62, ANCHO, 7, '#454c66'); h.rect(0, 62, ANCHO, 1, '#6a7494'); h.rect(0, 69, ANCHO, 2, 'rgba(0,0,0,0.35)');
+  const deposito = (x) => {
+    for (const px of [x - 12, x - 4, x + 4, x + 12]) h.rect(px, 66, 2, 24, '#2a2e3e');
+    h.linea(x - 12, 88, x + 12, 70, '#2a2e3e'); h.linea(x - 12, 70, x + 12, 88, '#2a2e3e');
+    h.rect(x - 16, 40, 32, 26, '#6a4a38'); for (let k = x - 14; k < x + 16; k += 5) h.rect(k, 40, 1, 26, '#4a3226');
+    h.rect(x - 16, 48, 32, 2, '#3a3a48'); h.rect(x - 16, 58, 32, 2, '#3a3a48');
+    h.poligono([[x - 18, 40], [x + 18, 40], [x, 30]], '#4a3a40'); h.rect(x - 16, 40, 3, 26, '#8a6650');
+  };
+  deposito(116);
+  // Máquinas del aire acondicionado con su rejilla, tubos y antenas.
+  for (const [x, y] of VENTILADORES) {
+    h.rect(x - 16, y - 14, 32, 22, '#1e2232'); h.rect(x - 15, y - 13, 30, 20, '#5a6278'); h.rect(x - 15, y - 13, 30, 2, '#7a84a0');
+    h.elipse(x, y - 3, 8, 8, '#2a2e3e'); h.elipse(x, y - 3, 7, 7, '#3a4054');
+  }
+  h.rect(0, 150, 26, 4, '#3a4054'); h.rect(0, 150, 26, 1, '#6a7494'); h.rect(454, 160, 26, 4, '#3a4054');
+  // El helipuerto pintado en el centro (pintura gastada).
+  for (let i = 0; i < 120; i++) { const a = (i / 120) * Math.PI * 2; if (i % 6 < 4 && umbral(i, 0) < 0.8) h.punto(240 + Math.cos(a) * 40, 182 + Math.sin(a) * 13, '#c8a83a'); }
+  for (const [x, y, w, alto] of [[230, 176, 3, 13], [247, 176, 3, 13], [233, 181, 14, 3]]) for (let yy = y; yy < y + alto; yy++) for (let xx = x; xx < x + w; xx++) if (umbral(xx, yy) < 0.75) h.punto(xx, yy, '#c8a83a');
+  // Charcos que reflejan los neones.
+  for (const [x, y, rx, ry] of CHARCOS) { h.elipse(x, y, rx, ry, '#1a1c2e'); h.elipse(x - 3, y - 1, rx * 0.6, ry * 0.4, '#3a2a5a'); h.rect(x - rx * 0.4, y, rx * 0.5, 1, '#ff4fa8'); h.rect(x, y + 1, rx * 0.3, 1, '#4fe6ff'); }
+  // Barandilla de delante.
+  h.rect(0, 258, ANCHO, 2, '#6a7494'); for (let x = 4; x < ANCHO; x += 20) h.rect(x, 258, 2, 12, '#4a5068'); h.rect(0, 266, ANCHO, 1, '#4a5068');
+  plataformas(h, {
+    borde: '#141826', cara: '#48506a', luz: '#6a7696',
+    adorno: (x, y) => { for (let i = 0; i < 18; i++) { const a = (i / 18) * Math.PI * 2; h.punto(x + Math.cos(a) * 31, y + Math.sin(a) * 8.6, i % 2 ? '#4fe6ff' : '#2a8aa8'); } },
+  });
+  iluminar(ctx, [
+    ...NEONES.map(n => ({ x: n.x + n.w / 2, y: n.y + n.h / 2, r: 46, ry: 30, color: n.color === '#ff4fa8' ? '#40102a' : n.color === '#4fe6ff' ? '#0a3040' : '#3a3008', fuerza: 0.9 })),
+    { x: 240, y: 190, r: 230, ry: 90, color: '#141a34', fuerza: 0.8 },
+    { x: 0, y: 270, r: 150, fuerza: -0.45 }, { x: 480, y: 270, r: 150, fuerza: -0.45 },
+  ]);
+}
+
+// --- Pilar celeste (por encima de las nubes) ---------------------------------------------------------------
+const CIELO_ALTO = paleta('#2e6cc8', '#3a7ad2', '#4a8adc', '#5c9ae4', '#72acea', '#8cbef0', '#a8d0f4');
+const PIEDRA_CELESTE = paleta('#56665c', '#627268', '#6e7e72', '#7a8a7c', '#869686', '#92a290');
+/** El suelo del pilar: un octógono de losas antiguas. */
+const PILAR = [[70, 74], [410, 74], [460, 118], [460, 214], [404, 252], [76, 252], [20, 214], [20, 118]];
+const dentroDe = (x, y, poli) => {
+  let dentro = false;
+  for (let i = 0, j = poli.length - 1; i < poli.length; j = i++) {
+    const [xi, yi] = poli[i]; const [xj, yj] = poli[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) dentro = !dentro;
+  }
+  return dentro;
+};
+
+function nube(h, x, y, w, azar) {
+  for (let k = 0; k < Math.max(3, w / 10); k++) {
+    const cx = x + (azar() - 0.5) * w; const cy = y + (azar() - 0.5) * w * 0.12; const r = w * (0.16 + azar() * 0.14);
+    h.elipse(cx, cy + r * 0.3, r, r * 0.55, '#b8cce4');
+  }
+  for (let k = 0; k < Math.max(3, w / 10); k++) {
+    const cx = x + (azar() - 0.5) * w * 0.9; const cy = y - 2 + (azar() - 0.5) * w * 0.1; const r = w * (0.14 + azar() * 0.12);
+    h.elipse(cx, cy, r, r * 0.6, '#eef4fb'); h.elipse(cx - r * 0.2, cy - r * 0.2, r * 0.6, r * 0.35, '#ffffff');
+  }
+}
+
+function cielo(ctx, azar) {
+  const h = herramientas(ctx);
+  const manchas = ruido(azar, 16);
+  pintarTerreno(ctx, (x, y) => {
+    if (dentroDe(x, y, PILAR)) {
+      let n = manchas(x, y) * 0.45 + azar() * 0.2 + 0.25;
+      if ((y - 74) % 16 === 0 || (x + ((Math.floor((y - 74) / 16) % 2) * 14)) % 28 === 0) n -= 0.4; // juntas de las losas
+      return tonoDe(PIEDRA_CELESTE, n, x, y);
+    }
+    return tonoDe(CIELO_ALTO, Math.min(1, y / 230), x, y);
+  });
+  // Islas flotantes y otros pilares que asoman a lo lejos.
+  for (const [x, y, w] of [[60, 26, 26], [250, 14, 18], [430, 32, 30]]) {
+    h.poligono([[x - w, y], [x + w, y], [x + w * 0.4, y + w * 0.9], [x - w * 0.2, y + w * 1.2]], '#6a7aa0');
+    h.rect(x - w, y - 3, w * 2, 3, '#7aa07a'); h.rect(x - w + 2, y - 4, w * 2 - 4, 1, '#9ac08a');
+  }
+  for (const [x, y, w] of [[20, 58, 70], [180, 56, 60], [330, 62, 80], [470, 60, 50]]) nube(h, x, y, w, azar);
+  // El espesor del pilar por delante (la cara de piedra que cae hacia las nubes).
+  h.poligono([[20, 214], [76, 252], [404, 252], [460, 214], [460, 230], [404, 270], [76, 270], [20, 230]], '#3e4a44');
+  const cara = x => (x < 76 ? 214 + (x - 20) * (38 / 56) : x > 404 ? 252 - (x - 404) * (38 / 56) : 252); // borde de arriba de la cara
+  for (let x = 20; x < 460; x++) { h.punto(x, cara(x) + 8, '#323e38'); h.punto(x, cara(x) + 1, '#56645a'); }
+  for (let x = 24; x < 458; x += 14) { h.rect(x, cara(x) + 1, 1, 7, '#323e38'); h.rect(x + 7, cara(x + 7) + 9, 1, 7, '#323e38'); }
+  h.trazo(PILAR.slice(3).concat([PILAR[0]]).slice(0, 4), '#a8b8a4', 1);
+  // Musgo, grietas y un sol tallado en el centro.
+  for (let i = 0; i < 60; i++) {
+    const x = 30 + azar() * 420; const y = 80 + azar() * 168;
+    if (!dentroDe(x, y, PILAR) || Math.hypot(x - CASA.jugador, (y - SUELO) * 3) < 42 || Math.hypot(x - CASA.rival, (y - SUELO) * 3) < 42) continue;
+    if (azar() < 0.5) h.elipse(x, y, 3 + azar() * 4, 1.5 + azar() * 2, azar() < 0.5 ? '#5a8a4a' : '#6e9e56');
+    else { let a = x; let b = y; for (let k = 0; k < 4; k++) { const na = a + (azar() - 0.5) * 10; const nb = b + (azar() - 0.5) * 5; h.linea(a, b, na, nb, '#46524a'); a = na; b = nb; } }
+  }
+  for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; h.linea(240 + Math.cos(a) * 9, 182 + Math.sin(a) * 3, 240 + Math.cos(a) * 18, 182 + Math.sin(a) * 6, '#a6b6a2'); }
+  h.elipse(240, 182, 8, 3, '#a6b6a2'); h.elipse(240, 182, 5, 1.8, '#c8d6c2');
+  // Columnas rotas en las esquinas de atrás y muñones delante.
+  const columna = (x, base, alto, rota) => {
+    h.elipse(x + 4, base + 2, 12, 3, 'rgba(20,30,40,0.3)');
+    h.rect(x - 9, base - 4, 18, 5, '#5a6a60'); h.rect(x - 9, base - 4, 18, 1, '#9aaa96');
+    h.rect(x - 7, base - alto, 14, alto - 4, '#7e8e80');
+    for (let k = x - 5; k < x + 6; k += 3) h.rect(k, base - alto, 1, alto - 4, '#66766a');
+    h.rect(x - 7, base - alto, 3, alto - 4, '#a2b29e');
+    if (rota) h.poligono([[x - 7, base - alto], [x + 7, base - alto], [x + 7, base - alto - 6], [x + 2, base - alto - 2], [x - 3, base - alto - 8], [x - 7, base - alto - 3]], '#7e8e80');
+    else { h.rect(x - 10, base - alto - 5, 20, 5, '#8e9e8e'); h.rect(x - 10, base - alto - 5, 20, 1, '#b2c2ae'); }
+  };
+  columna(74, 96, 52, false); columna(406, 96, 40, true); columna(40, 206, 16, true); columna(440, 206, 22, true);
+  // Nubes por delante, en las esquinas de abajo.
+  for (const [x, y, w] of [[0, 268, 70], [480, 266, 80]]) nube(h, x, y, w, azar);
+  plataformas(h, {
+    borde: '#3e4a44', cara: '#8a9a8a', luz: '#b2c2ae',
+    adorno: (x, y) => { for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; h.rect(x + Math.cos(a) * 24 - 1, y + Math.sin(a) * 6.5, 3, 1, '#c8e8ff'); } },
+  });
+  iluminar(ctx, [
+    { x: 120, y: 0, r: 300, ry: 200, color: '#2a2a1a', fuerza: 0.7 },
+    { x: 240, y: 182, r: 30, ry: 10, color: '#203848', fuerza: 0.6 },
+  ]);
+}
+
+const DIBUJOS = { bosque, volcan, playa, cueva, nieve, ruinas, jardin, desierto, ciudad, cielo, estadio };
+
+/** Los pinceles de píxel y el ruido, para otros dibujos en pixel art (el mapa del modo aventura). */
+export const pixel = { herramientas, ruido, generador, paleta, tonoDe, umbral, aRgb };
+
+/**
+ * El fondo de un escenario (lienzo de 480×270). Si la clave no existe (una guardada de antes), el primero.
+ * `colores`: los dos de la región (solo el estadio los usa: público, pancartas y luces).
+ */
+export function dibujarFondo(escenario, { colores } = {}) {
   const lienzo = document.createElement('canvas');
   lienzo.width = ANCHO;
   lienzo.height = ALTO;
   const ctx = lienzo.getContext('2d');
-  (DIBUJOS[escenario] || bosque)(ctx, generador(20261118));
+  (DIBUJOS[escenario] || bosque)(ctx, generador(20261118), colores ? { colores } : {});
   return lienzo;
 }
 
@@ -623,9 +1053,51 @@ export function dibujarFondo(escenario) {
  * Pokémon con los pinceles de la arena `p` ({ ctx, S, X, Y, cuadro, brillo, aro, trazo, particula, llama,
  * chispa4, reducido, entre }). Con movimiento reducido no suelta partículas.
  */
-export function crearAmbiente(escenario) {
+export function crearAmbiente(escenario, { colores } = {}) {
   const azar = Math.random;
   switch (escenario in DIBUJOS ? escenario : 'bosque') {
+    case 'estadio': {
+      const [ca, cb] = colores || ['#c8d2e6', '#8fa8d8'];
+      return {
+        suelo(p, t) {
+          const q = (t / 2600) % 1; // una luz que recorre el anillo
+          for (let i = 0; i < 14; i++) {
+            const a = (q - i * 0.006) * Math.PI * 2;
+            p.cuadro(ANILLO.x + Math.cos(a) * (ANILLO.rx - 6), ANILLO.y + Math.sin(a) * (ANILLO.ry - 3), 1.6, i % 2 ? ca : '#ffffff');
+          }
+          for (let i = 0; i < 9; i++) { // las nueve estrellas del emblema laten por turnos
+            const brilla = Math.sin(t / 500 - i * 0.7);
+            if (brilla > 0.6) { const a = -Math.PI / 2 + (i / 9) * Math.PI * 2; p.brillo(EMBLEMA.x + Math.cos(a) * (EMBLEMA.rx - 1.5), EMBLEMA.y + Math.sin(a) * (EMBLEMA.ry - 0.5), 5, ca, (brilla - 0.6) * 1.6); }
+          }
+          // Dos focos que barren el campo con los colores de la región.
+          p.brillo(240 + Math.sin(t / 2300) * 150, 178 + Math.sin(t / 1700) * 40, 46, ca, 0.16);
+          p.brillo(240 + Math.sin(t / 2900 + 2) * 160, 178 + Math.cos(t / 2100) * 42, 40, cb, 0.14);
+          for (let x = 4; x < ANCHO; x += 30) { // paneles de luz de la barrera
+            const fase = ((t / 70 - x / 6) % 40 + 40) % 40;
+            if (fase < 22) p.cuadro(x + fase, 66.5, 2, fase % 4 < 2 ? ca : cb);
+          }
+        },
+        aire(p, t) {
+          // Haces de los focos hacia el campo.
+          p.ctx.globalCompositeOperation = 'lighter';
+          for (const [i, [fx, fy]] of FOCOS_ESTADIO.entries()) {
+            const vaiven = Math.sin(t / 3000 + i * 2) * 30;
+            p.ctx.globalAlpha = 0.05; p.ctx.fillStyle = '#fff6dc';
+            p.ctx.beginPath(); p.ctx.moveTo(p.X(fx - 8), p.Y(fy + 8)); p.ctx.lineTo(p.X(fx + 8), p.Y(fy + 8));
+            p.ctx.lineTo(p.X(240 + vaiven + (i ? 40 : -40)), p.Y(230)); p.ctx.lineTo(p.X(240 + vaiven + (i ? -60 : 60)), p.Y(230)); p.ctx.closePath(); p.ctx.fill();
+          }
+          // La ola: una franja de luz que recorre las gradas.
+          const ola = ((t / 18) % (ANCHO + 120)) - 60;
+          p.ctx.globalAlpha = 0.07; p.ctx.fillStyle = '#ffffff';
+          p.ctx.fillRect(p.X(ola - 25), p.Y(12), 50 * p.S, 48 * p.S);
+          p.ctx.globalCompositeOperation = 'source-over'; p.ctx.globalAlpha = 1;
+          if (!p.reducido && azar() < 0.35) { // flashes de las cámaras en las gradas
+            const x = azar() * ANCHO; const y = 14 + azar() * 46;
+            p.particula({ x, y, vida: 160, colores: ['#ffffff', '#fff6dc'], tam: 1.2, forma: 'estrella', brillo: 4 });
+          }
+        },
+      };
+    }
     case 'bosque': {
       const luciernagas = Array.from({ length: 16 }, () => ({ x: 40 + azar() * 400, y: 70 + azar() * 180, fase: azar() * 10, v: 0.4 + azar() * 0.6 }));
       const rayos = [[110, 0.9], [250, 1.3], [372, 1.7]];
@@ -745,6 +1217,110 @@ export function crearAmbiente(escenario) {
         aire(p) {
           if (p.reducido) return;
           if (azar() < 0.5) p.particula({ x: p.entre(-20, ANCHO), y: -4, vx: p.entre(4, 16), vy: p.entre(14, 30), vida: 12000, colores: ['#ffffff'], tam: azar() < 0.2 ? 2 : 1.2, alfa: 0.9 }); // nieve
+        },
+      };
+    }
+    case 'jardin': {
+      const carpas = Array.from({ length: 4 }, (_, i) => ({ fase: i * 1.6, v: 0.35 + i * 0.09, color: i % 2 ? '#ff8a3a' : '#f4f0e8', mancha: i % 2 ? '#f4f0e8' : '#e8402a', sentido: i % 2 ? 1 : -1 }));
+      return {
+        suelo(p, t) {
+          const { x: ex, y: ey, rx, ry } = ESTANQUE_JARDIN;
+          for (const c of carpas) { // carpas que nadan en círculos bajo el puente
+            const a = (t / 1000) * c.v * c.sentido + c.fase;
+            const x = ex + Math.cos(a) * (rx - 24); const y = ey + 3 + Math.sin(a) * (ry - 12);
+            const dx = -Math.sin(a) * c.sentido; const dy = Math.cos(a) * 0.35 * c.sentido;
+            for (let k = 0; k < 4; k++) p.cuadro(x - dx * k * 2, y - dy * k * 2, 1.8 - k * 0.3, k === 1 ? c.mancha : c.color);
+          }
+          const q = (t / 2600) % 1; // un anillo que se abre en el agua
+          p.ctx.globalAlpha = 0.5 * (1 - q); p.ctx.strokeStyle = '#bfe8f0'; p.ctx.lineWidth = Math.max(1, p.S * 0.6);
+          p.ctx.beginPath(); p.ctx.ellipse(p.X(ex + 22), p.Y(ey - 2), (3 + q * 14) * p.S, (1 + q * 4) * p.S, 0, 0, Math.PI * 2); p.ctx.stroke(); p.ctx.globalAlpha = 1;
+          for (const [x, y] of FAROLILLOS) p.brillo(x, y - 1, 12 + Math.sin(t / 260 + x) * 1.5, '#ffd27a', 0.35);
+        },
+        aire(p) {
+          if (!p.reducido && azar() < 0.22) { // pétalos de cerezo al viento
+            p.particula({ x: p.entre(-40, ANCHO), y: -4, vx: p.entre(10, 30), vy: p.entre(10, 22), vida: 14000, colores: [azar() < 0.5 ? '#f6a8c2' : '#fcd4e0'], tam: 1.6, forma: 'roca', vgiro: p.entre(-4, 4) });
+          }
+        },
+      };
+    }
+    case 'desierto': {
+      return {
+        suelo(p, t) {
+          p.ctx.globalAlpha = 0.09; p.ctx.fillStyle = '#fff0d0'; // la calima tiembla sobre el horizonte
+          for (let k = 0; k < 4; k++) p.ctx.fillRect(p.X(0), p.Y(63 + k * 3 + Math.sin(t / 380 + k * 1.7) * 1.2), ANCHO * p.S, Math.max(1, p.S * 0.7));
+          p.ctx.globalAlpha = 1;
+          for (let i = 0; i < 4; i++) { const brilla = Math.sin(t / 420 + i * 1.9); if (brilla > 0.75) p.chispa4(OASIS.x - 24 + i * 15, OASIS.y - 3 + (i % 2) * 5, 2, '#ffffff', (brilla - 0.75) * 4); }
+          const ciclo = 15000; const f = (t % ciclo) / ciclo; // un matojo rodante cruza de vez en cuando
+          if (f < 0.4 && !p.reducido) {
+            const x = -20 + (f / 0.4) * (ANCHO + 40); const y = 236 - Math.abs(Math.sin(f * 46)) * 7; const giro = t / 110;
+            for (let k = 0; k < 10; k++) { const a = giro + k * 0.63; p.cuadro(x + Math.cos(a) * 4.5, y + Math.sin(a) * 4.5, 1.6, k % 2 ? '#7a5a30' : '#b08a4a'); }
+            p.cuadro(x, y, 3, '#8a6a3a');
+          }
+        },
+        aire(p, t) {
+          p.brillo(SOL_DESIERTO.x, SOL_DESIERTO.y, 34, '#fff0b0', 0.2 + Math.sin(t / 900) * 0.05);
+          if (!p.reducido && azar() < 0.45) p.particula({ x: -4, y: p.entre(66, ALTO), vx: p.entre(90, 170), vy: p.entre(-6, 6), vida: 5000, colores: ['#f6dcb0', '#e8bc84'], tam: 1, alfa: 0.55 }); // arena al viento
+        },
+      };
+    }
+    case 'ciudad': {
+      const ventanas = Array.from({ length: 12 }, () => ({ x: Math.floor(azar() * 118) * 4 + 3, y: 48 + Math.floor(azar() * 3) * 4, fase: azar() * 10, v: 0.5 + azar() }));
+      return {
+        suelo(p, t) {
+          for (const [x, y] of VENTILADORES) { // aspas que giran
+            for (let k = 0; k < 3; k++) { const a = t / 80 + k * 2.094; p.trazo([[x, y - 3], [x + Math.cos(a) * 6, y - 3 + Math.sin(a) * 6]], 1.6, '#8a94b0'); }
+          }
+          const q = (t / 1300) % 1; // luces que corren por el anillo de cada plataforma
+          for (const cx of [CASA.jugador, CASA.rival]) for (let k = 0; k < 5; k++) { const a = (q - k * 0.025) * Math.PI * 2; p.cuadro(cx + Math.cos(a) * 31, SUELO + 2 + Math.sin(a) * 8.6, 1.4, k ? '#7af0ff' : '#ffffff'); }
+          for (const [i, [x, y, rx]] of CHARCOS.entries()) p.brillo(x, y, rx * 0.8, i % 2 ? '#4fe6ff' : '#ff4fa8', 0.08 + Math.sin(t / 600 + i) * 0.04);
+        },
+        aire(p, t) {
+          for (const n of NEONES) { // los neones zumban y a veces parpadean
+            const apagado = Math.sin(t / 53 + n.x * 7) > 0.97;
+            if (!apagado) p.brillo(n.x + n.w / 2, n.y + n.h / 2, n.w * 0.8, n.color, 0.2 + Math.sin(t / 700 + n.x) * 0.04);
+          }
+          if (Math.floor(t / 650) % 2) { p.brillo(ANTENA.x, ANTENA.y, 6, '#ff3030', 0.9); p.cuadro(ANTENA.x, ANTENA.y, 1.2, '#ff8a8a'); }
+          for (const v of ventanas) if (Math.sin((t / 1600) * v.v + v.fase) > 0.75) p.cuadro(v.x + 1, v.y + 1, 2, '#ffe9a0');
+          const f = (t % 26000) / 26000; const ax = -10 + f * (ANCHO + 20); const ay = 12 + f * 5; // un avión cruza el cielo
+          p.cuadro(ax, ay, 1, '#ffffff'); if (Math.floor(t / 400) % 2) p.cuadro(ax - 3, ay, 1, '#ff5050');
+        },
+      };
+    }
+    case 'cielo': {
+      const formas = [];
+      const pintarNube = w => {
+        const lienzo = document.createElement('canvas'); lienzo.width = Math.ceil(w * 2 + 10); lienzo.height = Math.ceil(w * 0.8);
+        nube(herramientas(lienzo.getContext('2d')), w + 5, w * 0.45, w, azar);
+        return lienzo;
+      };
+      for (const [y, w, v] of [[24, 34, 5], [40, 46, 3.5], [252, 60, 7], [264, 44, 9]]) formas.push({ x: azar() * ANCHO, y, w, v, lienzo: pintarNube(w) });
+      const rafagas = Array.from({ length: 6 }, () => ({ y: 70 + azar() * 190, fase: azar(), v: 0.6 + azar() * 0.6 }));
+      return {
+        suelo(p, t) {
+          p.brillo(240, 182, 18, '#d8f4ff', 0.16 + Math.sin(t / 800) * 0.08); // el sol tallado brilla
+        },
+        aire(p, t) {
+          for (const n of formas) { // nubes que pasan por delante y por detrás
+            const x = ((n.x + (t / 1000) * n.v) % (ANCHO + n.w * 2.4)) - n.w * 1.2;
+            p.ctx.globalAlpha = n.y > 200 ? 0.92 : 0.75;
+            p.ctx.drawImage(n.lienzo, p.X(x - n.w - 5), p.Y(n.y - n.w * 0.45), n.lienzo.width * p.S, n.lienzo.height * p.S);
+            p.ctx.globalAlpha = 1;
+          }
+          if (p.reducido) return;
+          p.ctx.fillStyle = '#ffffff';
+          for (const r of rafagas) { // ráfagas de viento
+            const q = ((t / 1000) * r.v + r.fase) % 1.6;
+            if (q > 1) continue;
+            p.ctx.globalAlpha = Math.sin(q * Math.PI) * 0.35;
+            p.ctx.fillRect(p.X(-40 + q * (ANCHO + 80)), p.Y(r.y), 26 * p.S, Math.max(1, p.S * 0.5));
+          }
+          p.ctx.globalAlpha = 1;
+          const f = (t % 18000) / 18000; // una bandada cruza el cielo
+          if (f < 0.5) for (let k = 0; k < 5; k++) {
+            const x = ANCHO + 20 - (f / 0.5) * (ANCHO + 60) + Math.abs(k - 2) * 7; const y = 26 + Math.abs(k - 2) * 4 + (k % 2) * 2;
+            const ala = Math.floor(t / 160 + k) % 2;
+            p.cuadro(x, y, 1, '#2a3a5a'); p.cuadro(x - 1.5, y - ala, 1, '#2a3a5a'); p.cuadro(x + 1.5, y - ala, 1, '#2a3a5a');
+          }
         },
       };
     }
