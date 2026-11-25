@@ -135,8 +135,9 @@ a.camino:hover .camino-flecha { border-color:var(--camino); background:var(--cam
 .inicio-aventura-foco { position:absolute; left:50%; top:-10%; width:70%; height:110%; translate:-50% 0; background:linear-gradient(#f6f8fc33,transparent 85%); clip-path:polygon(42% 0,58% 0,100% 100%,0 100%); filter:blur(5px); }
 .inicio-aventura-escena::after { content:''; position:absolute; left:50%; bottom:22px; width:46%; height:26px; translate:-50% 0; border-radius:50%; background:radial-gradient(ellipse,#3a4466,#141a2e 70%); box-shadow:0 0 30px #c8d2e633; }
 .inicio-aventura-entrenador { position:absolute; left:50%; bottom:32px; z-index:1; translate:-50% 0; }
-.inicio-aventura-retrato { display:block; width:auto; height:216px; image-rendering:pixelated; filter:drop-shadow(0 10px 10px #000b); transition:transform .4s ease; }
+.inicio-aventura-retrato { display:block; width:auto; height:240px; image-rendering:pixelated; filter:drop-shadow(0 10px 10px #000b); transition:transform .4s ease; }
 a.camino-aventura:hover .inicio-aventura-retrato { transform:translateY(-6px); }
+.inicio-aventura-retrato.retrato-anime { height:224px; } /* tu entrenador: 112 de alto, ×2 */
 @keyframes latido-estrella { 0%,100% { box-shadow:0 0 0 0 color-mix(in srgb,var(--color) 60%,transparent); } 50% { box-shadow:0 0 0 5px transparent; } }
 
 /* Legendarios: un trozo de su cielo nocturno, con el anillo dorado del altar y tres leyendas */
@@ -245,7 +246,7 @@ a.camino-quien:hover .camino-silueta { filter:drop-shadow(0 12px 18px #000a); tr
 @media (max-width:1100px) {
   .caminos-rejilla { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .camino-aventura { padding-right:min(40%,320px); }
-  .inicio-aventura-retrato { height:144px; }
+  .inicio-aventura-retrato { height:160px; }
   .camino-leyendas { grid-row:auto; min-height:440px; }
   .camino-tipos-lista { grid-template-columns:repeat(6,minmax(0,1fr)); }
   /* Las regiones pasan a tres filas: la ruta continua ya no tiene sentido. */
@@ -282,7 +283,7 @@ a.camino-quien:hover .camino-silueta { filter:drop-shadow(0 12px 18px #000a); tr
   .camino { padding:24px 22px; }
   /* Aventura: el entrenador baja bajo el texto, con su foco. */
   .inicio-aventura-escena { position:relative; right:auto; bottom:auto; z-index:0; width:100%; height:210px; margin:4px 0 -24px; }
-  .inicio-aventura-retrato { height:144px; }
+  .inicio-aventura-retrato { height:160px; }
   .camino-tipos-cabecera { flex-wrap:wrap; }
   .camino-tipos-lista { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
   .camino-tipo { flex-direction:row; justify-content:flex-start; gap:7px; padding:7px 6px; border-radius:99px; }

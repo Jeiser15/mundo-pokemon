@@ -101,10 +101,12 @@ static/
                         climas), CLIMAS, ESTADOS, ENTRENADORES, FRASES_RIVAL, EVOLUCIONES_REGIONALES
                         y, para ¿Quién es?, MODOS_QUIEN, PISTAS_QUIEN, COLORES_ESPECIE y NOMBRES_ESPANOL (los 38
                         nombres que no son su clave de PokéAPI con mayúsculas: Nidoran♀, Mr. Mime, Código Cero, los Paradoja…).
-                        Modo aventura: ASPECTO_ENTRENADOR (gorras, chaquetas, pantalones, peinados, colores, pieles, pelos) y
+                        Modo aventura: ASPECTO_ENTRENADOR (colores, pieles y pelos de los entrenadores),
+                        ENTRENADOR_ANIME (las piezas del estilo anime: pañuelo, peinado, camiseta, pantalón, bolsa) y
                         ASPECTO_INICIAL, REGIONES_AVENTURA (copa, estadio, lema, colores, nivel, arenas y campeón con
                         su as y su aspecto, y paisaje: cómo se pinta su isla en el mapa), NOMBRES_AVENTURA (13 por región:
-                        los del anime y los líderes de cada región, [nombre, género, tipo favorito]), RIVAL_AVENTURA
+                        líderes, alto mando y rivales, [nombre, género, tipo favorito, sprite]), SPRITES_ENTRENADOR +
+                        URL_ENTRENADORES (los sprites de los juegos de los rivales, con la caja de su dibujo), RIVAL_AVENTURA
                         (Kael), LEYENDAS_FINAL + ASES_FINAL (la final de Paldea), FRASES_AVENTURA (kael, campeon,
                         leyendas) y ESTADIO_AVENTURA (va aparte de ESCENARIOS: no sale en el Duelo ni en el Inicio)
     datos-movimientos.js GENERADO (no editar): MOVIMIENTOS_DATOS, los 479 movimientos de daño de PokéAPI con
@@ -213,17 +215,17 @@ static/
                         de intensidad (bolas, llamas, rayos, hojas, cristales, rocas, estrellas, anillos, medias
                         lunas) cuantizado a la paleta del tipo (PALETAS_GBA) y con contorno grueso. coloresDe(tipo)
     fuente-pixel.js     Fuente de píxeles 5×7 para los números de daño y los letreros del lienzo (con Ñ)
-    entrenador.js       Entrenadores en pixel art (lienzo 48×72, de tres cuartos, ~4,5 cabezas, en contrapposto, con
-                        el estilo de los de HG/SS; pintados a mano con MAPAS de letras por capas: pelo de atrás →
-                        brazo de atrás → piernas → falda → torso → cabeza → gorra → brazo de delante). Color con
-                        rampas de 4 tonos con cambio de tono (rampa(): luces hacia el amarillo, sombras hacia el
-                        violeta; la piel, hacia el rosa) y contorno selectivo por capa (contorno(): la sombra profunda
-                        del vecino, más clara arriba y a la izquierda, casi #181420 abajo). vestir() convierte las
-                        piernas según el pantalón (vaquero, corto, falda, deportivo). lienzoEntrenador
-                        (aspecto, pose, paso) con poses quieto, paso, lanza1, lanza2, ordena, celebra y triste; MANO
-                        (de dónde sale la Poké Ball); retratoEntrenador()/pintarRetrato() para la página;
-                        normalizarAspecto(); tu entrenador guardado (leerEntrenador, guardarEntrenador → evento
-                        «entrenador-cambiado»)
+    entrenador.js       Entrenadores en pixel art, de DOS clases: (1) ESTILO ANIME (tu entrenador, Kael y cualquiera
+                        que no sea de los juegos): ANIME, un sprite de 57×108 sacado de la referencia del usuario, en
+                        un lienzo de 63×112, recoloreado con tonoComo y con las piezas de ENTRENADOR_ANIME (pañuelo,
+                        peinado corto/de punta/largo, camiseta de rayas o lisa, pirata o largo, bandolera);
+                        (2) los RIVALES DE LOS JUEGOS (`sprite` en su aspecto): su sprite de Pokémon Showdown, 80×80,
+                        cargado al verlo (cargarSprite/prepararEntrenador; si no carga, estilo anime). Una sola imagen:
+                        las poses (quieto, paso, lanza1, lanza2, ordena, celebra, triste) la mueven (POSE).
+                        medidasDe(aspecto) (ancho, alto, pies, unidad en la arena), manoDe(aspecto, pose),
+                        lienzoEntrenador(aspecto, pose, paso), retratoEntrenador()/pintarRetrato() para la página,
+                        normalizarAspecto() (los aspectos de antes pasan solos al anime: aAnime) y tu entrenador
+                        guardado (leerEntrenador, guardarEntrenador → evento «entrenador-cambiado»)
     liga.js             Modo aventura, LÓGICA PURA (como combate.js; azar con semilla, azarDe): la copa de cada
                         región (crearTemporada, sortearEquipo, sortearGrupos, registrarCombate → cerrarRonda,
                         clasificacion, ganadorCopa), la CURVA de dificultad (dificultad(region, ronda)), los equipos
@@ -327,7 +329,9 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
 - Archivos estáticos: `Cache-Control: no-cache` + `Last-Modified` → el navegador revalida (304) y los cambios se
   ven al recargar sin `?v=` en las URLs. Respuestas de `/api/*`: `no-store` (la caché está en el servidor).
 - La caché rápida de PokéAPI vive en memoria y se vacía al reiniciar; el snapshot SQLite permanece en disco.
-- Los sprites se piden directamente a `raw.githubusercontent.com` (no pasan por el servidor).
+- Los sprites se piden directamente a `raw.githubusercontent.com` (no pasan por el servidor). Los de los entrenadores
+  rivales, a `play.pokemonshowdown.com/sprites/trainers/` (no están en el proyecto); Showdown no manda cabeceras CORS:
+  se pueden pintar en un lienzo pero no leer sus píxeles (por eso sus cajas van medidas en datos.js).
 - El evento `close` del `<dialog>` llega en una tarea aparte: `ficha.js` lo ignora si la ficha ya se reabrió
   (si no, cancelaría la búsqueda nueva y la ficha se quedaría en «Buscando…»).
 - Portada: `--tipo-hero` está registrada con `@property` para que el color del escenario se anime al cambiar
@@ -625,7 +629,7 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   4 + 3. Medido de 360 a 1440 px: nunca desborda.
 - **Modo aventura** (#aventura, «Nueve copas, una leyenda»): las nueve regiones EN ORDEN; en cada una, su copa al
   estilo de una liga de campeones (liga.js): 16 entrenadores (tú, Kael, el campeón vigente y 13 con nombre de la
-  región: los del anime y los líderes, cada uno con su tipo favorito, que elige parte de su equipo), sorteo con 4 bombos (tú en el 4; Kael SIEMPRE en tu grupo; el campeón en la otra mitad
+  región: líderes, alto mando y rivales de los juegos, cada uno con su tipo favorito, que elige parte de su equipo), sorteo con 4 bombos (tú en el 4; Kael SIEMPRE en tu grupo; el campeón en la otra mitad
   del cuadro, así que solo puede cruzarse contigo en la final, y gana todos sus combates simulados: la final es
   siempre contra él), grupos de 4 a una vuelta (primero contra el del bombo 3, luego Kael, por último el cabeza de
   serie; 3 puntos por victoria; el marcador son los K.O., «6–2»; desempates: diferencia de K.O., K.O. hechos,
@@ -649,19 +653,33 @@ Para exponer otro recurso de PokéAPI (p. ej. `move`), añádelo a `RECURSOS_PER
   Teselia 26 %, Kalos 16 %, Alola 12 %, Galar 7 %, Paldea 6 % (la final de Paldea, ≈ 10–20 % si llegas). Un 6
   contra 6 amplifica cualquier ventaja pequeña: por eso la CURVA sube a pasos finos; la estrategia «maestro» del
   rival pesa muchísimo (solo en las finales desde Teselia). Si cambias la curva, vuelve a medir.
-- **Entrenadores** (entrenador.js): pixel art propio, no copia a ningún personaje (el aspecto inicial no es la gorra
-  roja y la chaqueta azul del protagonista del anime, a propósito). El usuario rechazó la primera versión (de perfil,
-  24×42: «feos») y pasó como REFERENCIA hojas de sprites de los juegos de la 4.ª y 5.ª generación: se tomó su estilo
-  (tres cuartos, ~4 cabezas, piernas separadas, sombras de tres tonos, contorno teñido), no sus personajes. Mapas de
-  letras pintados a mano (ver la cabecera del archivo). Después pidió que se parecieran MÁS a los de HG/SS y pasó
-  una especificación que se siguió al rehacerlos desde cero: lienzo de 48×72, ~4,5 cabezas, contrapposto (peso en la
-  pierna de delante; al lanzar y al señalar da un paso: piernas `zancada`), rampas con hue-shifting, sel-out por
-  capa, ojos de 2×3 con brillo blanco (OJO, filas 13–15), mechones irregulares y la Poké Ball en la mano. Señala
-  con el brazo de ATRÁS (BRAZOS_ATRAS.ordena): con el de delante el brazo tapaba la cara. Pantalones nuevos
-  (`pantalon` y `colorPantalon` en el aspecto; los guardados antes salen con el vaquero del inicial). Kael y los
-  nueve campeones tienen su aspecto en datos.js. En la arena están 7 unidades por detrás de los Pokémon (se dibujan
-  antes que ellos) a 1 unidad por píxel: miden ~67. En la página, los retratos miden múltiplos de 72 px (216,
-  288, 360…) para que los píxeles salgan parejos.
+- **Entrenadores** (entrenador.js): SOLO hay dos clases. Historia: el usuario rechazó un dibujo de perfil («feos»), luego
+  uno de 3/4 hecho pieza a pieza al estilo de HG/SS (gorras, chaquetas, pantalones, peinados…) y, el 2026-11-25, pasó
+  una imagen (pixel art ampliado ×5: un chico con pañuelo azul marino, camiseta de rayas azules y blancas, bandolera
+  lila, pantalón pirata gris y zapatillas azules) pidiendo «hazlo estilo anime como se ve en la imagen»; al ver a un
+  rival con el dibujo antiguo dijo «no quiero que hayan personajes así, quítalos todos»: ese dibujo se BORRÓ.
+  - ESTILO ANIME (tu entrenador, Kael y todo el que no sea de los juegos, también un rival cuyo sprite no carga): la
+    imagen pasada a su rejilla real (57×108) y a letras por material (ANIME; el script que lo hizo está fuera del
+    proyecto), volteada para mirar a la derecha. Sus colores se cambian con tonoComo (mismo giro de tono y misma
+    proporción de claridad que en el original: con los colores por defecto queda idéntico; el pelo, con mezclas
+    moderadas: con la proporción del original, casi negro, un pelo claro salía lleno de rayas). Piezas
+    (ENTRENADOR_ANIME, plantillaAnime): pañuelo o sin él (el pañuelo se vuelve pelo, con brillo y sombra), peinado
+    corto, de punta (PINCHOS: mechones hacia atrás) o largo (peloLargo: un mechón a cada lado hasta los hombros; lo
+    llevan las chicas al azar), camiseta de rayas o lisa, pirata o largo, bandolera o sin bolsa (quitarBandolera: tapa
+    la correa con la camiseta de su fila y redibuja el contorno). `ojos` solo por datos. Los aspectos de antes pasan
+    solos (aAnime): sin gorra → sin pañuelo, otra → pañuelo; rayas o lisa; pirata o largo; coleta → largo.
+  - KAEL: estilo anime distinto del tuyo (sin pañuelo, pelo plateado de punta, ojos rojos, jersey rojo liso, pantalón
+    largo negro); aspectoDeParticipante() le da siempre el de RIVAL_AVENTURA (también en temporadas guardadas).
+  - RIVALES DE LOS JUEGOS: el usuario pasó la hoja de sprites de Platino y dijo «estos sean los rivales»: los
+    campeones (Cynthia, la de la 4.ª generación), los 13 de cada copa (en Sinnoh, los de su hoja: Barry, Dawn, Lucas,
+    líderes, Cyrus, Palmer…; los del anime sin sprite —Ritchie, Paul, Drew, Trip…— se cambiaron por otros de su región;
+    en temporadas guardadas antes siguen esos nombres, en estilo anime) y, en el Duelo, la clase de entrenador de su
+    oficio (`ENTRENADORES.sprites`: Nadadora, Montañero, Karateka…). aspectoDeParticipante() (liga.js) les pone el
+    sprite también a las temporadas ya guardadas. Su aspecto de reserva (si no carga) es de estilo anime.
+  - Una sola imagen por entrenador: las poses la mueven (POSE: un paso al lanzar y al señalar, salto al celebrar,
+    triste más oscuro). En la arena, a 1 unidad por píxel los de los juegos y a 0,72 los de estilo anime (miden igual);
+    7 unidades por detrás de los Pokémon. En el mapa, tú reducido a 0,6 y suavizado. En la página, los retratos de los
+    juegos miden múltiplos de 80 px y los de estilo anime (.retrato-anime) múltiplos de 112 y, en pequeño, suavizados.
 - **Ataques GBA** (sprites-ataques.js + ataqueGBA en arena-pixel.js): el usuario dijo que los ataques «se veían muy
   sencillos» y pasó una especificación: pixel art de Game Boy Advance, sin suavizado ni alfa parcial, contorno
   exterior grueso y oscuro, núcleo blanco con 2–3 tonos saturados hacia el borde, píxeles sueltos alrededor, tiras de

@@ -23,7 +23,7 @@
 
 import { multiplicadorContra } from './combate.js';
 import {
-  ASES_FINAL, ASPECTO_ENTRENADOR, GENERACIONES, LEYENDAS_FINAL, NOMBRES_AVENTURA, rarezaDe,
+  ASES_FINAL, ASPECTO_ENTRENADOR, ENTRENADOR_ANIME, GENERACIONES, LEYENDAS_FINAL, NOMBRES_AVENTURA, rarezaDe,
   REGIONES_AVENTURA, RIVAL_AVENTURA, TIPOS,
 } from './datos.js';
 import { barajar } from './utilidades.js';
@@ -110,19 +110,22 @@ const alAzar = (lista, azar) => lista[Math.floor(azar() * lista.length)];
 
 // --- Participantes --------------------------------------------------------------------------------
 
-/** Un aspecto al azar para un entrenador (entrenador.js lo dibuja). */
+/** Un aspecto al azar para un entrenador, en estilo anime (entrenador.js lo dibuja); con pelo largo si es chica. */
 export function aspectoAlAzar(azar = Math.random, genero = 'm') {
-  const { gorras, chaquetas, colores, pieles, pelos } = ASPECTO_ENTRENADOR;
+  const { colores, pieles, pelos } = ASPECTO_ENTRENADOR;
+  const { gorras, camisetas, pantalones, bolsas } = ENTRENADOR_ANIME;
+  const claves = objeto => Object.keys(objeto);
   return {
-    gorra: alAzar(Object.keys(gorras), azar),
+    gorra: alAzar(claves(gorras), azar),
     colorGorra: alAzar(colores, azar)[1],
-    chaqueta: alAzar(Object.keys(chaquetas), azar),
+    chaqueta: alAzar(claves(camisetas), azar),
     colorChaqueta: alAzar(colores, azar)[1],
     piel: alAzar(pieles, azar),
     pelo: alAzar(pelos, azar)[1],
-    peinado: genero === 'f' ? alAzar(['largo', 'coleta', 'corto', 'largo'], azar) : alAzar(['corto', 'pinchos', 'corto', 'largo'], azar),
-    pantalon: genero === 'f' ? alAzar(['falda', 'vaquero', 'corto', 'falda', 'deportivo'], azar) : alAzar(['vaquero', 'corto', 'deportivo', 'vaquero'], azar),
+    peinado: genero === 'f' ? alAzar(['largo'], azar) : alAzar(['corto', 'pinchos', 'corto'], azar),
+    pantalon: alAzar(claves(pantalones), azar),
     colorPantalon: alAzar(colores, azar)[1],
+    bolsa: alAzar(claves(bolsas), azar),
   };
 }
 
@@ -130,6 +133,22 @@ export function aspectoAlAzar(azar = Math.random, genero = 'm') {
 export function asDeKael(region, semilla) {
   const base = GENERACIONES[region].iniciales[semilla % 3];
   return base + (region < 2 ? 1 : 2);
+}
+
+/** Nombre → sprite de los juegos de los participantes y los campeones de las nueve copas. */
+const SPRITE_DE = Object.fromEntries([
+  ...NOMBRES_AVENTURA.flat().map(([nombre, , , sprite]) => [nombre, sprite]),
+  ...REGIONES_AVENTURA.map(r => [r.campeon.nombre, r.campeon.aspecto.sprite]),
+]);
+
+/**
+ * El aspecto con el que se dibuja a un participante: si es un personaje de los juegos, con su sprite (también en
+ * las temporadas guardadas antes de que los tuvieran). Kael, con su aspecto de ahora (estilo anime, como el tuyo).
+ */
+export function aspectoDeParticipante(p) {
+  if (p?.rol === 'rival') return RIVAL_AVENTURA.aspecto; // Kael, siempre con su aspecto de ahora
+  const sprite = SPRITE_DE[p?.nombre];
+  return sprite && p.aspecto?.sprite !== sprite ? { ...p.aspecto, sprite } : p?.aspecto;
 }
 
 /** «el Campeón Lance», «Misty», «Kael». */
@@ -147,11 +166,11 @@ export function crearTemporada(region, { semilla = nuevaSemilla(), intento = 1, 
   const tipos = barajar(Object.keys(TIPOS), azar);
   const fuerzas = nombres.map(() => 0.2 + azar() * 0.6).sort((a, b) => b - a);
   const BOMBOS = [1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4];
-  const otros = nombres.map(([nombre, genero, favorito], i) => {
+  const otros = nombres.map(([nombre, genero, favorito, sprite], i) => {
     const tipo = favorito in TIPOS ? favorito : tipos[i];
     return {
       clave: 'e' + i, rol: null, nombre, articulo: '', titulo: nombre, apodo: `especialista en tipo ${TIPOS[tipo].nombre}`,
-      tipo, bombo: BOMBOS[i], fuerza: fuerzas[i], aspecto: aspectoAlAzar(azar, genero), equipo: null,
+      tipo, bombo: BOMBOS[i], fuerza: fuerzas[i], aspecto: { ...aspectoAlAzar(azar, genero), sprite }, equipo: null,
     };
   });
   const c = datos.campeon;

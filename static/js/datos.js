@@ -482,6 +482,18 @@ export const ENTRENADORES = {
     rock: ['Montañero', 'Montañera'], ghost: ['Exorcista', 'Exorcista'], dragon: ['Domador de dragones', 'Domadora de dragones'],
     dark: ['Pandillero', 'Pandillera'], steel: ['Herrero', 'Herrera'], fairy: ['Hechicero', 'Hechicera'],
   },
+  /** Su sprite según el oficio (hombre, mujer): las clases de entrenador de los juegos. */
+  sprites: {
+    normal: ['youngster-gen4', 'lass-gen4'], fire: ['firebreather', 'kindler-gen6'],
+    water: ['swimmer-gen4', 'swimmerf-gen4'], electric: ['guitarist-gen4', 'idol'], grass: ['gardener', 'aromalady'],
+    ice: ['skier', 'skierf-gen4dp'], fighting: ['blackbelt-gen4', 'battlegirl-gen4'],
+    poison: ['scientist-gen4', 'scientistf'], ground: ['ruinmaniac', 'cowgirl'],
+    flying: ['pilot', 'birdkeeper-gen4dp'], psychic: ['psychic-gen4', 'psychicf-gen4'],
+    bug: ['bugcatcher-gen4dp', 'picnicker'], rock: ['hiker-gen4', 'pokemonrangerf-gen4'],
+    ghost: ['sage', 'hexmaniac-gen6'], dragon: ['dragontamer', 'acetrainerf-gen4'],
+    dark: ['roughneck-gen4', 'punkgirl'], steel: ['worker-gen4', 'workerf-gen8'],
+    fairy: ['pokefan-gen4', 'fairytalegirl'],
+  },
   /** Lo que se antepone al oficio según la dificultad («Gran Montañera Lucía»). */
   rango: { novato: ['Joven', 'Joven'], retador: ['', ''], maestro: ['Gran', 'Gran'] },
 };
@@ -514,27 +526,86 @@ export const FRASES_RIVAL = {
 // =====================================================================================================
 
 /**
- * Piezas para crear a tu entrenador (y a los rivales): gorras, chaquetas, pantalones, peinados y colores.
- * entrenador.js los dibuja en pixel art. Un aspecto es { gorra, colorGorra, chaqueta, colorChaqueta, pantalon,
- * colorPantalon, piel, pelo, peinado } (los colores, en hexadecimal: así un aspecto guardado sigue valiendo aunque
- * cambie el orden; lo que falte, como el pantalón de los guardados antes de que existiera, sale del inicial).
- * Las zapatillas y los lazos llevan el color de la gorra.
+ * Los colores para los entrenadores (entrenador.js los dibuja en estilo anime). Un aspecto es { gorra, colorGorra,
+ * chaqueta, colorChaqueta, pantalon, colorPantalon, bolsa, peinado, piel, pelo } con las piezas de ENTRENADOR_ANIME
+ * (los colores, en hexadecimal: así un aspecto guardado sigue valiendo aunque cambie el orden). Las zapatillas llevan
+ * el color del pañuelo. Los rivales de los juegos llevan además `sprite` (SPRITES_ENTRENADOR).
  */
 export const ASPECTO_ENTRENADOR = {
-  gorras: { clasica: 'Gorra clásica', reves: 'Gorra al revés', lana: 'Gorro de lana', visera: 'Visera', explorador: 'Sombrero', ninguna: 'Sin gorra' },
-  chaquetas: { cazadora: 'Cazadora', sudadera: 'Sudadera', chaleco: 'Chaleco', deportiva: 'Deportiva', abrigo: 'Abrigo largo' },
-  pantalones: { vaquero: 'Vaquero', corto: 'Corto', falda: 'Falda', deportivo: 'Deportivo' },
-  peinados: { corto: 'Corto', pinchos: 'De punta', largo: 'Largo', coleta: 'Coleta' },
   colores: [['Rojo', '#d8433a'], ['Azul', '#3a66d4'], ['Verde', '#3e9a5c'], ['Amarillo', '#e6bd3a'], ['Negro', '#2b2b36'],
     ['Blanco', '#e9ecf1'], ['Morado', '#8a52cc'], ['Naranja', '#ec7b2c'], ['Rosa', '#e46aa6'], ['Turquesa', '#2aa9b4'],
-    ['Vaquero', '#3d5689'], ['Caqui', '#a88f5c']],
+    ['Vaquero', '#3d5689'], ['Caqui', '#a88f5c'], ['Marino', '#1a5b8c'], ['Gris', '#586070']],
   pieles: ['#f7d6b8', '#e9b88f', '#cf9466', '#a26a44', '#6e4429'],
   pelos: [['Negro', '#2a1d16'], ['Castaño', '#5c3a22'], ['Cobrizo', '#a85a26'], ['Rojo', '#b8322a'], ['Rubio', '#e2c26e'], ['Plata', '#c9cfdc'],
     ['Azul noche', '#34407e'], ['Morado', '#6a3f8c']],
 };
 
-/** El aspecto con el que empieza el creador de entrenador. */
-export const ASPECTO_INICIAL = { gorra: 'clasica', colorGorra: '#2aa9b4', chaqueta: 'cazadora', colorChaqueta: '#3e9a5c', pantalon: 'vaquero', colorPantalon: '#3d5689', piel: '#e9b88f', pelo: '#5c3a22', peinado: 'corto' };
+/**
+ * Las piezas de los entrenadores en estilo anime (tu entrenador, Kael y los rivales que no son de los juegos): un
+ * sprite de 57×108 a partir de la referencia del usuario (entrenador.js).
+ */
+export const ENTRENADOR_ANIME = {
+  gorras: { bandana: 'Pañuelo', ninguna: 'Sin pañuelo' },
+  peinados: { corto: 'Corto', pinchos: 'De punta', largo: 'Largo' },
+  camisetas: { rayas: 'Rayas', lisa: 'Lisa' },
+  pantalones: { pirata: 'Pirata', largo: 'Largo' },
+  bolsas: { bandolera: 'Bandolera', ninguna: 'Sin bolsa' },
+};
+
+/** El aspecto con el que empieza tu entrenador (estilo anime). */
+export const ASPECTO_INICIAL = { gorra: 'bandana', colorGorra: '#1a5b8c', chaqueta: 'rayas', colorChaqueta: '#1a5b8c', pantalon: 'pirata', colorPantalon: '#586070', bolsa: 'bandolera', piel: '#f7d6b8', pelo: '#2a1d16', peinado: 'corto' };
+
+/**
+ * Los sprites de entrenador de los juegos (estilo de la 4.ª y 5.ª generación, 80×80, mirando a la izquierda) que
+ * usan los rivales: se cargan de Pokémon Showdown al verlos, como los GIF de los Pokémon (no están en el proyecto).
+ * Cada uno con la caja de su dibujo [x0, y0, x1, y1], medida de antemano: Showdown no deja leer sus píxeles desde
+ * otra web, y entrenador.js la necesita para apoyar los pies en el suelo y centrarlo.
+ */
+export const URL_ENTRENADORES = 'https://play.pokemonshowdown.com/sprites/trainers/';
+export const SPRITES_ENTRENADOR = {
+  acerola: [26, 12, 63, 78], 'acetrainerf-gen4': [17, 3, 60, 77], 'agatha-lgpe': [16, 13, 62, 77],
+  alain: [25, 4, 54, 78], allister: [18, 1, 56, 78], aromalady: [15, 7, 62, 78], 'arven-v': [21, 9, 52, 78],
+  barry: [23, 11, 64, 78], 'battlegirl-gen4': [17, 10, 63, 78], bea: [19, 3, 62, 77], bede: [24, 0, 55, 79],
+  bianca: [22, 8, 67, 78], 'birdkeeper-gen4dp': [19, 6, 59, 78], 'blackbelt-gen4': [17, 2, 66, 78],
+  blaine: [25, 0, 57, 79], blue: [24, 2, 57, 78], brawly: [23, 1, 58, 78], brendan: [24, 9, 57, 76],
+  brock: [19, 14, 62, 64], bruno: [5, 7, 69, 74], brycen: [11, 3, 67, 78], 'bugcatcher-gen4dp': [14, 12, 66, 77],
+  bugsy: [8, 11, 70, 77], burgh: [9, 20, 70, 79], byron: [22, 1, 61, 79], candice: [21, 1, 64, 78],
+  cheren: [28, 3, 52, 78], chuck: [3, 5, 71, 78], clair: [9, 3, 67, 78], clay: [15, 6, 63, 78],
+  clemont: [0, 0, 74, 79], cowgirl: [20, 13, 60, 78], crasherwake: [4, 1, 76, 79], 'cynthia-gen4': [19, 1, 58, 79],
+  cyrus: [15, 0, 62, 79], 'dawn-gen4pt': [25, 11, 52, 76], diantha: [16, 1, 63, 79], dragontamer: [19, 1, 62, 78],
+  'drake-gen3': [18, 8, 64, 70], drayden: [20, 1, 59, 79], elesa: [1, 29, 77, 77], erika: [16, 6, 58, 78],
+  ethan: [24, 12, 59, 76], fairytalegirl: [19, 20, 59, 79], falkner: [4, 7, 68, 69], fantina: [7, 0, 71, 79],
+  firebreather: [0, 7, 79, 78], flannery: [12, 16, 67, 79], gardener: [20, 2, 58, 79], gardenia: [17, 6, 59, 78],
+  geeta: [16, 1, 68, 79], giovanni: [22, 0, 60, 79], glacia: [15, 0, 53, 79], gladion: [26, 10, 52, 78],
+  gordie: [16, 0, 59, 79], grant: [23, 1, 56, 78], grusha: [25, 7, 51, 78], 'guitarist-gen4': [17, 5, 63, 78],
+  guzma: [21, 20, 57, 77], hala: [13, 1, 62, 79], hapu: [24, 13, 61, 78], hassel: [24, 0, 54, 78],
+  hau: [20, 8, 49, 78], 'hexmaniac-gen6': [4, 20, 75, 79], 'hiker-gen4': [14, 4, 64, 79], hop: [16, 10, 62, 77],
+  hugh: [14, 7, 62, 73], idol: [20, 11, 60, 78], iono: [3, 3, 76, 78], iris: [13, 17, 66, 78],
+  janine: [9, 6, 74, 73], jasmine: [18, 1, 50, 78], kabu: [25, 1, 52, 78], karen: [22, 1, 53, 79],
+  kiawe: [25, 4, 66, 78], 'kindler-gen6': [7, 0, 72, 79], kofu: [18, 1, 61, 79], koga: [2, 6, 77, 71],
+  korrina: [10, 4, 65, 78], kukui: [18, 2, 54, 78], lana: [29, 12, 52, 78], lance: [13, 4, 71, 77],
+  larry: [26, 0, 53, 79], 'lass-gen4': [15, 7, 60, 73], leon: [3, 0, 78, 79], liko: [16, 3, 57, 76],
+  lillie: [25, 13, 58, 78], 'lorelei-lgpe': [22, 2, 58, 77], ltsurge: [9, 0, 73, 79],
+  'lucas-gen4pt': [24, 12, 59, 77], lyra: [24, 10, 58, 74], marlon: [8, 9, 75, 71], marnie: [28, 3, 56, 78],
+  marshal: [5, 8, 72, 79], may: [24, 10, 59, 76], maylene: [19, 19, 66, 78], melony: [20, 1, 58, 79],
+  milo: [21, 3, 62, 78], misty: [14, 5, 64, 76], morty: [16, 0, 54, 79], n: [14, 0, 66, 77], nanu: [16, 30, 64, 78],
+  'nemona-v': [20, 7, 57, 78], nessa: [17, 1, 57, 79], norman: [15, 4, 60, 77], olivia: [29, 3, 56, 78],
+  olympia: [0, 0, 79, 79], palmer: [18, 0, 62, 79], penny: [24, 4, 57, 78], 'phoebe-gen6': [12, 1, 66, 79],
+  picnicker: [22, 25, 56, 78], piers: [9, 1, 60, 79], pilot: [20, 1, 59, 79], plumeria: [23, 7, 58, 78],
+  'pokefan-gen4': [13, 28, 65, 78], 'pokemonrangerf-gen4': [21, 9, 59, 78], poppy: [26, 28, 53, 78],
+  pryce: [24, 4, 58, 78], 'psychic-gen4': [14, 3, 63, 78], 'psychicf-gen4': [17, 2, 61, 78],
+  punkgirl: [18, 3, 62, 79], raihan: [3, 0, 77, 79], ramos: [20, 13, 56, 75], red: [22, 8, 58, 76],
+  rika: [23, 5, 55, 78], roark: [20, 5, 61, 78], 'roughneck-gen4': [11, 8, 66, 78], roxanne: [20, 10, 58, 76],
+  roxie: [2, 3, 75, 70], roy: [22, 4, 56, 76], ruinmaniac: [13, 25, 64, 77], sabrina: [15, 3, 66, 78],
+  sage: [7, 1, 61, 79], 'scientist-gen4': [16, 5, 59, 78], scientistf: [19, 6, 57, 79], serena: [22, 8, 62, 77],
+  silver: [27, 7, 53, 77], skier: [5, 12, 78, 78], 'skierf-gen4dp': [7, 6, 77, 78], skyla: [17, 5, 62, 79],
+  sonia: [23, 0, 63, 79], sophocles: [20, 15, 53, 78], steven: [10, 1, 55, 76], 'swimmer-gen4': [16, 10, 64, 70],
+  'swimmerf-gen4': [25, 2, 56, 77], tate: [22, 9, 58, 73], tierno: [9, 5, 64, 77], trevor: [22, 15, 57, 78],
+  tulip: [23, 1, 55, 78], valerie: [0, 2, 79, 77], viola: [29, 6, 52, 77], volkner: [14, 1, 51, 78],
+  wallace: [8, 19, 77, 78], wattson: [20, 5, 61, 76], whitney: [17, 5, 58, 73], wikstrom: [14, 9, 72, 77],
+  will: [13, 2, 62, 77], winona: [22, 2, 60, 77], 'worker-gen4': [15, 26, 65, 78], 'workerf-gen8': [14, 5, 63, 78],
+  wulfric: [0, 0, 79, 79], 'youngster-gen4': [22, 11, 56, 68],
+};
 
 /**
  * Las nueve regiones del modo aventura, en orden. Cada una celebra su copa (formato de la liga en liga.js):
@@ -553,87 +624,109 @@ export const REGIONES_AVENTURA = [
     paisaje: 'pradera', lema: 'Donde empezó todo. Dieciséis entrenadores suben a la Meseta Añil y solo uno baja con la copa.',
     arenas: ['bosque', 'cueva', 'ciudad'],
     campeon: { nombre: 'Lance', genero: 'm', apodo: 'el Maestro Dragón', as: 148,
-      aspecto: { gorra: 'ninguna', colorGorra: '#d8433a', chaqueta: 'abrigo', colorChaqueta: '#2b2b36', pantalon: 'vaquero', colorPantalon: '#2b2b36', piel: '#e9b88f', pelo: '#b8322a', peinado: 'pinchos' } } },
+      aspecto: { sprite: 'lance', gorra: 'ninguna', colorGorra: '#d8433a', peinado: 'pinchos', chaqueta: 'lisa', colorChaqueta: '#2b2b36', pantalon: 'largo', colorPantalon: '#2b2b36', bolsa: 'ninguna', piel: '#e9b88f', pelo: '#b8322a' } } },
   { region: 'Johto', copa: 'Copa Plata', estadio: 'Estadio Plata', colores: ['#e2b24c', '#b8c4d6'], nivel: 18,
     paisaje: 'otono', lema: 'Bajo el eco de las campanas de las torres, la Copa Plata premia a quien combate con calma y corazón.',
     arenas: ['jardin', 'ruinas', 'bosque'],
     campeon: { nombre: 'Karen', genero: 'f', apodo: 'la Reina de la Noche', as: 248,
-      aspecto: { gorra: 'ninguna', colorGorra: '#8a52cc', chaqueta: 'chaleco', colorChaqueta: '#2b2b36', pantalon: 'vaquero', colorPantalon: '#3d5689', piel: '#cf9466', pelo: '#c9cfdc', peinado: 'largo' } } },
+      aspecto: { sprite: 'karen', gorra: 'ninguna', colorGorra: '#8a52cc', peinado: 'largo', chaqueta: 'lisa', colorChaqueta: '#2b2b36', pantalon: 'largo', colorPantalon: '#3d5689', bolsa: 'ninguna', piel: '#cf9466', pelo: '#c9cfdc' } } },
   { region: 'Hoenn', copa: 'Copa Colosalia', estadio: 'Estadio Colosalia', colores: ['#3cc08c', '#3d7fe0'], nivel: 28,
     paisaje: 'tropico', lema: 'Más allá de la Calle Victoria, entre el mar y el volcán, la Copa Colosalia separa a los buenos de los grandes.',
     arenas: ['playa', 'volcan', 'desierto'],
     campeon: { nombre: 'Steven', genero: 'm', apodo: 'el Coleccionista de Piedras', as: 375,
-      aspecto: { gorra: 'ninguna', colorGorra: '#3a66d4', chaqueta: 'cazadora', colorChaqueta: '#2b2b36', pantalon: 'vaquero', colorPantalon: '#2b2b36', piel: '#f7d6b8', pelo: '#c9cfdc', peinado: 'pinchos' } } },
+      aspecto: { sprite: 'steven', gorra: 'ninguna', colorGorra: '#3a66d4', peinado: 'pinchos', chaqueta: 'lisa', colorChaqueta: '#2b2b36', pantalon: 'largo', colorPantalon: '#2b2b36', bolsa: 'ninguna', piel: '#f7d6b8', pelo: '#c9cfdc' } } },
   { region: 'Sinnoh', copa: 'Copa Lirio del Valle', estadio: 'Estadio Lirio del Valle', colores: ['#8fb4ff', '#f0a8c8'], nivel: 38,
     paisaje: 'nieve', lema: 'A orillas del lago, en el frío del norte, la Copa Lirio del Valle no perdona un solo error.',
     arenas: ['nieve', 'cueva', 'cielo'],
     campeon: { nombre: 'Cynthia', genero: 'f', apodo: 'la Campeona Invicta', as: 445,
-      aspecto: { gorra: 'ninguna', colorGorra: '#e6bd3a', chaqueta: 'abrigo', colorChaqueta: '#2b2b36', pantalon: 'deportivo', colorPantalon: '#2b2b36', piel: '#f7d6b8', pelo: '#e2c26e', peinado: 'largo' } } },
+      aspecto: { sprite: 'cynthia-gen4', gorra: 'ninguna', colorGorra: '#e6bd3a', peinado: 'largo', chaqueta: 'lisa', colorChaqueta: '#2b2b36', pantalon: 'largo', colorPantalon: '#2b2b36', bolsa: 'ninguna', piel: '#f7d6b8', pelo: '#e2c26e' } } },
   { region: 'Teselia', copa: 'Copa Vertress', estadio: 'Estadio Vertress', colores: ['#dfe8f2', '#5ad0e0'], nivel: 48,
     paisaje: 'urbe', lema: 'En la región de los ideales, cada combate es un choque de verdades. La Copa Vertress no admite dudas.',
     arenas: ['ciudad', 'desierto', 'ruinas'],
     campeon: { nombre: 'Iris', genero: 'f', apodo: 'la Domadora de Dragones', as: 635,
-      aspecto: { gorra: 'ninguna', colorGorra: '#e46aa6', chaqueta: 'chaleco', colorChaqueta: '#e6bd3a', pantalon: 'falda', colorPantalon: '#e46aa6', piel: '#a26a44', pelo: '#6a3f8c', peinado: 'coleta' } } },
+      aspecto: { sprite: 'iris', gorra: 'ninguna', colorGorra: '#e46aa6', peinado: 'largo', chaqueta: 'lisa', colorChaqueta: '#e6bd3a', pantalon: 'pirata', colorPantalon: '#e46aa6', bolsa: 'ninguna', piel: '#a26a44', pelo: '#6a3f8c' } } },
   { region: 'Kalos', copa: 'Copa Luminalia', estadio: 'Gran Estadio de Luminalia', colores: ['#4f86ff', '#e2405a'], nivel: 58,
     paisaje: 'jardines', lema: 'Bajo las luces de Luminalia se juega la copa más elegante del mundo: aquí se gana con estilo… o no se gana.',
     arenas: ['ciudad', 'jardin', 'bosque'],
     campeon: { nombre: 'Diantha', genero: 'f', apodo: 'la Estrella de Luminalia', as: 706,
-      aspecto: { gorra: 'ninguna', colorGorra: '#d8433a', chaqueta: 'abrigo', colorChaqueta: '#e9ecf1', pantalon: 'vaquero', colorPantalon: '#e9ecf1', piel: '#f7d6b8', pelo: '#2a1d16', peinado: 'corto' } } },
+      aspecto: { sprite: 'diantha', gorra: 'ninguna', colorGorra: '#d8433a', peinado: 'corto', chaqueta: 'lisa', colorChaqueta: '#e9ecf1', pantalon: 'largo', colorPantalon: '#e9ecf1', bolsa: 'ninguna', piel: '#f7d6b8', pelo: '#2a1d16' } } },
   { region: 'Alola', copa: 'Copa Lanakila', estadio: 'Estadio del Monte Lanakila', colores: ['#ffa04a', '#9b7bff'], nivel: 68,
     paisaje: 'islas', lema: 'En la cima del Monte Lanakila, entre la nieve y el sol del trópico, las islas eligen a su campeón.',
     arenas: ['playa', 'volcan', 'cielo'],
     campeon: { nombre: 'Kukui', genero: 'm', apodo: 'el Profesor Enmascarado', as: 784,
-      aspecto: { gorra: 'clasica', colorGorra: '#2b2b36', chaqueta: 'chaleco', colorChaqueta: '#e9ecf1', pantalon: 'corto', colorPantalon: '#3e9a5c', piel: '#cf9466', pelo: '#2a1d16', peinado: 'corto' } } },
+      aspecto: { sprite: 'kukui', gorra: 'bandana', colorGorra: '#2b2b36', peinado: 'corto', chaqueta: 'lisa', colorChaqueta: '#e9ecf1', pantalon: 'pirata', colorPantalon: '#3e9a5c', bolsa: 'ninguna', piel: '#cf9466', pelo: '#2a1d16' } } },
   { region: 'Galar', copa: 'Copa Coronación', estadio: 'Estadio de la Coronación', colores: ['#3fb8ff', '#e0408a'], nivel: 78,
     paisaje: 'colinas', lema: 'Estadios llenos, cánticos y focos. La Copa Coronación es un espectáculo… y una trituradora de aspirantes.',
     arenas: ['ciudad', 'nieve', 'bosque'],
     campeon: { nombre: 'Leon', genero: 'm', apodo: 'el Campeón Invicto', as: 887,
-      aspecto: { gorra: 'reves', colorGorra: '#2b2b36', chaqueta: 'abrigo', colorChaqueta: '#d8433a', pantalon: 'deportivo', colorPantalon: '#2b2b36', piel: '#a26a44', pelo: '#6a3f8c', peinado: 'largo' } } },
+      aspecto: { sprite: 'leon', gorra: 'bandana', colorGorra: '#2b2b36', peinado: 'largo', chaqueta: 'lisa', colorChaqueta: '#d8433a', pantalon: 'largo', colorPantalon: '#2b2b36', bolsa: 'ninguna', piel: '#a26a44', pelo: '#6a3f8c' } } },
   { region: 'Paldea', copa: 'Copa de las Leyendas', estadio: 'Estadio del Área Cero', colores: ['#ff3b4e', '#9b4dff'], nivel: 88,
     paisaje: 'crater', lema: 'Al borde del Área Cero se juega la última copa. Solo llegan quienes ya ganaron ocho… y la campeona combate con leyendas.',
     arenas: ['desierto', 'cielo', 'cueva', 'volcan'],
     campeon: { nombre: 'Geeta', genero: 'f', apodo: 'la Campeona Suprema', as: null, leyendas: true,
-      aspecto: { gorra: 'ninguna', colorGorra: '#d8433a', chaqueta: 'abrigo', colorChaqueta: '#2b2b36', pantalon: 'falda', colorPantalon: '#2b2b36', piel: '#e9b88f', pelo: '#2a1d16', peinado: 'coleta' } } },
+      aspecto: { sprite: 'geeta', gorra: 'ninguna', colorGorra: '#d8433a', peinado: 'largo', chaqueta: 'lisa', colorChaqueta: '#2b2b36', pantalon: 'pirata', colorPantalon: '#2b2b36', bolsa: 'ninguna', piel: '#e9b88f', pelo: '#2a1d16' } } },
 ];
 
 /**
- * Los otros trece entrenadores de cada copa: [nombre, género, tipo favorito]. Son los del anime y los líderes,
- * alto mando y rivales de cada región (con el nombre del doblaje latino). Su tipo elige parte de su equipo.
+ * Los otros trece entrenadores de cada copa: [nombre, género, tipo favorito, sprite]. Son líderes, alto mando, rivales
+ * y protagonistas de cada región (los del anime que no salen en los juegos se cambiaron por otros de su región: no
+ * tienen sprite). Su tipo elige parte de su equipo; el sprite es el suyo de los juegos (SPRITES_ENTRENADOR).
  */
 export const NOMBRES_AVENTURA = [
-  [['Misty', 'f', 'water'], ['Brock', 'm', 'rock'], ['Gary', 'm', 'normal'], ['Ritchie', 'm', 'flying'], ['Erika', 'f', 'grass'],
-    ['Sabrina', 'f', 'psychic'], ['Surge', 'm', 'electric'], ['Koga', 'm', 'poison'], ['Blaine', 'm', 'fire'], ['Giovanni', 'm', 'ground'],
-    ['Bruno', 'm', 'fighting'], ['Lorelei', 'f', 'ice'], ['Agatha', 'f', 'ghost']],
-  [['Falkner', 'm', 'flying'], ['Bugsy', 'm', 'bug'], ['Whitney', 'f', 'normal'], ['Morty', 'm', 'ghost'], ['Chuck', 'm', 'fighting'],
-    ['Jasmine', 'f', 'steel'], ['Pryce', 'm', 'ice'], ['Clair', 'f', 'dragon'], ['Will', 'm', 'psychic'], ['Casey', 'f', 'electric'],
-    ['Harrison', 'm', 'fire'], ['Jackson', 'm', 'grass'], ['Silver', 'm', 'dark']],
-  [['May', 'f', 'normal'], ['Drew', 'm', 'grass'], ['Harley', 'm', 'ghost'], ['Morrison', 'm', 'steel'], ['Roxanne', 'f', 'rock'],
-    ['Brawly', 'm', 'fighting'], ['Wattson', 'm', 'electric'], ['Flannery', 'f', 'fire'], ['Winona', 'f', 'flying'], ['Tate', 'm', 'psychic'],
-    ['Wallace', 'm', 'water'], ['Drake', 'm', 'dragon'], ['Glacia', 'f', 'ice']],
-  [['Paul', 'm', 'dark'], ['Barry', 'm', 'fire'], ['Tobias', 'm', 'dragon'], ['Conway', 'm', 'bug'], ['Kenny', 'm', 'water'],
-    ['Zoey', 'f', 'ice'], ['Dawn', 'f', 'fairy'], ['Roark', 'm', 'rock'], ['Gardenia', 'f', 'grass'], ['Maylene', 'f', 'fighting'],
-    ['Fantina', 'f', 'ghost'], ['Byron', 'm', 'steel'], ['Volkner', 'm', 'electric']],
-  [['Trip', 'm', 'grass'], ['Cameron', 'm', 'fighting'], ['Virgil', 'm', 'normal'], ['Bianca', 'f', 'fire'], ['Georgia', 'f', 'ice'],
-    ['Elesa', 'f', 'electric'], ['Skyla', 'f', 'flying'], ['Clay', 'm', 'ground'], ['Drayden', 'm', 'dragon'], ['Burgh', 'm', 'bug'],
-    ['Roxie', 'f', 'poison'], ['Marlon', 'm', 'water'], ['N', 'm', 'dark']],
-  [['Alain', 'm', 'dragon'], ['Sawyer', 'm', 'grass'], ['Serena', 'f', 'fire'], ['Clemont', 'm', 'electric'], ['Tierno', 'm', 'water'],
-    ['Trevor', 'm', 'normal'], ['Astrid', 'f', 'psychic'], ['Korrina', 'f', 'fighting'], ['Valerie', 'f', 'fairy'], ['Viola', 'f', 'bug'],
-    ['Wulfric', 'm', 'ice'], ['Grant', 'm', 'rock'], ['Wikstrom', 'm', 'steel']],
-  [['Gladion', 'm', 'normal'], ['Hau', 'm', 'grass'], ['Kiawe', 'm', 'fire'], ['Lana', 'f', 'water'], ['Sophocles', 'm', 'electric'],
-    ['Lillie', 'f', 'ice'], ['Guzma', 'm', 'bug'], ['Plumeria', 'f', 'poison'], ['Hala', 'm', 'fighting'], ['Olivia', 'f', 'rock'],
-    ['Nanu', 'm', 'dark'], ['Hapu', 'f', 'ground'], ['Acerola', 'f', 'ghost']],
-  [['Raihan', 'm', 'dragon'], ['Hop', 'm', 'normal'], ['Bede', 'm', 'fairy'], ['Marnie', 'f', 'dark'], ['Goh', 'm', 'fire'],
-    ['Bea', 'f', 'fighting'], ['Allister', 'm', 'ghost'], ['Milo', 'm', 'grass'], ['Nessa', 'f', 'water'], ['Gordie', 'm', 'rock'],
-    ['Melony', 'f', 'ice'], ['Piers', 'm', 'poison'], ['Sonia', 'f', 'electric']],
-  [['Nemona', 'f', 'normal'], ['Arven', 'm', 'dark'], ['Penny', 'f', 'fairy'], ['Liko', 'f', 'grass'], ['Roy', 'm', 'fire'],
-    ['Dot', 'f', 'water'], ['Iono', 'f', 'electric'], ['Grusha', 'm', 'ice'], ['Larry', 'm', 'flying'], ['Rika', 'f', 'ground'],
-    ['Poppy', 'f', 'steel'], ['Hassel', 'm', 'dragon'], ['Tulip', 'f', 'psychic']],
+  [['Misty', 'f', 'water', 'misty'], ['Brock', 'm', 'rock', 'brock'], ['Gary', 'm', 'normal', 'blue'],
+    ['Red', 'm', 'flying', 'red'], ['Erika', 'f', 'grass', 'erika'], ['Sabrina', 'f', 'psychic', 'sabrina'],
+    ['Surge', 'm', 'electric', 'ltsurge'], ['Koga', 'm', 'poison', 'koga'], ['Blaine', 'm', 'fire', 'blaine'],
+    ['Giovanni', 'm', 'ground', 'giovanni'], ['Bruno', 'm', 'fighting', 'bruno'],
+    ['Lorelei', 'f', 'ice', 'lorelei-lgpe'], ['Agatha', 'f', 'ghost', 'agatha-lgpe']],
+  [['Falkner', 'm', 'flying', 'falkner'], ['Bugsy', 'm', 'bug', 'bugsy'], ['Whitney', 'f', 'normal', 'whitney'],
+    ['Morty', 'm', 'ghost', 'morty'], ['Chuck', 'm', 'fighting', 'chuck'], ['Jasmine', 'f', 'steel', 'jasmine'],
+    ['Pryce', 'm', 'ice', 'pryce'], ['Clair', 'f', 'dragon', 'clair'], ['Will', 'm', 'psychic', 'will'],
+    ['Janine', 'f', 'poison', 'janine'], ['Ethan', 'm', 'fire', 'ethan'], ['Lyra', 'f', 'grass', 'lyra'],
+    ['Silver', 'm', 'dark', 'silver']],
+  [['May', 'f', 'fire', 'may'], ['Brendan', 'm', 'grass', 'brendan'], ['Phoebe', 'f', 'ghost', 'phoebe-gen6'],
+    ['Norman', 'm', 'normal', 'norman'], ['Roxanne', 'f', 'rock', 'roxanne'], ['Brawly', 'm', 'fighting', 'brawly'],
+    ['Wattson', 'm', 'electric', 'wattson'], ['Flannery', 'f', 'fire', 'flannery'],
+    ['Winona', 'f', 'flying', 'winona'], ['Tate', 'm', 'psychic', 'tate'], ['Wallace', 'm', 'water', 'wallace'],
+    ['Drake', 'm', 'dragon', 'drake-gen3'], ['Glacia', 'f', 'ice', 'glacia']],
+  [['Barry', 'm', 'fire', 'barry'], ['Dawn', 'f', 'fairy', 'dawn-gen4pt'], ['Lucas', 'm', 'normal', 'lucas-gen4pt'],
+    ['Roark', 'm', 'rock', 'roark'], ['Gardenia', 'f', 'grass', 'gardenia'], ['Maylene', 'f', 'fighting', 'maylene'],
+    ['Crasher Wake', 'm', 'water', 'crasherwake'], ['Fantina', 'f', 'ghost', 'fantina'],
+    ['Byron', 'm', 'steel', 'byron'], ['Candice', 'f', 'ice', 'candice'], ['Volkner', 'm', 'electric', 'volkner'],
+    ['Cyrus', 'm', 'dark', 'cyrus'], ['Palmer', 'm', 'dragon', 'palmer']],
+  [['Hugh', 'm', 'grass', 'hugh'], ['Marshal', 'm', 'fighting', 'marshal'], ['Cheren', 'm', 'normal', 'cheren'],
+    ['Bianca', 'f', 'fire', 'bianca'], ['Brycen', 'm', 'ice', 'brycen'], ['Elesa', 'f', 'electric', 'elesa'],
+    ['Skyla', 'f', 'flying', 'skyla'], ['Clay', 'm', 'ground', 'clay'], ['Drayden', 'm', 'dragon', 'drayden'],
+    ['Burgh', 'm', 'bug', 'burgh'], ['Roxie', 'f', 'poison', 'roxie'], ['Marlon', 'm', 'water', 'marlon'],
+    ['N', 'm', 'dark', 'n']],
+  [['Alain', 'm', 'dragon', 'alain'], ['Ramos', 'm', 'grass', 'ramos'], ['Serena', 'f', 'fire', 'serena'],
+    ['Clemont', 'm', 'electric', 'clemont'], ['Tierno', 'm', 'water', 'tierno'], ['Trevor', 'm', 'normal', 'trevor'],
+    ['Olympia', 'f', 'psychic', 'olympia'], ['Korrina', 'f', 'fighting', 'korrina'],
+    ['Valerie', 'f', 'fairy', 'valerie'], ['Viola', 'f', 'bug', 'viola'], ['Wulfric', 'm', 'ice', 'wulfric'],
+    ['Grant', 'm', 'rock', 'grant'], ['Wikstrom', 'm', 'steel', 'wikstrom']],
+  [['Gladion', 'm', 'normal', 'gladion'], ['Hau', 'm', 'grass', 'hau'], ['Kiawe', 'm', 'fire', 'kiawe'],
+    ['Lana', 'f', 'water', 'lana'], ['Sophocles', 'm', 'electric', 'sophocles'], ['Lillie', 'f', 'ice', 'lillie'],
+    ['Guzma', 'm', 'bug', 'guzma'], ['Plumeria', 'f', 'poison', 'plumeria'], ['Hala', 'm', 'fighting', 'hala'],
+    ['Olivia', 'f', 'rock', 'olivia'], ['Nanu', 'm', 'dark', 'nanu'], ['Hapu', 'f', 'ground', 'hapu'],
+    ['Acerola', 'f', 'ghost', 'acerola']],
+  [['Raihan', 'm', 'dragon', 'raihan'], ['Hop', 'm', 'normal', 'hop'], ['Bede', 'm', 'fairy', 'bede'],
+    ['Marnie', 'f', 'dark', 'marnie'], ['Kabu', 'm', 'fire', 'kabu'], ['Bea', 'f', 'fighting', 'bea'],
+    ['Allister', 'm', 'ghost', 'allister'], ['Milo', 'm', 'grass', 'milo'], ['Nessa', 'f', 'water', 'nessa'],
+    ['Gordie', 'm', 'rock', 'gordie'], ['Melony', 'f', 'ice', 'melony'], ['Piers', 'm', 'poison', 'piers'],
+    ['Sonia', 'f', 'electric', 'sonia']],
+  [['Nemona', 'f', 'normal', 'nemona-v'], ['Arven', 'm', 'dark', 'arven-v'], ['Penny', 'f', 'fairy', 'penny'],
+    ['Liko', 'f', 'grass', 'liko'], ['Roy', 'm', 'fire', 'roy'], ['Kofu', 'm', 'water', 'kofu'],
+    ['Iono', 'f', 'electric', 'iono'], ['Grusha', 'm', 'ice', 'grusha'], ['Larry', 'm', 'flying', 'larry'],
+    ['Rika', 'f', 'ground', 'rika'], ['Poppy', 'f', 'steel', 'poppy'], ['Hassel', 'm', 'dragon', 'hassel'],
+    ['Tulip', 'f', 'psychic', 'tulip']],
 ];
 
-/** Kael, tu rival: aparece en las nueve copas, siempre en tu grupo, y crece contigo. */
+/**
+ * Kael, tu rival: aparece en las nueve copas, siempre en tu grupo, y crece contigo. En estilo anime, como tú, con
+ * pelo plateado de punta y ojos rojos (`ojos` solo se pone por datos: no está en el creador).
+ */
 export const RIVAL_AVENTURA = {
   nombre: 'Kael',
-  aspecto: { gorra: 'reves', colorGorra: '#d8433a', chaqueta: 'deportiva', colorChaqueta: '#2b2b36', pantalon: 'deportivo', colorPantalon: '#3a66d4', piel: '#e9b88f', pelo: '#c9cfdc', peinado: 'pinchos' },
+  aspecto: { gorra: 'ninguna', peinado: 'pinchos', colorGorra: '#2b2b36', chaqueta: 'lisa', colorChaqueta: '#d8433a', pantalon: 'largo', colorPantalon: '#2b2b36', bolsa: 'ninguna', piel: '#e9b88f', pelo: '#c9cfdc', ojos: '#a8202a' },
 };
 
 /**

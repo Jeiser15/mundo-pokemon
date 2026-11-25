@@ -35,7 +35,7 @@
 import { PALETAS_ATAQUE } from './datos.js';
 import { coloresDe, hojaDeAtaque, LADO_SPRITE } from './sprites-ataques.js';
 import { ALTO, ANCHO, CASA, crearAmbiente, dibujarFondo, SUELO } from './escenarios.js';
-import { ALTO_ENTRENADOR, ANCHO_ENTRENADOR, lienzoEntrenador, MANO, PIES_ENTRENADOR } from './entrenador.js';
+import { lienzoEntrenador, manoDe as manoEntrenador, medidasDe as medidasEntrenador, prepararEntrenador } from './entrenador.js';
 import { anchoTexto, dibujarTexto } from './fuente-pixel.js';
 
 export { ALTO, ANCHO }; // tamaño del mundo (el lienzo real se ajusta a la pantalla)
@@ -348,12 +348,13 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
   });
   const luchadores = { jugador: nuevoLuchador('jugador'), rival: nuevoLuchador('rival') };
   // Entrenadores: a cada lado, un poco por detrás de los Pokémon (más arriba en la vista 3/4).
-  const ESCALA_ENTRENADOR = 1; // unidades del mundo por píxel de su sprite (32×48)
+  const ESCALA_ENTRENADOR = 1; // unidades del mundo por píxel de su sprite (× la unidad de medidasDe)
   const PIES_ENTRENADOR_Y = SUELO - 7;
   const CASA_ENTRENADOR = { jugador: 24, rival: ANCHO - 24 };
   const entrenadores = Object.fromEntries(['jugador', 'rival'].map(lado => [lado, aspectos?.[lado]
     ? { lado, aspecto: aspectos[lado], x: CASA_ENTRENADOR[lado], pose: 'quieto', paso: 0, visible: false, hastaPose: 0, celebrando: false }
     : null]));
+  for (const E of Object.values(entrenadores)) if (E) prepararEntrenador(E.aspecto); // los de los juegos: que vayan llegando
   const camara = { x: ANCHO / 2, y: ALTO / 2, zoom: 1 };
   const tweens = [];
   const particulas = [];
@@ -2886,9 +2887,11 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
   // --- Entrenadores ------------------------------------------------------------------------------------
   /** Dónde tiene la mano (en el mundo) el entrenador de un lado, en su pose actual. */
   function manoDe(E) {
-    const [hx, hy] = MANO[E.pose] || MANO.quieto;
+    const [hx, hy] = manoEntrenador(E.aspecto, E.pose);
+    const m = medidasEntrenador(E.aspecto);
+    const u = ESCALA_ENTRENADOR * m.unidad;
     const dir = E.lado === 'jugador' ? 1 : -1;
-    return { x: E.x + (hx + 0.5 - ANCHO_ENTRENADOR / 2) * ESCALA_ENTRENADOR * dir, y: PIES_ENTRENADOR_Y - (PIES_ENTRENADOR + 0.5 - hy) * ESCALA_ENTRENADOR };
+    return { x: E.x + (hx + 0.5 - m.ancho / 2) * u * dir, y: PIES_ENTRENADOR_Y - (m.pies + 0.5 - hy) * u };
   }
   /** Pone una pose un rato (luego vuelve a quieto). */
   function posar(E, pose, ms = 0) {
@@ -2899,9 +2902,12 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
   function dibujarEntrenador(E, t) {
     if (!E?.visible) return;
     if (E.hastaPose && t > E.hastaPose) { E.pose = 'quieto'; E.hastaPose = 0; }
-    const bruto = Sreal * ESCALA_ENTRENADOR;
-    const k = bruto < 0.75 ? bruto : Math.max(1, Math.round(bruto));
-    const ancho = Math.round(ANCHO_ENTRENADOR * k); const alto = Math.round(ALTO_ENTRENADOR * k);
+    const m = medidasEntrenador(E.aspecto);
+    const bruto = Sreal * ESCALA_ENTRENADOR * m.unidad;
+    const entero = Math.max(1, Math.round(bruto));
+    // Píxeles enteros (nítido); el tuyo, que va a otra escala, solo si así cambia de tamaño menos de un 8 %.
+    const k = bruto < 0.75 ? bruto : m.unidad === 1 || Math.abs(entero - bruto) / bruto < 0.08 ? entero : bruto;
+    const ancho = Math.round(m.ancho * k); const alto = Math.round(m.alto * k);
     const respira = E.pose === 'quieto' && !reducido() && Math.floor((t + (E.lado === 'rival' ? 700 : 0)) / 900) % 2 ? 1 : 0;
     const salto = E.celebrando && !reducido() ? Math.abs(Math.sin(t / 160)) * 6 : 0;
     const pies = Y(PIES_ENTRENADOR_Y);
@@ -2910,7 +2916,7 @@ export function crearArenaPixel(lienzo, { escenario = 'bosque', clima = null, so
     ctx.beginPath(); ctx.ellipse(X(E.x), pies + S * 0.5, 9 * S * (1 - salto / 30), 2.2 * S, 0, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
     const x = Math.round(X(E.x) - ancho / 2);
-    const y = Math.round(pies - (PIES_ENTRENADOR + 1) * k + respira * k - salto * S);
+    const y = Math.round(pies - (m.pies + 1) * k + respira * k - salto * S);
     ctx.save();
     ctx.imageSmoothingEnabled = k < 1;
     if (E.lado === 'rival') { ctx.translate(x + ancho, y); ctx.scale(-1, 1); } else ctx.translate(x, y);

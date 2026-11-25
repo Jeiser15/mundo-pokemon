@@ -237,7 +237,9 @@ function crearEntrenador(equipo, nivel) {
   const g = genero === 'f' ? 1 : 0;
   const oficio = (ENTRENADORES.oficios[tipo] || ENTRENADORES.oficios.normal)[g];
   const rango = ENTRENADORES.rango[nivel][g];
-  return { nombre: nombrePropio, titulo: `${rango} ${oficio} ${nombrePropio}`.trim(), articulo: g ? 'la' : 'el', aspecto: aspectoAlAzar(Math.random, genero) };
+  // Su aspecto: la clase de entrenador de los juegos de su oficio (y el nuestro de reserva, si no carga).
+  const sprite = (ENTRENADORES.sprites[tipo] || ENTRENADORES.sprites.normal)[g];
+  return { nombre: nombrePropio, titulo: `${rango} ${oficio} ${nombrePropio}`.trim(), articulo: g ? 'la' : 'el', aspecto: { ...aspectoAlAzar(Math.random, genero), sprite } };
 }
 
 async function empezar(revancha) {

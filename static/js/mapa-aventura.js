@@ -9,13 +9,15 @@
 // isla siguiente al ganar una copa. Se pausa solo si no se ve (otra vista, otra pestaña o fuera de pantalla).
 
 import { REGIONES_AVENTURA } from './datos.js';
-import { ALTO_ENTRENADOR, ANCHO_ENTRENADOR, lienzoEntrenador, PIES_ENTRENADOR } from './entrenador.js';
+import { lienzoEntrenador, medidasDe } from './entrenador.js';
 import { pixel } from './escenarios.js';
 
 const { herramientas, ruido, generador, paleta, tonoDe, umbral, aRgb } = pixel;
 
 export const ANCHO_MAPA = 960;
 export const ALTO_MAPA = 400;
+/** Tu entrenador (estilo anime, 112 de alto) se dibuja reducido en el mapa: así mide lo que una isla pequeña. */
+const ESCALA_MAPA = 0.6;
 /** Centro de cada isla (en el orden de las regiones) y su tamaño. */
 export const ISLAS = [[86, 258], [190, 158], [292, 266], [394, 164], [496, 270], [598, 164], [700, 264], [800, 160], [890, 256]]
   .map(([x, y], i) => ({ x, y, rx: i === 8 ? 56 : 48, ry: i === 8 ? 38 : 34 }));
@@ -309,13 +311,17 @@ export function crearMapa(lienzo) {
     m.globalAlpha = 0.35; m.fillStyle = '#0a1420';
     m.beginPath(); m.ellipse(x, y + 1, 8, 2.5, 0, 0, Math.PI * 2); m.fill(); m.globalAlpha = 1;
     const sprite = lienzoEntrenador(estado.aspecto, pose, paso);
+    const medidas = medidasDe(estado.aspecto);
+    const escala = medidas.unidad === 1 ? 1 : ESCALA_MAPA; // el tuyo (estilo anime) es más grande: se reduce
     m.save();
-    m.translate(Math.round(x), Math.round(y + dy - PIES_ENTRENADOR - 1));
+    m.translate(Math.round(x), Math.round(y + dy - (medidas.pies + 1) * escala));
     if (mira < 0) m.scale(-1, 1);
-    m.drawImage(sprite, -ANCHO_ENTRENADOR / 2, 0, ANCHO_ENTRENADOR, ALTO_ENTRENADOR);
+    m.imageSmoothingEnabled = escala !== 1;
+    m.drawImage(sprite, -medidas.ancho * escala / 2, 0, medidas.ancho * escala, medidas.alto * escala);
     m.restore();
+    const cabeza = (medidas.pies - (medidas.unidad === 1 ? 70 : 104)) * escala; // la flecha, encima de la cabeza
     if (!viaje && t >= fiesta) { // flecha que señala «estás aquí»
-      const fy = y - ALTO_ENTRENADOR - 8 + (reducido.matches ? 0 : Math.round(Math.sin(t / 250) * 2));
+      const fy = Math.round(y - (medidas.pies + 1) * escala + cabeza) - 10 + (reducido.matches ? 0 : Math.round(Math.sin(t / 250) * 2));
       m.fillStyle = '#1b1622'; m.fillRect(Math.round(x) - 4, fy - 1, 9, 2); m.fillRect(Math.round(x) - 3, fy + 1, 7, 2); m.fillRect(Math.round(x) - 2, fy + 3, 5, 2); m.fillRect(Math.round(x) - 1, fy + 5, 3, 1);
       m.fillStyle = '#ffd86a'; m.fillRect(Math.round(x) - 3, fy, 7, 1); m.fillRect(Math.round(x) - 2, fy + 1, 5, 2); m.fillRect(Math.round(x) - 1, fy + 3, 3, 2);
     }

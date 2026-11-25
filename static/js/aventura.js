@@ -13,13 +13,13 @@
 // ganadas, cifras y ajustes. Tu entrenador va aparte ('pokedex.entrenador') porque también sale en el Duelo.
 
 import { dibujarVistaPrevia } from './arena-pixel.js';
-import { ASPECTO_ENTRENADOR, ASPECTO_INICIAL, ESCENARIOS, ESTADIO_AVENTURA, FRASES_AVENTURA, FRASES_RIVAL, GENERACIONES, NIVELES_SIMULACRO, rarezaDe, REGIONES_AVENTURA, TIPOS } from './datos.js';
+import { ASPECTO_ENTRENADOR, ASPECTO_INICIAL, ENTRENADOR_ANIME, ESCENARIOS, ESTADIO_AVENTURA, FRASES_AVENTURA, FRASES_RIVAL, GENERACIONES, NIVELES_SIMULACRO, rarezaDe, REGIONES_AVENTURA, TIPOS } from './datos.js';
 import { guardarEntrenador, leerEntrenador, MAX_NOMBRE, pintarRetrato, retratoEntrenador } from './entrenador.js';
 import { dibujarFondo } from './escenarios.js';
 import { cargarEspecies } from './especies.js';
 import { buscarPokemon } from './ficha.js';
 import {
-  aspectoAlAzar, azarDe, clasificacion, completarEquipoRival, crearTemporada, dificultad, ganadorCopa, grupoDelJugador,
+  aspectoDeParticipante, azarDe, clasificacion, completarEquipoRival, crearTemporada, dificultad, ganadorCopa, grupoDelJugador,
   GRUPOS, MAX_BONO_INTENTOS, nivelJugador, nombreCompleto, objetivoRival, participante, partidoDelJugador, planEquipoRival,
   poderReferencia, registrarCombate, RONDA_CUARTOS, RONDA_FINAL, RONDAS, rivalDe, sortearEquipo, sortearGrupos,
 } from './liga.js';
@@ -84,7 +84,7 @@ const colorTipo = tipo => TIPOS[tipo]?.color || '#8a917e';
 const conquistada = i => datos.conquistas.some(c => c.region === i);
 /** Nombre corto de un participante para tablas y cuadros. */
 const nombreCorto = (t, clave) => (clave === 'tu' ? yo()?.nombre || 'Tú' : participante(t, clave).titulo);
-const aspectoDe = (t, clave) => (clave === 'tu' ? yo()?.aspecto || ASPECTO_INICIAL : participante(t, clave).aspecto);
+const aspectoDe = (t, clave) => (clave === 'tu' ? yo()?.aspecto || ASPECTO_INICIAL : aspectoDeParticipante(participante(t, clave)));
 const clavesFrases = (t, rival) => (rival.rol === 'rival' ? 'kael' : rival.rol === 'campeon' ? (REGIONES_AVENTURA[t.region].campeon.leyendas ? 'leyendas' : 'campeon') : null);
 /** Las frases del rival (Kael, campeones…) o las de cualquier entrenador. */
 const frasesDe = (t, rival) => FRASES_AVENTURA[clavesFrases(t, rival)] || FRASES_RIVAL;
@@ -569,7 +569,7 @@ function cartaPartido(t, partido, v) {
     crear('div', { clase: 'av-previa-duelo' },
       lado(entrenador.aspecto, entrenador.nombre, crear('small', { texto: `Nv. ${nivel}` }), false),
       crear('span', { clase: 'av-vs', texto: 'VS' }),
-      lado(rival.aspecto, nombreCompleto(rival).replace(/^(el|la) /, ''), crear('small', {},
+      lado(aspectoDeParticipante(rival), nombreCompleto(rival).replace(/^(el|la) /, ''), crear('small', {},
         `Nv. ${dif.nivel}`, ...(rival.tipo ? [' · ', chipTipo(rival.tipo)] : []), ...(rival.rol === 'rival' ? [' · tu rival'] : [])), true)),
     dialogo(rival.titulo, alAzar(frasesDe(t, rival).inicio), 'rival'),
     crear('div', { clase: 'av-previa-pie' },
@@ -639,7 +639,7 @@ function lanzarCombate(t, partido, ids, pantallaCompleta) {
       copa: r.copa, ronda, final: t.ronda === RONDA_FINAL, enEstadio: escenario === 'estadio', estadio: r.estadio,
       colores: r.colores, ayudas: dif.ayudas,
       jugador: { ids: t.equipo, nivel: nivelJugador(t) },
-      rival: { ids, nivel: dif.nivel, nombre: rival.nombre, titulo: rival.titulo, articulo: rival.articulo, aspecto: rival.aspecto, frases: clavesFrases(t, rival) },
+      rival: { ids, nivel: dif.nivel, nombre: rival.nombre, titulo: rival.titulo, articulo: rival.articulo, aspecto: aspectoDeParticipante(rival), frases: clavesFrases(t, rival) },
       alTerminar: resultado => alTerminarCombate(t, rival, ronda, resultado),
     },
   });
@@ -782,7 +782,7 @@ function pantallaEliminado(t) {
     crear('div', { clase: 'av-eliminado-cuerpo' },
       crear('div', { clase: 'av-eliminado-escena' },
         retratoEntrenador(yo().aspecto, { escala: 5, pose: 'triste', clase: 'av-sprite' }),
-        ...(quien ? [retratoEntrenador(quien.aspecto, { escala: 5, volteado: true, pose: 'celebra', clase: 'av-sprite' })] : [])),
+        ...(quien ? [retratoEntrenador(aspectoDeParticipante(quien), { escala: 5, volteado: true, pose: 'celebra', clase: 'av-sprite' })] : [])),
       crear('div', {},
         etiqueta(ronda.fase === 'grupos' ? 'Fuera en la fase de grupos' : `Fuera en ${ronda.nombre.toLowerCase()}`),
         titulo('Fin del camino… ', 'por ahora'),
@@ -840,6 +840,18 @@ function pintarVitrina() {
   }));
 }
 
+/** Un entrenador al azar con las piezas y los colores del creador (estilo anime). */
+function animeAlAzar() {
+  const uno = lista => lista[Math.floor(Math.random() * lista.length)];
+  const { colores, pieles, pelos } = ASPECTO_ENTRENADOR;
+  const { gorras, peinados, camisetas, pantalones, bolsas } = ENTRENADOR_ANIME;
+  return {
+    gorra: uno(Object.keys(gorras)), peinado: uno(Object.keys(peinados)), chaqueta: uno(Object.keys(camisetas)), pantalon: uno(Object.keys(pantalones)),
+    bolsa: uno(Object.keys(bolsas)), colorGorra: uno(colores)[1], colorChaqueta: uno(colores)[1], colorPantalon: uno(colores)[1],
+    piel: uno(pieles), pelo: uno(pelos)[1],
+  };
+}
+
 // --- Creador de entrenador --------------------------------------------------------------------------------
 
 function creador(guardado) {
@@ -870,7 +882,8 @@ function creador(guardado) {
     }
     ocupado = false;
   };
-  const { gorras, chaquetas, pantalones, peinados, colores, pieles, pelos } = ASPECTO_ENTRENADOR;
+  const { colores, pieles, pelos } = ASPECTO_ENTRENADOR;
+  const { gorras, peinados, camisetas, pantalones, bolsas } = ENTRENADOR_ANIME;
   /** Opciones con dibujo: cada botón enseña a tu entrenador con esa pieza. */
   const piezas = (clave, opciones) => {
     const botones = Object.entries(opciones).map(([valor, nombre]) => {
@@ -898,12 +911,13 @@ function creador(guardado) {
   };
   const paginas = {
     gorra: piezas('gorra', gorras),
-    chaqueta: piezas('chaqueta', chaquetas),
-    pantalon: piezas('pantalon', pantalones),
     peinado: piezas('peinado', peinados),
+    chaqueta: piezas('chaqueta', camisetas),
+    pantalon: piezas('pantalon', pantalones),
+    bolsa: piezas('bolsa', bolsas),
     colores: crear('div', { clase: 'av-paleta' },
-      muestras('Gorra y zapatillas', 'colorGorra', colores.map(([n, c]) => [c, n])),
-      muestras('Chaqueta', 'colorChaqueta', colores.map(([n, c]) => [c, n])),
+      muestras('Pañuelo y zapatillas', 'colorGorra', colores.map(([n, c]) => [c, n])),
+      muestras('Camiseta', 'colorChaqueta', colores.map(([n, c]) => [c, n])),
       muestras('Pantalón', 'colorPantalon', colores.map(([n, c]) => [c, n])),
       muestras('Pelo', 'pelo', pelos.map(([n, c]) => [c, n])),
       muestras('Piel', 'piel', pieles.map((c, i) => [c, `Tono ${i + 1}`]))),
@@ -912,7 +926,7 @@ function creador(guardado) {
   const grupos = Object.values(paginas);
   let abierta = 'gorra';
   const hoja = crear('div', { clase: 'av-creador-hoja', atributos: { role: 'tabpanel' } }, paginas.gorra);
-  const NOMBRES = { gorra: 'Gorra', chaqueta: 'Chaqueta', pantalon: 'Pantalón', peinado: 'Peinado', colores: 'Colores' };
+  const NOMBRES = { gorra: 'Pañuelo', peinado: 'Peinado', chaqueta: 'Camiseta', pantalon: 'Pantalón', bolsa: 'Bolsa', colores: 'Colores' };
   const lenguetas = Object.keys(paginas).map(clave => crear('button', {
     type: 'button', clase: 'av-pestana', texto: NOMBRES[clave], atributos: { role: 'tab', 'aria-selected': String(clave === abierta) },
     alPulsar: () => { abierta = clave; hoja.replaceChildren(paginas[clave]); lenguetas.forEach(l => l.setAttribute('aria-selected', String(l.textContent === NOMBRES[clave]))); },
@@ -936,7 +950,7 @@ function creador(guardado) {
       vista,
       crear('div', { clase: 'av-creador-botones' },
         boton('▶ Probar', probar, 'secundario pequeno'),
-        boton('🎲 Al azar', () => { estado.aspecto = aspectoAlAzar(Math.random, Math.random() < 0.5 ? 'f' : 'm'); repintar(); }, 'secundario pequeno'))),
+        boton('🎲 Al azar', () => { estado.aspecto = animeAlAzar(); repintar(); }, 'secundario pequeno'))),
     crear('div', { clase: 'av-creador-formulario' },
       etiqueta(guardado ? 'Tu entrenador' : 'Antes de empezar'),
       titulo(guardado ? 'Cambia tu ' : 'Crea a tu ', 'entrenador'),
